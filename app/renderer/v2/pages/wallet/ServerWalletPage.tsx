@@ -1,3 +1,4 @@
+import { formatFinoraDateTime } from "../../../shared/finoraDateTimeDisplay";
 import { useEffect, useRef, useState } from "react";
 import { useTheme } from "../../themes/provider";
 import type { CSSProperties, FormEvent } from "react";
@@ -595,7 +596,7 @@ export default function ServerWalletPage({
         </div>
         {balance && (
           <p style={{ color: theme.colors.text.secondary, overflowWrap: "anywhere" }}>
-            Wallet {balance.walletId} ? Updated {new Date(balance.updatedAt).toLocaleString()}
+            Wallet {balance.walletId} ? Updated {formatFinoraDateTime(balance.updatedAt)}
           </p>
         )}
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>

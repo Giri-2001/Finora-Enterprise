@@ -1,3 +1,4 @@
+import { formatFinoraDateTime } from "../../shared/finoraDateTimeDisplay";
 import {
   useCallback,
   useEffect,
@@ -394,7 +395,7 @@ export function FinoraControlCenterServerBranchDirectoryPanel() {
                     <div>
                       Subscription status: {display(branch.subscription_status)}
                     </div>
-                    <div>Expiry: {display(branch.subscription_expiry)}</div>
+                    <div>Expiry: {formatFinoraDateTime(branch.subscription_expiry)}</div>
                   </div>
                 </article>
               ))}

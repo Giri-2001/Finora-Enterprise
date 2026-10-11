@@ -1,3 +1,4 @@
+import { formatFinoraDateTime } from "../../shared/finoraDateTimeDisplay";
 import { useEffect, useState } from "react";
 import {
   ChevronLeft,
@@ -35,66 +36,17 @@ function formatInr(value: string): string {
   );
 }
 
-function formatDateTime(
-  value:
-    | string
-    | Date
-    | undefined,
-): string {
+function formatDateTime(value: string | Date | undefined): string {
+  // FINORA_P566EH_FORMAT: Presentation only; stored timestamps unchanged.
   if (!value) {
     return "Unavailable";
   }
 
-  const date =
-    value instanceof Date
-      ? value
-      : new Date(value);
+  const formatted = formatFinoraDateTime(value);
 
-  if (
-    Number.isNaN(
-      date.getTime(),
-    )
-  ) {
-    return "Unavailable";
-  }
-
-  const day = String(
-    date.getDate(),
-  ).padStart(2, "0");
-
-  const month = String(
-    date.getMonth() + 1,
-  ).padStart(2, "0");
-
-  const year =
-    date.getFullYear();
-
-  let hours =
-    date.getHours();
-
-  const minutes = String(
-    date.getMinutes(),
-  ).padStart(2, "0");
-
-  const seconds = String(
-    date.getSeconds(),
-  ).padStart(2, "0");
-
-  const meridiem =
-    hours >= 12
-      ? "PM"
-      : "AM";
-
-  hours =
-    hours % 12 || 12;
-
-  const hourText =
-    String(hours).padStart(
-      2,
-      "0",
-    );
-
-  return `${day}-${month}-${year} ${hourText}:${minutes}:${seconds} ${meridiem}`;
+  return formatted === "\u2014"
+    ? "Unavailable"
+    : formatted;
 }
 
 const sectionStyle: React.CSSProperties = {

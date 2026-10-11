@@ -1,3 +1,4 @@
+import { formatFinoraDateTime } from "../../shared/finoraDateTimeDisplay";
 import {
   useCallback,
   useEffect,
@@ -61,31 +62,17 @@ type BranchRegistryLoadState =
   | "UNAVAILABLE"
   | "ERROR";
 
-function formatTimestamp(
-  value:
-    string | undefined,
-): string {
-
+function formatTimestamp(value: string | undefined): string {
+  // FINORA_P566EH_FORMAT: Presentation only; stored timestamps unchanged.
   if (!value) {
     return "Not reported yet";
   }
 
-  const timestamp =
-    new Date(
-      value,
-    );
+  const formatted = formatFinoraDateTime(value);
 
-  if (
-    !Number.isFinite(
-      timestamp.getTime(),
-    )
-  ) {
-    return value;
-  }
-
-  return timestamp.toLocaleString(
-    "en-IN",
-  );
+  return formatted === "\u2014"
+    ? "Unavailable"
+    : formatted;
 }
 
 function formatLastReportedWallet(

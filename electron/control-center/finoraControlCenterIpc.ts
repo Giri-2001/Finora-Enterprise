@@ -1731,13 +1731,32 @@ registerFinoraDeveloperSecurityControlCenterHandler(
         return failure("DIRECTORY_QUERY_INVALID");
       }
 
-      return executePrivileged(() =>
-        loadFinoraServerBranchDirectory({
-          search: input?.search as string | undefined,
-          limit: input?.limit as number | undefined,
-          offset: input?.offset as number | undefined,
-        }),
-      );
+      // P1-566DZ: Main-process vault is the sole credential source.
+      // Developer unlock and trusted-renderer checks run above.
+      return executePrivileged(async () => {
+        const adminApiKey =
+          await readFinoraServerAdminCredential();
+
+        try {
+          return await loadFinoraServerBranchDirectory(
+            adminApiKey,
+            {
+              search: input?.search as string | undefined,
+              limit: input?.limit as number | undefined,
+              offset: input?.offset as number | undefined,
+            },
+          );
+        } catch (error) {
+          if (
+            error instanceof Error &&
+            error.message === "DIRECTORY_ACCESS_DENIED"
+          ) {
+            await clearFinoraServerAdminCredential();
+          }
+
+          throw error;
+        }
+      });
     },
   );
   registerFinoraDeveloperProtectedControlCenterHandler(

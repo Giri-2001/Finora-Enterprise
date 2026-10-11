@@ -1,4 +1,5 @@
-﻿import {
+import { formatFinoraDateTime } from "../../shared/finoraDateTimeDisplay";
+import {
   useCallback,
   useEffect,
   useMemo,
@@ -219,48 +220,17 @@ function matchesPeriod(
   );
 }
 
-function formatTimestamp(
-  value:
-    string,
-): string {
-
-  const parsed =
-    new Date(
-      value,
-    );
-
-  if (
-    Number.isNaN(
-      parsed.getTime(),
-    )
-  ) {
-    return value;
+function formatTimestamp(value: string): string {
+  // FINORA_P566EH_FORMAT: Presentation only; stored timestamps unchanged.
+  if (!value) {
+    return "Unavailable";
   }
 
-  return new Intl.DateTimeFormat(
-    "en-IN",
-    {
-      year:
-        "numeric",
+  const formatted = formatFinoraDateTime(value);
 
-      month:
-        "short",
-
-      day:
-        "2-digit",
-
-      hour:
-        "2-digit",
-
-      minute:
-        "2-digit",
-
-      second:
-        "2-digit",
-    },
-  ).format(
-    parsed,
-  );
+  return formatted === "\u2014"
+    ? "Unavailable"
+    : formatted;
 }
 
 function formatAmount(

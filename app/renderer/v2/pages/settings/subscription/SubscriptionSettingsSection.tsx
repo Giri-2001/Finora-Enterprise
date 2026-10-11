@@ -1,3 +1,4 @@
+import { formatFinoraDateTime } from "../../../../shared/finoraDateTimeDisplay";
 // ============================================================
 // FINORA ENTERPRISE OS
 //
@@ -63,45 +64,16 @@ function pad2(value: number): string {
 }
 
 function formatDateTime(value: string | null | undefined): string {
+  // FINORA_P566EH_FORMAT: Presentation only; stored timestamps unchanged.
   if (!value) {
     return "Not recorded";
   }
 
-  const date =
-    new Date(value);
+  const formatted = formatFinoraDateTime(value);
 
-  if (
-    Number.isNaN(
-      date.getTime(),
-    )
-  ) {
-    return "Unavailable";
-  }
-
-  const day =
-    pad2(date.getDate());
-
-  const month =
-    pad2(date.getMonth() + 1);
-
-  const year =
-    date.getFullYear();
-
-  const rawHour =
-    date.getHours();
-
-  const minute =
-    pad2(date.getMinutes());
-
-  const period =
-    rawHour >= 12
-      ? "PM"
-      : "AM";
-
-  const hour =
-    rawHour % 12 || 12;
-
-  return `${day}-${month}-${year} ${pad2(hour)}:${minute} ${period}`;
+  return formatted === "\u2014"
+    ? "Unavailable"
+    : formatted;
 }
 
 function formatMoney(

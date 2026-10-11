@@ -1,3 +1,4 @@
+import { formatFinoraDateTime } from "../../shared/finoraDateTimeDisplay";
 import { useEffect, useState } from "react";
 import { Phone, RefreshCw, Wallet } from "lucide-react";
 
@@ -135,7 +136,7 @@ export default function FinoraBranchCardLiveWallet({
         if (!active) return;
 
         setWallet(found);
-        setSyncedAt(new Date().toLocaleString("en-IN"));
+        setSyncedAt(formatFinoraDateTime(new Date()));
         setStatus(found ? "READY" : "NOT_FOUND");
       } catch (cause) {
         if (!active) return;
@@ -242,7 +243,7 @@ export default function FinoraBranchCardLiveWallet({
           </div>
           <div style={{ fontSize: 11, opacity: 0.75 }}>
             Wallet Updated:{" "}
-            {new Date(wallet.wallet_updated_at).toLocaleString("en-IN")}
+            {formatFinoraDateTime(wallet.wallet_updated_at)}
           </div>
           <div style={{ fontSize: 10, opacity: 0.7 }}>
             Source: PostgreSQL | Status: {wallet.wallet_status}

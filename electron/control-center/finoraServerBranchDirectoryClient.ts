@@ -107,6 +107,7 @@ function validBranch(
 }
 
 export async function loadFinoraServerBranchDirectory(
+  adminKey: string,
   query: FinoraServerDirectoryQuery = {},
   transport: Transport = globalThis.fetch,
 ): Promise<FinoraServerDirectoryPage> {
@@ -127,9 +128,12 @@ export async function loadFinoraServerBranchDirectory(
     throw new Error("DIRECTORY_QUERY_INVALID");
   }
 
-  const adminKey = process.env.FINORA_ADMIN_API_KEY;
-
-  if (!adminKey) {
+  // P1-566DZ: Credential supplied only by privileged Electron main IPC.
+  // Never accept credentials from a renderer directory request.
+  if (
+    typeof adminKey !== "string" ||
+    adminKey.trim().length === 0
+  ) {
     throw new Error("DIRECTORY_ADMIN_AUTH_UNAVAILABLE");
   }
 
