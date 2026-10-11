@@ -1238,7 +1238,8 @@ public final class FinoraBranchCredentialContract {
         String role
     ) {
 
-        return ROLE_ADMIN.equals(role) ||
+        return "OWNER".equals(role) ||
+            ROLE_ADMIN.equals(role) ||
             ROLE_MANAGER.equals(role) ||
             ROLE_COLLECTOR.equals(role) ||
             ROLE_VIEWER.equals(role);
