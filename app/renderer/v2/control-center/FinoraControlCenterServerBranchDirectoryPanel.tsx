@@ -7,6 +7,20 @@ import {
 } from "react";
 import type { FormEvent } from "react";
 
+
+// FINORA_P566EW: Informational context only, not an access grant.
+export type FinoraSelectedServerBranchIdentity = {
+  ownerId: string;
+  businessId: string;
+  branchId: string;
+};
+
+type DirectoryProps = {
+  onSelectionChange?: (
+    identity: FinoraSelectedServerBranchIdentity | null
+  ) => void;
+};
+
 type Branch = {
   owner_id: string;
   owner_name: string;
@@ -65,20 +79,29 @@ function getBridge(): DirectoryBridge | undefined {
   return host.finoraControlCenter;
 }
 
-export function FinoraControlCenterServerBranchDirectoryPanel() {
+export function FinoraControlCenterServerBranchDirectoryPanel({
+  onSelectionChange,
+}: DirectoryProps = {}) {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
-  const [selectedServerIdentity, setSelectedServerIdentity] = useState<{
-    ownerId: string;
-    businessId: string;
-    branchId: string;
-  } | null>(null);
+  const [selectedServerIdentity, setSelectedServerIdentity] = useState<FinoraSelectedServerBranchIdentity | null>(null);
   const [page, setPage] = useState<DirectoryPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
   const currentQuery = useRef({ search: "", offset: 0 });
+
+  // FINORA_P566EW: UI selection is never server authorization.
+  useEffect(() => {
+    onSelectionChange?.(selectedServerIdentity);
+  }, [selectedServerIdentity, onSelectionChange]);
+
+  useEffect(() => {
+    return () => {
+      onSelectionChange?.(null);
+    };
+  }, [onSelectionChange]);
 
   const load = useCallback(
     async (nextSearch: string, nextOffset: number) => {
@@ -331,7 +354,8 @@ export function FinoraControlCenterServerBranchDirectoryPanel() {
                   <div style={{ marginTop: 12 }}>
                     <button
                       type="button"
-                      aria-pressed={
+                      disabled={branch.branch_status !== "ACTIVE"}
+                        aria-pressed={
                         selectedServerIdentity?.ownerId === branch.owner_id &&
                         selectedServerIdentity?.businessId === branch.business_id &&
                         selectedServerIdentity?.branchId === branch.branch_id

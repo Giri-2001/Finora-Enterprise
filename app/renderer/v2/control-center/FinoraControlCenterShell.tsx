@@ -1,4 +1,7 @@
-import { FinoraControlCenterServerBranchDirectoryPanel } from "./FinoraControlCenterServerBranchDirectoryPanel";
+import {
+  FinoraControlCenterServerBranchDirectoryPanel,
+  type FinoraSelectedServerBranchIdentity,
+} from "./FinoraControlCenterServerBranchDirectoryPanel";
 import {
   Capacitor,
   registerPlugin,
@@ -1394,6 +1397,11 @@ export default function FinoraControlCenterShell() {
 }
 
 function FinoraControlCenterPrivilegedShell() {
+  // FINORA_P566EW: Read-only context; no issuance authorization.
+  const [
+    selectedServerBranchIdentity,
+    setSelectedServerBranchIdentity,
+  ] = useState<FinoraSelectedServerBranchIdentity | null>(null);
   const [
     activeView,
     setActiveView,
@@ -2608,7 +2616,36 @@ const [
               <FinoraControlCenterLiveWalletPanel />
 )}
 {activeView === "BRANCHES" && (
-  <FinoraControlCenterServerBranchDirectoryPanel />
+  <>
+    <FinoraControlCenterServerBranchDirectoryPanel
+      onSelectionChange={setSelectedServerBranchIdentity}
+    />
+    {selectedServerBranchIdentity && (
+      <section
+        role="status"
+        aria-label="Selected server branch context"
+        style={{
+          padding: 16,
+          marginBottom: 18,
+          borderRadius: 12,
+          border: "1px solid #39617e",
+          background: "#12243a",
+          color: "#e8f0ff",
+          overflowWrap: "anywhere",
+        }}
+      >
+        <strong>Server Branch Context (Read Only)</strong>
+        <div>Owner ID: {selectedServerBranchIdentity.ownerId}</div>
+        <div>Business ID: {selectedServerBranchIdentity.businessId}</div>
+        <div>Branch ID: {selectedServerBranchIdentity.branchId}</div>
+        <p style={{ fontSize: 12, marginBottom: 0 }}>
+          Informational selection only. Wallet, subscriptions,
+          provisioning and financial operations require
+          independent server-side authorization.
+        </p>
+      </section>
+    )}
+  </>
             )}
 
 
