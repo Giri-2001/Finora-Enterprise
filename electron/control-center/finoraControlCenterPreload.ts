@@ -72,6 +72,8 @@ const CONTROL_CENTER_CHANNELS = {
   GET_TRUST_RECORD:
     "finora:control-center:get-trust-record",
 
+  GET_SERVER_EFFECTIVE_PRICING: "finora:control-center:get-server-effective-pricing",
+
   GET_SERVER_BRANCH_DIRECTORY:
     "finora:control-center:get-server-branch-directory",
 
@@ -1230,6 +1232,35 @@ export interface FinoraControlCenterBridge {
         >
       >;
 
+  // FINORA_P567L - Read-only server pricing.
+  getServerEffectivePricing:
+    (identity: {
+      ownerId: string;
+      businessId: string;
+      branchId: string;
+    }) => Promise<
+      FinoraControlCenterResult<{
+        branch: {
+          ownerId: string;
+          businessId: string;
+          branchId: string;
+          ownerName: string;
+          businessName: string;
+          branchName: string;
+          status: string;
+        };
+        pricing: Record<string, {
+          chargeCode: string;
+          priceKind: string;
+          amount: number;
+          source: "GLOBAL" | "BRANCH_OVERRIDE";
+          pricingRevisionId?: string | null;
+          updatedAt?: string | null;
+        }>;
+        complete: boolean;
+        missingChargeCodes: string[];
+      }>
+    >;
   getServerBranchDirectory:
     (
       query?: FinoraServerDirectoryQuery,
@@ -1762,6 +1793,35 @@ const controlCenterBridge:
         >
       >,
 
+  // FINORA_P567L - Read-only pricing IPC bridge.
+  getServerEffectivePricing:
+    (identity) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.GET_SERVER_EFFECTIVE_PRICING,
+        identity,
+      ) as Promise<
+        FinoraControlCenterResult<{
+          branch: {
+            ownerId: string;
+            businessId: string;
+            branchId: string;
+            ownerName: string;
+            businessName: string;
+            branchName: string;
+            status: string;
+          };
+          pricing: Record<string, {
+            chargeCode: string;
+            priceKind: string;
+            amount: number;
+            source: "GLOBAL" | "BRANCH_OVERRIDE";
+            pricingRevisionId?: string | null;
+            updatedAt?: string | null;
+          }>;
+          complete: boolean;
+          missingChargeCodes: string[];
+        }>
+      >,
   getServerBranchDirectory:
     (query) =>
       ipcRenderer.invoke(

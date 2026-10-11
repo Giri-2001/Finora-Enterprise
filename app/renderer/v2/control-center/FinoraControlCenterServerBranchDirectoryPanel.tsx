@@ -139,7 +139,15 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
           !Array.isArray(response.data.branches) ||
           typeof response.data.hasMore !== "boolean"
         ) {
-          throw new Error("Live server directory unavailable");
+          const safeCode =
+            typeof response?.error === "string" &&
+            /^(DIRECTORY|FINORA|CONTROL_CENTER|DEVELOPER|PRICING)_[A-Z0-9_]{1,100}$/.test(response.error)
+              ? response.error
+              : response?.success === true
+                ? "DIRECTORY_RESPONSE_SHAPE_INVALID"
+                : "DIRECTORY_IPC_FAILURE_UNKNOWN";
+
+          throw new Error(safeCode);
         }
 
         // P1-566DR: Keep a read-only selection only when the
@@ -159,12 +167,23 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
         });
 
         setPage(response.data);
-      } catch {
+      } catch (error) {
         if (id !== requestId.current) return;
         setPage(null);
         setSelectedServerIdentity(null);
+
+        const message =
+          error instanceof Error ? error.message : "";
+
+        const safeCode =
+          /^(DIRECTORY|FINORA|CONTROL_CENTER|DEVELOPER|PRICING)_[A-Z0-9_]{1,100}$/.test(message)
+            ? message
+            : message === "Live directory bridge unavailable"
+              ? "DIRECTORY_BRIDGE_UNAVAILABLE"
+              : "DIRECTORY_UNEXPECTED_FAILURE";
+
         setError(
-          "Live server directory unavailable. Check the authenticated server connection.",
+          `Live server directory unavailable. Diagnostic: ${safeCode}`,
         );
       } finally {
         if (id === requestId.current) {

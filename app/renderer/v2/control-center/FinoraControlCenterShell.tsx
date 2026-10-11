@@ -1,3 +1,4 @@
+import { FinoraControlCenterServerEffectivePricingPanel } from "./FinoraControlCenterServerEffectivePricingPanel";
 import {
   FinoraControlCenterServerBranchDirectoryPanel,
   type FinoraSelectedServerBranchIdentity,
@@ -2613,13 +2614,17 @@ const [
         ) && (
           <>
                         {activeView === "BRANCHES" && (
-              <FinoraControlCenterLiveWalletPanel />
+              <>
+  {/* FINORA_P567X_TOP_WALLET_HIDDEN: Directory has wallet details. */}
+  {false && (<FinoraControlCenterLiveWalletPanel />)}
+</>
 )}
 {activeView === "BRANCHES" && (
   <>
     <FinoraControlCenterServerBranchDirectoryPanel
       onSelectionChange={setSelectedServerBranchIdentity}
     />
+    <FinoraControlCenterServerEffectivePricingPanel selected={selectedServerBranchIdentity} />
     {selectedServerBranchIdentity && (
       <section
         role="status"

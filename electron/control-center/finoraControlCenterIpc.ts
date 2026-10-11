@@ -1,3 +1,8 @@
+// FINORA_P567K - Read-only local-test pricing.
+import {
+  loadFinoraServerEffectivePricing,
+} from "./finoraServerEffectivePricingClient";
+
 import {
   loadFinoraServerBranchDirectory,
 } from "./finoraServerBranchDirectoryClient.js";
@@ -278,6 +283,8 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
 
   GET_TRUST_RECORD:
     "finora:control-center:get-trust-record",
+
+  GET_SERVER_EFFECTIVE_PRICING: "finora:control-center:get-server-effective-pricing",
 
   GET_SERVER_BRANCH_DIRECTORY:
     "finora:control-center:get-server-branch-directory",
@@ -1096,11 +1103,44 @@ export function registerFinoraControlCenterHandlers():
 
 try {
 
-  await verifyFinoraServerAdminCredential(
+  if (process.env.FINORA_LOCAL_CONTROL_CENTER_DIRECTORY === "1") {
+    // Local development API only; never silently fall back to production.
+    const response = await fetch(
+        "http://127.0.0.1:3000/admin/verify",
+        {
+            method: "GET",
+            headers: {
+                "x-finora-admin-key": apiKey,
+                accept: "application/json",
+            },
+            redirect: "error",
+            cache: "no-store",
+            signal: AbortSignal.timeout(10000),
+        },
+    );
 
-    apiKey,
+    if (response.status === 401 || response.status === 403) {
+        throw new Error(
+            "FINORA Server rejected the Control Center administrator credential.",
+        );
+    }
 
-  );
+    if (!response.ok) {
+        throw new Error("FINORA_LOCAL_ADMIN_VERIFY_FAILED");
+    }
+
+    const result: unknown = await response.json();
+
+    if (
+        !result ||
+        typeof result !== "object" ||
+        (result as { ok?: unknown }).ok !== true
+    ) {
+        throw new Error("FINORA_LOCAL_ADMIN_VERIFY_INVALID");
+    }
+} else {
+    await verifyFinoraServerAdminCredential(apiKey);
+}
 
 } catch (error) {
 
@@ -1687,6 +1727,80 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   // ----------------------------------------------------------
 
   // FINORA P1-566DC: Server-authoritative directory.
+  // FINORA_P567K - Protected, read-only effective pricing.
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_SERVER_EFFECTIVE_PRICING,
+    async (event, input: unknown) => {
+      if (!isTrustedFinoraControlCenterRenderer(event.senderFrame)) {
+        return failure("PRICING_RENDERER_NOT_TRUSTED");
+      }
+
+      if (
+        typeof input !== "object" ||
+        input === null ||
+        Array.isArray(input) ||
+        Object.getPrototypeOf(input) !== Object.prototype ||
+        Object.keys(input).length !== 3 ||
+        !["ownerId", "businessId", "branchId"].every(
+          key => Object.prototype.hasOwnProperty.call(input, key)
+        )
+      ) {
+        return failure("PRICING_IDENTITY_INVALID");
+      }
+
+      const identity = input as Record<string, unknown>;
+
+      const validId = (value: unknown): value is string =>
+        typeof value === "string" &&
+        value.length > 0 &&
+        value.length <= 128 &&
+        /^[A-Za-z0-9_-]+$/.test(value);
+
+      if (
+        !validId(identity.ownerId) ||
+        !validId(identity.businessId) ||
+        !validId(identity.branchId)
+      ) {
+        return failure("PRICING_IDENTITY_INVALID");
+      }
+
+      // FINORA_P567K: Explicit validated string identity.
+      // No unchecked 'unknown' reaches the pricing client.
+      const selectedIdentity = {
+        ownerId: identity.ownerId as string,
+        businessId: identity.businessId as string,
+        branchId: identity.branchId as string,
+      };
+
+      if (
+        process.env.FINORA_LOCAL_CONTROL_CENTER_DIRECTORY !== "1"
+      ) {
+        return failure("PRICING_LOCAL_TEST_DISABLED");
+      }
+
+      return executePrivileged(async () => {
+        const adminApiKey =
+          await readFinoraServerAdminCredential();
+
+        try {
+          return await loadFinoraServerEffectivePricing(
+            adminApiKey,
+            selectedIdentity
+          );
+        } catch (error) {
+          if (
+            error instanceof Error &&
+            error.message === "PRICING_ACCESS_DENIED"
+          ) {
+            await clearFinoraServerAdminCredential();
+          }
+
+          throw error;
+        }
+      });
+    }
+  );
+
   registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_SERVER_BRANCH_DIRECTORY,
     async (event, query: unknown) => {
