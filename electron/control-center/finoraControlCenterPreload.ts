@@ -1,3 +1,7 @@
+import type {
+  FinoraServerDirectoryPage,
+  FinoraServerDirectoryQuery,
+} from "./finoraServerBranchDirectoryClient.js";
 // ============================================================
 // FINORA ENTERPRISE OS
 //
@@ -67,6 +71,9 @@ const CONTROL_CENTER_CHANNELS = {
 
   GET_TRUST_RECORD:
     "finora:control-center:get-trust-record",
+
+  GET_SERVER_BRANCH_DIRECTORY:
+    "finora:control-center:get-server-branch-directory",
 
   GET_BRANCH_REGISTRY:
     "finora:control-center:get-branch-registry",
@@ -1223,6 +1230,12 @@ export interface FinoraControlCenterBridge {
         >
       >;
 
+  getServerBranchDirectory:
+    (
+      query?: FinoraServerDirectoryQuery,
+    ) => Promise<
+      FinoraControlCenterResult<FinoraServerDirectoryPage>
+    >;
   getBranchRegistry:
     () =>
       Promise<
@@ -1749,6 +1762,14 @@ const controlCenterBridge:
         >
       >,
 
+  getServerBranchDirectory:
+    (query) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.GET_SERVER_BRANCH_DIRECTORY,
+        query,
+      ) as Promise<
+        FinoraControlCenterResult<FinoraServerDirectoryPage>
+      >,
   getBranchRegistry:
     () =>
       ipcRenderer.invoke(

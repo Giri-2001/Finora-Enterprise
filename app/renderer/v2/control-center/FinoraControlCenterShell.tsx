@@ -1,3 +1,4 @@
+import { FinoraControlCenterServerBranchDirectoryPanel } from "./FinoraControlCenterServerBranchDirectoryPanel";
 import {
   Capacitor,
   registerPlugin,
@@ -2605,6 +2606,9 @@ const [
           <>
                         {activeView === "BRANCHES" && (
               <FinoraControlCenterLiveWalletPanel />
+)}
+{activeView === "BRANCHES" && (
+  <FinoraControlCenterServerBranchDirectoryPanel />
             )}
 
 

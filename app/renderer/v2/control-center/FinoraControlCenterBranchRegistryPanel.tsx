@@ -3210,7 +3210,7 @@ export default function FinoraControlCenterBranchRegistryPanel({
               0.72,
           }}
         >
-          No provisioned branches are registered yet.
+          No locally provisioned branch records on this device. Server-managed branches are listed above in Live Owners & Branches.
         </div>
       )}
 

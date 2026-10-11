@@ -1,3 +1,6 @@
+import {
+  loadFinoraServerBranchDirectory,
+} from "./finoraServerBranchDirectoryClient.js";
 // ============================================================
 // FINORA ENTERPRISE OS
 //
@@ -275,6 +278,9 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
 
   GET_TRUST_RECORD:
     "finora:control-center:get-trust-record",
+
+  GET_SERVER_BRANCH_DIRECTORY:
+    "finora:control-center:get-server-branch-directory",
 
   GET_BRANCH_REGISTRY:
     "finora:control-center:get-branch-registry",
@@ -1680,6 +1686,60 @@ registerFinoraDeveloperSecurityControlCenterHandler(
   // - No registry mutation capability crosses IPC.
   // ----------------------------------------------------------
 
+  // FINORA P1-566DC: Server-authoritative directory.
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_SERVER_BRANCH_DIRECTORY,
+    async (event, query: unknown) => {
+      if (!isTrustedFinoraControlCenterRenderer(event.senderFrame)) {
+        return failure("DIRECTORY_RENDERER_NOT_TRUSTED");
+      }
+
+      if (
+        query !== undefined &&
+        (
+          query === null ||
+          typeof query !== "object" ||
+          Array.isArray(query) ||
+          Object.getPrototypeOf(query) !== Object.prototype ||
+          Object.keys(query).some(
+            (key) => !["search", "limit", "offset"].includes(key),
+          )
+        )
+      ) {
+        return failure("DIRECTORY_QUERY_INVALID");
+      }
+
+      const input = query as
+        | { search?: unknown; limit?: unknown; offset?: unknown }
+        | undefined;
+
+      if (
+        (input?.search !== undefined &&
+          (typeof input.search !== "string" ||
+            input.search.length > 100)) ||
+        (input?.limit !== undefined &&
+          (typeof input.limit !== "number" ||
+            !Number.isSafeInteger(input.limit) ||
+            input.limit < 1 ||
+            input.limit > 100)) ||
+        (input?.offset !== undefined &&
+          (typeof input.offset !== "number" ||
+            !Number.isSafeInteger(input.offset) ||
+            input.offset < 0 ||
+            input.offset > 99999999))
+      ) {
+        return failure("DIRECTORY_QUERY_INVALID");
+      }
+
+      return executePrivileged(() =>
+        loadFinoraServerBranchDirectory({
+          search: input?.search as string | undefined,
+          limit: input?.limit as number | undefined,
+          offset: input?.offset as number | undefined,
+        }),
+      );
+    },
+  );
   registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_BRANCH_REGISTRY,
     async (
