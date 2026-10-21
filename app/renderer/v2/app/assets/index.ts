@@ -1,3 +1,3 @@
-import finoraLogo from "./finoraenterprise.png";
+import finoraLogo from "./finoraenterprise.png?url";
 
 export { finoraLogo };

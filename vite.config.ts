@@ -6,6 +6,10 @@ export default defineConfig({
 
   plugins: [react()],
 
+  // P1-686L: Explicit static asset recognition.
+  // PNG imports must resolve to asset URLs, not executable JS.
+  assetsInclude: ["**/*.png"],
+
   build: {
     rollupOptions: {
       input: {

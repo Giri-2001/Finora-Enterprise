@@ -74,7 +74,10 @@ const CONTROL_CENTER_CHANNELS = {
 
   GET_SERVER_EFFECTIVE_PRICING: "finora:control-center:get-server-effective-pricing",
 
-  GET_SERVER_BRANCH_DIRECTORY:
+    // FINORA_P1_594G2_DASHBOARD
+  GET_SERVER_DASHBOARD:
+    "finora:control-center:get-server-dashboard",
+GET_SERVER_BRANCH_DIRECTORY:
     "finora:control-center:get-server-branch-directory",
 
   GET_BRANCH_REGISTRY:
@@ -115,6 +118,10 @@ const CONTROL_CENTER_CHANNELS = {
 
   GET_SERVER_LIVE_WALLETS:
     "finora:control-center:get-server-live-wallets",
+  GET_SERVER_PENDING_RECHARGES:
+    "finora:control-center:get-server-pending-recharges",
+  DECIDE_SERVER_WALLET_RECHARGE:
+    "finora:control-center:decide-server-wallet-recharge",
 
   GET_FINORA_INCOME_PRICING:
     "finora:control-center:get-finora-income-pricing",
@@ -793,6 +800,60 @@ export interface FinoraServerLiveWalletPageView {
   offset: number;
   hasMore: boolean;
 }
+// FINORA_P1_590U_SAFE
+export interface FinoraServerPendingRechargeRecordView {
+  requestId: string;
+  amountInr: string;
+  paymentMethod: string;
+  status: "PENDING";
+  createdAt: string;
+  walletId: string;
+  balanceInr: string;
+  walletStatus: string;
+  branchId: string;
+  branchName: string;
+  branchStatus: string;
+  businessId: string;
+  businessName: string;
+  ownerId: string;
+  ownerName: string;
+}
+export interface FinoraServerPendingRechargePageView {
+  ok: true;
+  source: "POSTGRESQL_RECHARGE_REQUESTS";
+  requests: FinoraServerPendingRechargeRecordView[];
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
+// FINORA_P1_591D_DECISION_PRELOAD
+export type FinoraServerRechargeDecisionInputView =
+  | {
+      requestId: string;
+      decision: "APPROVE";
+      paymentVerified: true;
+      paymentReference: string;
+    }
+  | {
+      requestId: string;
+      decision: "DECLINE";
+      reason: string;
+    };
+
+export interface FinoraServerRechargeDecisionResultView {
+  ok: true;
+  source: "POSTGRESQL_RECHARGE_REQUESTS";
+  request: {
+    requestId: string;
+    walletId: string;
+    amountInr: string;
+    status: "APPROVED" | "DECLINED";
+    decidedAt: string;
+  };
+  replayed: boolean;
+}
+
 export interface FinoraServerProvisionOwnerInput {
   ownerName: string;
   mobile: string;
@@ -976,6 +1037,14 @@ export interface FinoraControlCenterIncomePricingInput {
 
   collectionAbove50000Fee:
     number;
+
+  subscription1MonthFee?: number;
+  subscription3MonthFee?: number;
+  subscription6MonthFee?: number;
+  subscription12MonthFee?: number;
+
+  pricingNoticeTitle?: string;
+  pricingNoticeMessage?: string;
 }
 
 export interface FinoraControlCenterIncomePricingView
@@ -1261,7 +1330,14 @@ export interface FinoraControlCenterBridge {
         missingChargeCodes: string[];
       }>
     >;
-  getServerBranchDirectory:
+    // FINORA_P1_594G2_DASHBOARD
+  getServerDashboard:
+    (query?: { page?: number; size?: number }) => Promise<
+      FinoraControlCenterResult<
+        import("./finoraServerDashboardClient").FinoraServerDashboardView
+      >
+    >;
+getServerBranchDirectory:
     (
       query?: FinoraServerDirectoryQuery,
     ) => Promise<
@@ -1394,6 +1470,16 @@ export interface FinoraControlCenterBridge {
     (input: { limit: number; offset: number }) =>
       Promise<
         FinoraControlCenterResult<FinoraServerLiveWalletPageView>
+      >;
+  getServerPendingRecharges:
+    (input: { limit: number; offset: number }) =>
+      Promise<
+        FinoraControlCenterResult<FinoraServerPendingRechargePageView>
+      >;
+  decideServerWalletRecharge:
+    (input: FinoraServerRechargeDecisionInputView) =>
+      Promise<
+        FinoraControlCenterResult<FinoraServerRechargeDecisionResultView>
       >;
 
   getFinoraIncomePricing:
@@ -1822,7 +1908,18 @@ const controlCenterBridge:
           missingChargeCodes: string[];
         }>
       >,
-  getServerBranchDirectory:
+    // FINORA_P1_594G2_DASHBOARD
+  getServerDashboard:
+    (query) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.GET_SERVER_DASHBOARD,
+        query,
+      ) as Promise<
+        FinoraControlCenterResult<
+          import("./finoraServerDashboardClient").FinoraServerDashboardView
+        >
+      >,
+getServerBranchDirectory:
     (query) =>
       ipcRenderer.invoke(
         CONTROL_CENTER_CHANNELS.GET_SERVER_BRANCH_DIRECTORY,
@@ -1946,6 +2043,22 @@ const controlCenterBridge:
         input,
       ) as Promise<
         FinoraControlCenterResult<FinoraServerLiveWalletPageView>
+      >,
+  getServerPendingRecharges:
+    (input) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.GET_SERVER_PENDING_RECHARGES,
+        input,
+      ) as Promise<
+        FinoraControlCenterResult<FinoraServerPendingRechargePageView>
+      >,
+  decideServerWalletRecharge:
+    (input) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.DECIDE_SERVER_WALLET_RECHARGE,
+        input,
+      ) as Promise<
+        FinoraControlCenterResult<FinoraServerRechargeDecisionResultView>
       >,
   provisionServerOwner:
     (input) =>

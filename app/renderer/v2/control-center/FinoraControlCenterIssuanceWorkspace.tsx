@@ -320,7 +320,7 @@ export default function FinoraControlCenterIssuanceWorkspace({
 
   const [serverProvisioningResult, setServerProvisioningResult] =
     useState<
-      import("../../../electron/control-center/finoraControlCenterPreload").FinoraServerProvisionOwnerView | undefined
+      import("../../../../electron/control-center/finoraControlCenterPreload").FinoraServerProvisionOwnerView | undefined
     >();
 
   const [serverAdminCredentialConfigured, setServerAdminCredentialConfigured] =
@@ -5377,7 +5377,6 @@ setEnrollmentOpenState(
         <FinoraControlCenterBusinessProfileForm
           target={target}
           initialProfileId={
-            selectedBranch?.profile?.profileId ??
             ""
           }
           initialBusinessCode={
@@ -5397,7 +5396,6 @@ setEnrollmentOpenState(
             ""
           }
           initialCreatedAt={
-            selectedBranch?.profile?.createdAt ??
             ""
           }
           initialUpdatedAt={

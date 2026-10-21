@@ -1860,26 +1860,10 @@ export async function createFinoraBranchLoginSession(
   }
 
   pruneExpiredSessions();
-
-  // ----------------------------------------------------------
-  // ONE ACTIVE MAIN-PROCESS SESSION PER CREDENTIAL
-  // ----------------------------------------------------------
-
-  for (
-    const [
-      existingSessionId,
-      existingRecord,
-    ] of activeSessions
-  ) {
-    if (
-      existingRecord.credentialId ===
-        principal.credentialId
-    ) {
-      activeSessions.delete(
-        existingSessionId,
-      );
-    }
-  }
+  // FINORA_P1_677O_MULTI_DEVICE_SESSIONS
+  // Preserve independently authenticated sessions for the same
+  // credential. Existing expiry, revocation and authorization
+  // validation continue to apply to every session.
 
   const now =
     authoritativeLoginTime;

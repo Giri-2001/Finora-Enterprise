@@ -234,13 +234,37 @@ function exactJsonEqual(
   right:
     unknown,
 ): boolean {
+  // FINORA_P1_673T_ORDER_INDEPENDENT_EQUALITY
+  // JSON object key order is not an authority difference.
+  // Arrays retain their original order.
+  const canonicalize = (value: unknown): unknown => {
+    if (Array.isArray(value)) {
+      return value.map(canonicalize);
+    }
+
+    if (
+      value !== null &&
+      typeof value === "object"
+    ) {
+      const object =
+        value as Record<string, unknown>;
+
+      const sorted:
+        Record<string, unknown> = {};
+
+      for (const key of Object.keys(object).sort()) {
+        sorted[key] = canonicalize(object[key]);
+      }
+
+      return sorted;
+    }
+
+    return value;
+  };
+
   return (
-    JSON.stringify(
-      left,
-    ) ===
-    JSON.stringify(
-      right,
-    )
+    JSON.stringify(canonicalize(left)) ===
+    JSON.stringify(canonicalize(right))
   );
 }
 
@@ -273,6 +297,79 @@ function buildServerFirstEvidence(
   };
 }
 
+/**
+ * FINORA_P1_675A_STRICT_LEGACY_IDENTITY
+ *
+ * A legacy USB credential is never automatically a server-first
+ * credential. This guard verifies immutable scope only.
+ *
+ * No signing authority is fabricated, no USB state is changed,
+ * and this function grants no login authorization.
+ */
+function legacyPortableIdentityMatchesServer(
+  portable: FinoraPortableBranchAuthPayloadV1,
+  server: FinoraServerFirstLoginBootstrapPayloadV1,
+): boolean {
+  const evidence =
+    portable.sourceAuthorizationVerificationEvidence;
+
+  if (
+    !("legacyNativeBoundMigrationEvidence" in evidence)
+  ) {
+    return false;
+  }
+
+  const legacy =
+    evidence.legacyNativeBoundMigrationEvidence;
+
+  return (
+    evidence.authorizationId ===
+      legacy.sourceAuthorizationId &&
+    portable.sourceAuthorizationId ===
+      legacy.sourceAuthorizationId &&
+    // P1-675X: Old and new authorization IDs may differ.
+    // Both must be present; migration still requires a separate
+    // server-signed authorization before any credential replacement.
+    typeof server.sourceAuthorizationId === "string" &&
+    server.sourceAuthorizationId.trim().length > 0 &&
+
+    portable.ownerId === server.ownerId &&
+    legacy.ownerId === server.ownerId &&
+
+    portable.businessId === server.businessId &&
+    legacy.businessId === server.businessId &&
+
+    portable.branchId === server.branchId &&
+    legacy.branchId === server.branchId &&
+
+    portable.userId === server.userId &&
+    legacy.userId === server.userId &&
+
+    portable.username === server.username &&
+    legacy.username === server.username &&
+
+    portable.canonicalUsername ===
+      server.canonicalUsername &&
+
+    portable.fullName === server.fullName &&
+    portable.role === server.role &&
+
+    portable.storageMode === "USB" &&
+    legacy.storageMode === "USB" &&
+    server.storageMode === "USB" &&
+
+    portable.dataContext === "REAL" &&
+    server.dataContext === "REAL" &&
+
+    portable.authGeneration ===
+      legacy.authGeneration &&
+    legacy.authGeneration ===
+      server.authGeneration &&
+
+    portable.branchCertificationKeyMaterial !==
+      undefined
+  );
+}
 function portablePayloadMatchesServerAuthority(
   portable:
     FinoraPortableBranchAuthPayloadV1,
@@ -293,6 +390,41 @@ function portablePayloadMatchesServerAuthority(
   ) {
     return false;
   }
+  // FINORA_P1_673H_AUTHORITY_DIAGNOSTIC
+  // Log field names only. Never log credential or authority values.
+  const signedPayload = evidence.signedBootstrap.payload;
+
+  const comparedFields = [
+    "sourceAuthorizationId",
+    "ownerId",
+    "businessId",
+    "branchId",
+    "userId",
+    "username",
+    "canonicalUsername",
+    "fullName",
+    "role",
+    "storageMode",
+    "dataContext",
+    "authGeneration",
+    "issuedAt",
+  ] as const;
+
+  const mismatches: string[] = [];
+
+  for (const field of comparedFields) {
+    if (!exactJsonEqual(signedPayload[field], server[field])) {
+      mismatches.push(field);
+    }
+  }
+
+  if (mismatches.length > 0) {
+    console.warn(
+      "[FINORA AUTHORITY FIELD MISMATCH]",
+      mismatches.join(","),
+    );
+  }
+
 
   return (
     evidence.authorizationId ===
@@ -508,10 +640,7 @@ export async function enrollFinoraServerFirstLogin(
       "string" ||
     request.password.length ===
       0 ||
-    typeof request.securityCode !==
-      "string" ||
-    request.securityCode.length ===
-      0 ||
+    (request.securityCode !== undefined && typeof request.securityCode !== "string") ||
     typeof request.selectedUsbRoot !==
       "string" ||
     request.selectedUsbRoot.trim().length ===
@@ -659,24 +788,208 @@ export async function enrollFinoraServerFirstLogin(
         );
 
       const securityPayload =
-        await decryptFinoraPortableBranchAuthEnvelopeV2WithRecoveryCode(
-          portableEnvelope,
-          request.securityCode,
-        );
+          request.securityCode
+            ? await decryptFinoraPortableBranchAuthEnvelopeV2WithRecoveryCode(
+                portableEnvelope,
+                request.securityCode,
+              )
+            : passwordPayload;
+
+        if (
+          !exactJsonEqual(
+            passwordPayload,
+            securityPayload,
+          )
+        ) {
+          return failure(
+            "PORTABLE_AUTH_CONFLICT",
+            "PORTABLE_TWO_FACTOR_PAYLOAD_MISMATCH",
+          );
+        }
 
       if (
-        !exactJsonEqual(
-          passwordPayload,
-          securityPayload,
-        ) ||
         !portablePayloadMatchesServerAuthority(
           passwordPayload,
           server,
         )
       ) {
+        // FINORA_P1_675A_LEGACY_MIGRATION_GUARD
+        // Classification only; never bypass signature checks.
+        if (
+          "legacyNativeBoundMigrationEvidence" in
+            passwordPayload.sourceAuthorizationVerificationEvidence &&
+          !legacyPortableIdentityMatchesServer(
+            passwordPayload,
+            server,
+          )
+        ) {
+          return failure(
+            "PORTABLE_AUTH_CONFLICT",
+            "LEGACY_SERVER_IDENTITY_MISMATCH",
+          );
+        }
+        // FINORA_P1_673N_TYPE_SAFE_CLASSIFICATION
+        // Diagnostics only. Preserve all existing authentication checks.
+                // FINORA_P1_675G_LEGACY_MIGRATION_REQUIRED
+        // Existing legacy USB authority cannot be silently
+        // converted into a new server-signed authority.
+        //
+        // The online server must explicitly authorize migration.
+        // No local auth replacement or runtime mutation is allowed.
+        if (
+          "legacyNativeBoundMigrationEvidence" in
+            securityPayload.sourceAuthorizationVerificationEvidence
+        ) {
+          const identityMatches =
+            legacyPortableIdentityMatchesServer(
+              securityPayload,
+              server,
+            );
+
+          return failure(
+            "PORTABLE_AUTH_CONFLICT",
+            identityMatches
+              ? "LEGACY_SERVER_MIGRATION_REQUIRED"
+              : "LEGACY_SERVER_IDENTITY_OR_AUTHORITY_MISMATCH",
+          );
+        }
+const verifiedEvidence =
+          securityPayload.sourceAuthorizationVerificationEvidence;
+
+        const signedBootstrapMatches =
+          verifiedEvidence &&
+          "provenanceType" in verifiedEvidence &&
+          verifiedEvidence.provenanceType ===
+            "SERVER_FIRST_LOGIN_SIGNED_BOOTSTRAP" &&
+          exactJsonEqual(
+            verifiedEvidence.signedBootstrap.payload,
+            server,
+          );
+
+        // FINORA_P1_673Q_SIGNED_FIELD_DIAGNOSIS
+        // Diagnostic only: expose field NAMES, never values.
+        const signedFieldsDiffering: string[] = [];
+
+        if (
+          verifiedEvidence &&
+          "provenanceType" in verifiedEvidence &&
+          verifiedEvidence.provenanceType ===
+            "SERVER_FIRST_LOGIN_SIGNED_BOOTSTRAP"
+        ) {
+          const oldSigned =
+            verifiedEvidence.signedBootstrap.payload;
+
+          const currentSigned = server;
+
+          const safeFields = [
+            "authorityId",
+            "sourceAuthorizationId",
+            "credentialId",
+            "activationId",
+            "branchAccessGrantId",
+            "storageEntitlementId",
+            "authGeneration",
+            "ownerId",
+            "businessId",
+            "branchId",
+            "userId",
+            "username",
+            "canonicalUsername",
+            "fullName",
+            "role",
+            "businessName",
+            "branchName",
+            "storageMode",
+            "subscriptionId",
+            "subscriptionStatus",
+            "accessValidFrom",
+            "accessValidUntil",
+            "issuedAt",
+          ] as const;
+
+          for (const field of safeFields) {
+            if (
+              !exactJsonEqual(
+                oldSigned[field],
+                currentSigned[field],
+              )
+            ) {
+              signedFieldsDiffering.push(field);
+            }
+          }
+        }
+
+        const reason = signedBootstrapMatches
+          ? "PORTABLE_METADATA_MISMATCH"
+          : signedFieldsDiffering.length > 0
+            ? "SIGNED_FIELDS_CHANGED:" +
+              signedFieldsDiffering.join(",")
+            : (() => {
+  // FINORA_P1_673Y_COMPLETE_FIELD_DIFF
+  // Return only field names, never values.
+  const oldPayload =
+    verifiedEvidence &&
+    "provenanceType" in verifiedEvidence &&
+    verifiedEvidence.provenanceType ===
+      "SERVER_FIRST_LOGIN_SIGNED_BOOTSTRAP"
+      ? verifiedEvidence.signedBootstrap.payload
+      : null;
+
+  if (!oldPayload) {
+    return (
+  "SIGNED_PROVENANCE_MISMATCH:" +
+  (
+    verifiedEvidence &&
+    "legacyNativeBoundMigrationEvidence" in verifiedEvidence
+      ? "LEGACY_NATIVE_BOUND"
+      : verifiedEvidence &&
+        "verifiedControlSigner" in verifiedEvidence
+        ? "CONTROL_SIGNER"
+        : verifiedEvidence &&
+          "provenanceType" in verifiedEvidence
+          ? "UNEXPECTED_PROVENANCE"
+          : "UNKNOWN_EVIDENCE"
+  )
+);
+  }
+
+  const previous =
+    oldPayload as unknown as Record<string, unknown>;
+
+  const current =
+    server as unknown as Record<string, unknown>;
+
+  const fields = Array.from(
+    new Set([
+      ...Object.keys(previous),
+      ...Object.keys(current),
+    ]),
+  ).sort();
+
+  const differing = fields.filter(
+    (field) =>
+      !Object.prototype.hasOwnProperty.call(
+        previous,
+        field,
+      ) ||
+      !Object.prototype.hasOwnProperty.call(
+        current,
+        field,
+      ) ||
+      !exactJsonEqual(
+        previous[field],
+        current[field],
+      ),
+  );
+
+  return differing.length > 0
+    ? "SIGNED_FIELDS_CHANGED:" + differing.join(",")
+    : "SIGNED_PAYLOAD_STRUCTURE_MISMATCH";
+})();
+
         return failure(
           "PORTABLE_AUTH_CONFLICT",
-          "Existing FINORA Portable Auth does not match this server-first authority.",
+          reason,
         );
       }
 
@@ -689,8 +1002,17 @@ export async function enrollFinoraServerFirstLogin(
         "Existing FINORA Portable Auth cannot be resumed with these verified credentials.",
       );
     }
-  }
-  else {
+  }  else {
+    // FINORA_P1_677R_FRESH_USB_NO_INCOMPLETE_ENCRYPTION
+    // No recovery credential means no new V2 envelope creation.
+    // Do not substitute a dummy code or overwrite USB state.
+    if (!request.securityCode) {
+      return failure(
+        "PORTABLE_AUTH_FAILED",
+        "FRESH_USB_RECOVERY_ENROLLMENT_REQUIRED",
+      );
+    }
+
     const certificationKeyMaterial =
       generateFinoraBranchCertificationKeyMaterial(
         new Date(
@@ -823,11 +1145,33 @@ export async function enrollFinoraServerFirstLogin(
       material.envelope;
 
     try {
-      portablePayload =
+      // FINORA_P1_578JL_VERIFY_BOTH_FACTORS_AFTER_V2_WRITE
+      const passwordVerifiedPayload =
         await decryptFinoraPortableBranchAuthEnvelopeV2WithPassword(
           portableEnvelope,
           request.password,
         );
+
+      const securityCodeVerifiedPayload =
+        await decryptFinoraPortableBranchAuthEnvelopeV2WithRecoveryCode(
+          portableEnvelope,
+          request.securityCode,
+        );
+
+      if (
+        !exactJsonEqual(
+          passwordVerifiedPayload,
+          securityCodeVerifiedPayload,
+        )
+      ) {
+        return failure(
+          "PORTABLE_AUTH_FAILED",
+          "FINORA Portable Auth V2 post-write factor verification failed.",
+        );
+      }
+
+      portablePayload =
+        passwordVerifiedPayload;
     }
     catch {
       return failure(

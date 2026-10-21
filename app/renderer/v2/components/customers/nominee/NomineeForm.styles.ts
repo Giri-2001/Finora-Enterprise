@@ -100,7 +100,7 @@ export function createNomineeFormStyles(
     tokens.spacing;
 
 
-  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  return {
 
 
     /* =======================================================
@@ -336,7 +336,6 @@ labelStyle: {
   textTransform:
     "uppercase",
 
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 },
 
 
@@ -419,8 +418,6 @@ inputStyle: {
     theme.components.input.text,
 
   fontSize: "12px",
-
-  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
 
   fontWeight: 650,
 },

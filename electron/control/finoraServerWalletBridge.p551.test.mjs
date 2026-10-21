@@ -53,7 +53,7 @@ test("facade exposes only five frozen wallet methods", () => {
   const f = fixture();
   const bridge = resolve(f.host);
   assert.deepEqual(Object.keys(bridge).sort(),
-    ["balance", "enroll", "logout", "recharge", "signIn"]);
+    ["balance", "enroll", "logout", "pricing", "recharge", "recharges", "recovery", "signIn", "subscriptionPending", "subscriptionPurchase", "subscriptionResume", "transactions"]);
   assert.equal(Object.isFrozen(bridge), true);
 });
 

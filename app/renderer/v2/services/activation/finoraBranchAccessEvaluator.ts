@@ -619,7 +619,7 @@ export function evaluateFinoraBranchAccess(
         grant.accessType ===
           "DEMO"
           ? "FINORA Demo access has expired."
-          : "FINORA annual registration has expired.",
+          : "Subscription expired. Renew to continue.",
 
       grant,
     };

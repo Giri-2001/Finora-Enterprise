@@ -60,6 +60,10 @@ import { usbStorageAdapter } from "./adapters/usbStorage.adapter";
 // ============================================================
 
 export class StorageManager {
+
+  // FINORA_P1_589R_LIFECYCLE_REVISION
+  // Invalidate operations as soon as a context transition starts.
+  private lifecycleRevision = 0;
   // ==========================================================
   // REGISTERED ADAPTERS
   // ==========================================================
@@ -141,6 +145,8 @@ export class StorageManager {
   async initialize(
     configuration?: StorageConfiguration,
   ): Promise<StorageResult<void>> {
+    this.lifecycleRevision++;
+
     // --------------------------------------------------------
     // EXPLICIT CONFIGURATION
     //
@@ -200,6 +206,9 @@ export class StorageManager {
   async selectStorageMode(
     storageMode: StorageMode,
   ): Promise<StorageResult<void>> {
+    this.lifecycleRevision++;
+    const modeRevision = this.lifecycleRevision;
+
     const nextConfiguration: StorageConfiguration = {
       ...this.configuration,
 
@@ -287,6 +296,15 @@ export class StorageManager {
       }
     }
 
+    // FINORA_P1_589Z_MODE_REVISION
+    // Reject an older async selection after a newer transition.
+    if (this.lifecycleRevision !== modeRevision) {
+      return {
+        success: false,
+        error: "Storage mode selection superseded by a newer transition.",
+      };
+    }
+
     this.configuration = nextConfiguration;
 
     this.initialized = true;
@@ -317,6 +335,10 @@ export class StorageManager {
       storageId?: string;
     },
   ): Promise<StorageResult<void>> {
+    // FINORA_P1_589V_CONTEXT_REVISION
+    // Invalidate pending operations before tenant transition starts.
+    this.lifecycleRevision++;
+    const contextRevision = this.lifecycleRevision;
     const nextConfiguration: StorageConfiguration = {
       ...this.configuration,
 
@@ -402,6 +424,15 @@ export class StorageManager {
       };
     }
 
+    // FINORA_P1_589W_STALE_CONTEXT
+    // A newer context request supersedes this async completion.
+    if (this.lifecycleRevision !== contextRevision) {
+      return {
+        success: false,
+        error: "Storage context changed during initialization. Retry from the active branch.",
+      };
+    }
+
     this.configuration = nextConfiguration;
 
     this.initialized = true;
@@ -435,6 +466,8 @@ export class StorageManager {
   // ==========================================================
 
   async resetDataContext(): Promise<StorageResult<void>> {
+    this.lifecycleRevision++;
+
     const nextConfiguration: StorageConfiguration = {
       storageMode: this.configuration.storageMode,
 
@@ -500,6 +533,8 @@ export class StorageManager {
   // ==========================================================
 
   async resetFinoraData(): Promise<StorageResult<void>> {
+    this.lifecycleRevision++;
+
     const adapter = this.getActiveAdapter();
 
     if (!adapter) {
@@ -528,6 +563,10 @@ export class StorageManager {
   // ==========================================================
   // GET CURRENT CONFIGURATION
   // ==========================================================
+
+  getLifecycleRevision(): number {
+    return this.lifecycleRevision;
+  }
 
   getConfiguration(): StorageConfiguration {
     return {

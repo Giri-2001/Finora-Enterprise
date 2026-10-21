@@ -93,6 +93,14 @@ export interface FinoraPortableBranchAuthCredentialRotationTransactionV2 {
   sourceAuthorizationVerificationEvidence:
     FinoraPortableBranchAuthSourceAuthorizationVerificationEvidenceV1;
 
+  /*
+   * FINORA_P1_578XG_DURABLE_NATIVE_AUTHORITY
+   * Optional for old persisted V2 transactions.
+   * New native reconvergence persists this exact authority discriminator.
+   */
+  credentialMutationAuthority?:
+    "CONTROL_AUTHENTICATED_NATIVE_RECONVERGENCE";
+
   credentialId:
     string;
 
@@ -608,6 +616,16 @@ export function validateFinoraPortableBranchAuthCredentialRotationTransactionV2(
   ) {
     throw new Error(
       "Credential rotation source authorization evidence does not match sourceAuthorizationId.",
+    );
+  }
+
+  if (
+    transaction.credentialMutationAuthority !== undefined &&
+    transaction.credentialMutationAuthority !==
+      "CONTROL_AUTHENTICATED_NATIVE_RECONVERGENCE"
+  ) {
+    throw new Error(
+      "Credential rotation mutation authority is invalid.",
     );
   }
 

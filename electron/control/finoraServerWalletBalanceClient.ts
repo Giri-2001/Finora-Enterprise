@@ -1,6 +1,8 @@
 const FINORA_WALLET_API_BASE =
-  process.env.FINORA_LOCAL_WALLET_TEST === "1"
-    ? "http://127.0.0.1:3000"
+  process.env.FINORA_LOCAL_WALLET_SSO_3002 === "1"
+      ? "http://127.0.0.1:3002"
+      : process.env.FINORA_LOCAL_WALLET_TEST === "1"
+    ? "http://127.0.0.1:3001"
     : "https://api.finoraenterprise.com";
 // Main-process client. Never persist tokens or use local wallet fallback.
 // Session acquisition and branch association must be enforced by the caller.

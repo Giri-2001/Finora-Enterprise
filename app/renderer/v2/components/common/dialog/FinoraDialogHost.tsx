@@ -1,4 +1,5 @@
-﻿// ============================================================
+import { CheckCircle2, XCircle, TriangleAlert, Info } from "lucide-react";
+// ============================================================
 // FINORA ENTERPRISE OSâ„¢
 //
 // GLOBAL PREMIUM DIALOG HOST
@@ -233,11 +234,11 @@ export default function FinoraDialogHost() {
             aria-hidden="true"
           >
             <span className="finora-dialog-icon-mark">
-  {dialog.type === "success" ? (
+  {activeRequest.kind === "success" ? (
     <CheckCircle2 size={28} strokeWidth={2.2} />
-  ) : dialog.type === "error" ? (
+  ) : activeRequest.kind === "error" ? (
     <XCircle size={28} strokeWidth={2.2} />
-  ) : dialog.type === "warning" ? (
+  ) : activeRequest.kind === "warning" ? (
     <TriangleAlert size={28} strokeWidth={2.2} />
   ) : (
     <Info size={28} strokeWidth={2.2} />

@@ -139,18 +139,17 @@ export async function loadFinoraServerBranchDirectory(
 
   // Explicit local-test opt-in. Production endpoint must be
   // configured after deployment, TLS and staff auth verification.
-  if (
-    process.env.FINORA_LOCAL_CONTROL_CENTER_DIRECTORY !== "1"
-  ) {
-    throw new Error("DIRECTORY_SERVER_CONFIGURATION_REQUIRED");
-  }
+  // P1-631E: Production HTTPS, or explicit local development.
+  const localTest =
+    process.env.FINORA_LOCAL_CONTROL_CENTER_DIRECTORY === "1" &&
+    process.env.NODE_ENV !== "production";
 
   if (typeof transport !== "function") {
     throw new Error("DIRECTORY_TRANSPORT_UNAVAILABLE");
   }
 
   const url = new URL(
-    "http://127.0.0.1:3000/admin/branches/directory",
+    `${localTest ? "http://127.0.0.1:3000" : "https://api.finoraenterprise.com"}/admin/branches/directory`,
   );
 
   url.searchParams.set("limit", String(limit));

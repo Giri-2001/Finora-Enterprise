@@ -98,9 +98,7 @@ import type {
 } from "../../../../utils/responsive/tokens";
 
 
-import {
-  loadWalletBalance,
-} from "../../../../services/wallet/walletWorkspaceService";
+import { getFinoraServerWalletBridge } from "../../../../services/wallet/finoraServerWalletBridge";
 
 import {
   subscribeWalletBalanceUpdates,
@@ -282,44 +280,61 @@ export default function GlobalHeader({
       return;
     }
 
-    const walletScope = {
-      ownerId:
-        walletOwnerId,
-
-      businessId:
-        walletBusinessId,
-
-      branchId:
-        walletBranchId,
-    };
+    // FINORA_P1_582F_VERIFIED_HEADER
+    // Never use a workspace balance as a substitute for PostgreSQL.
+    let requestNumber = 0;
+    setWalletBalance(null);
 
     async function refreshHeaderWalletBalance(): Promise<void> {
-      const result =
-        await loadWalletBalance(
-          walletScope,
-        );
+      const thisRequest = ++requestNumber;
+      const bridge = getFinoraServerWalletBridge();
 
-      if (cancelled) {
+      if (!bridge) {
+        if (!cancelled && thisRequest === requestNumber) {
+          setWalletBalance(null);
+        }
         return;
       }
 
-      if (!result.success) {
-        console.error(
-          "FINORA GLOBAL HEADER WALLET ERROR:",
-          result.error,
-        );
+      try {
+        const result = await bridge.balance();
+        if (cancelled || thisRequest !== requestNumber) return;
 
+        if (!result.success) {
+          setWalletBalance(null);
+          return;
+        }
+
+        const value = result.data;
+        if (
+          value.source !== "POSTGRESQL_WALLETS" ||
+          value.currency !== "INR" ||
+          !/^(0|[1-9][0-9]{0,9})\.[0-9]{2}$/.test(value.balanceInr) ||
+          !/^[0-9]{8,12}$/.test(value.walletId)
+        ) {
+          setWalletBalance(null);
+          return;
+        }
+
+        const amount = Number(value.balanceInr);
         setWalletBalance(
-          null,
+          Number.isFinite(amount) && amount >= 0 ? amount : null
         );
-
-        return;
+      } catch {
+        if (!cancelled && thisRequest === requestNumber) {
+          setWalletBalance(null);
+        }
       }
-
-      setWalletBalance(
-        result.data.availableBalance,
-      );
     }
+
+    const onVerifiedBalanceRefresh = () => {
+      void refreshHeaderWalletBalance();
+    };
+
+    window.addEventListener(
+      "finora:verified-wallet-balance-refresh",
+      onVerifiedBalanceRefresh,
+    );
 
     const unsubscribe =
       subscribeWalletBalanceUpdates(
@@ -335,6 +350,10 @@ export default function GlobalHeader({
         true;
 
       unsubscribe();
+      window.removeEventListener(
+        "finora:verified-wallet-balance-refresh",
+        onVerifiedBalanceRefresh,
+      );
     };
   }, [
     walletOwnerId,

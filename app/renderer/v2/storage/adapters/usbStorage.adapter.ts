@@ -87,6 +87,10 @@ export class USBStorageAdapter
   // CURRENT STATUS
   // ----------------------------------------------------------
 
+  // FINORA_P1_590B_STATUS_GENERATION
+  // Only the newest USB status request may update shared status.
+  private statusRequestRevision = 0;
+
   private status:
     StorageStatus = {
 
@@ -125,6 +129,8 @@ export class USBStorageAdapter
     Promise<
       StorageResult
     > {
+
+    this.statusRequestRevision++;
 
     if (
       configuration.storageMode !==
@@ -212,6 +218,8 @@ export class USBStorageAdapter
   async isAvailable():
     Promise<boolean> {
 
+    const requestRevision = ++this.statusRequestRevision;
+
     const bridge =
       getFinoraUsbBridge();
 
@@ -240,6 +248,8 @@ export class USBStorageAdapter
 
       const available =
         await bridge.isAvailable();
+
+      if (requestRevision !== this.statusRequestRevision) return false;
 
 
       if (!available) {
@@ -280,6 +290,8 @@ export class USBStorageAdapter
       return true;
 
     } catch (error) {
+
+      if (requestRevision !== this.statusRequestRevision) return false;
 
       this.status = {
 
@@ -326,6 +338,8 @@ export class USBStorageAdapter
   private async refreshStatus():
     Promise<void> {
 
+    const requestRevision = ++this.statusRequestRevision;
+
     const bridge =
       getFinoraUsbBridge();
 
@@ -361,6 +375,8 @@ export class USBStorageAdapter
         const result =
           await bridge.getStatus();
 
+        if (requestRevision !== this.statusRequestRevision) return;
+
 
         this.status = {
 
@@ -383,6 +399,8 @@ export class USBStorageAdapter
         return;
 
       } catch (error) {
+
+        if (requestRevision !== this.statusRequestRevision) return;
 
         this.status = {
 

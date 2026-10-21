@@ -1,6 +1,6 @@
+import { finoraControlShared } from "../../services/finoraControlShared";
 import {
   Capacitor,
-  registerPlugin,
 } from "@capacitor/core";
 
 interface FinoraRecipientTrustPairingResult {
@@ -15,9 +15,7 @@ interface FinoraRecipientTrustNativeBridge {
 }
 
 const finoraRecipientTrustNative =
-  registerPlugin<FinoraRecipientTrustNativeBridge>(
-    "FinoraControl",
-  );
+  finoraControlShared as FinoraRecipientTrustNativeBridge;
 /* ============================================================
    FINORA ENTERPRISE OS™
 

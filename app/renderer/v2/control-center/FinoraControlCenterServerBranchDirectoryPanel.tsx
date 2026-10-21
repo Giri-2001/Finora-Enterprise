@@ -104,18 +104,20 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
   }, [onSelectionChange]);
 
   const load = useCallback(
-    async (nextSearch: string, nextOffset: number) => {
+    async (nextSearch: string, nextOffset: number, silent = false) => {
       const id = ++requestId.current;
       currentQuery.current = {
         search: nextSearch,
         offset: nextOffset,
       };
 
-      setLoading(true);
-      setError(null);
-
-      // Never retain stale financial data during a fresh read.
-      setPage(null);
+      // Initial/manual reads show loading. Background reads keep
+      // verified cards visible until a fresh server response arrives.
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+        setPage(null);
+      }
 
       try {
         const bridge = getBridge();
@@ -152,10 +154,11 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
 
         // P1-566DR: Keep a read-only selection only when the
         // same identity still exists and remains ACTIVE.
+        const verifiedBranches = response.data.branches;
         setSelectedServerIdentity((selected) => {
           if (!selected) return null;
 
-          const stillActive = response.data.branches.some(
+          const stillActive = verifiedBranches.some(
             (branch) =>
               branch.owner_id === selected.ownerId &&
               branch.business_id === selected.businessId &&
@@ -166,6 +169,7 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
           return stillActive ? selected : null;
         });
 
+        setError(null);
         setPage(response.data);
       } catch (error) {
         if (id !== requestId.current) return;
@@ -186,7 +190,7 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
           `Live server directory unavailable. Diagnostic: ${safeCode}`,
         );
       } finally {
-        if (id === requestId.current) {
+        if (id === requestId.current && !silent) {
           setLoading(false);
         }
       }
@@ -199,7 +203,7 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
 
     const timer = setInterval(() => {
       const query = currentQuery.current;
-      void load(query.search, query.offset);
+      void load(query.search, query.offset, true);
     }, REFRESH_MS);
 
     return () => {

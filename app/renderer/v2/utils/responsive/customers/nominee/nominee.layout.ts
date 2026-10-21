@@ -317,7 +317,7 @@ export function createStep5NomineeStyles(
      RETURN
   ========================================================= */
 
-    return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    return {
 
     containerStyle,
 

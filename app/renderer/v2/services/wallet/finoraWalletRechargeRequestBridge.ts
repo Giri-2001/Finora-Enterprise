@@ -1,3 +1,4 @@
+import { finoraControlShared } from "../finoraControlShared";
 /* ============================================================
    FINORA ENTERPRISE OS™
 
@@ -66,9 +67,7 @@ export interface FinoraWalletControlBundleImportBridge {
 
 
 const androidControl =
-  registerPlugin<FinoraWalletRechargeRequestBridge>(
-    "FinoraControl",
-  );
+  finoraControlShared as FinoraWalletRechargeRequestBridge;
 
 
 const androidControlBundleImport =

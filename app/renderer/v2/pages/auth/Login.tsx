@@ -1,3 +1,5 @@
+import { finoraControlShared } from "../../services/finoraControlShared";
+import { getFinoraServerWalletBridge } from "../../services/wallet/finoraServerWalletBridge";
 import { getFinoraAndroidServerFirstV2Recovery } from "../../services/auth/loginSessionBridge";
 import { Capacitor as FinoraP1075Capacitor } from "@capacitor/core";
 import {
@@ -127,7 +129,7 @@ import {
 } from "./Login.styles";
 
 import finoraLogo
-  from "../../app/assets/finoraenterprise.png";
+  from "../../app/assets/finoraenterprise.png?url";
 
 
 // ============================================================
@@ -203,6 +205,60 @@ async function activateStorageMode(
 // COMPONENT
 // ============================================================
 
+// FINORA_P1_678R_ACCOUNT_LOGIN_UI
+// Account/Wallet authentication is separate from Business Login.
+// The Account token is never exposed to this Renderer.
+type FinoraAccountLoginResponse = {
+  success: boolean;
+  errorCode?: string;
+  sessionType?: "ACCOUNT_WALLET_ONLY";
+  businessDataAccess: false;
+};
+
+async function authenticateFinoraAccountOnly(
+  username: string,
+  password: string,
+): Promise<FinoraAccountLoginResponse> {
+  const host = window as Window & {
+    finoraAccountLogin?: {
+      login: (input: {
+        username: string;
+        password: string;
+      }) => Promise<FinoraAccountLoginResponse>;
+    };
+  };
+
+  if (!host.finoraAccountLogin?.login) {
+    return {
+      success: false,
+      errorCode: "ACCOUNT_LOGIN_BRIDGE_UNAVAILABLE",
+      businessDataAccess: false,
+    };
+  }
+
+  const result = await host.finoraAccountLogin.login({
+    username,
+    password,
+  });
+
+  if (
+    result.success !== true ||
+    result.sessionType !== "ACCOUNT_WALLET_ONLY" ||
+    result.businessDataAccess !== false
+  ) {
+    return {
+      success: false,
+      errorCode: result.errorCode ?? "ACCOUNT_LOGIN_FAILED",
+      businessDataAccess: false,
+    };
+  }
+
+  return {
+    success: true,
+    sessionType: "ACCOUNT_WALLET_ONLY",
+    businessDataAccess: false,
+  };
+}
 export default function Login({
   onLogin,
 }: LoginProps) {
@@ -320,7 +376,12 @@ export default function Login({
   ] = useState("");
 
 
-  const [
+    // FINORA_P1_579NM_WALLET_ACTIVATION
+  // Explicit one-time enrollment only; never persisted.
+  const [activateWalletOnce, setActivateWalletOnce] = useState(false);
+  const [walletEnrollmentCode, setWalletEnrollmentCode] = useState("");
+
+const [
     forgotConfirmNewPassword,
     setForgotConfirmNewPassword,
   ] = useState<string>("");
@@ -334,6 +395,22 @@ export default function Login({
     forgotSecurityCode,
     setForgotSecurityCode,
   ] = useState<string>("");
+
+  // FINORA_P1_578IR_RESET_UI
+  const [
+    showForgotConfirmNewPassword,
+    setShowForgotConfirmNewPassword,
+  ] = useState<boolean>(false);
+
+  const [
+    showForgotNewPassword,
+    setShowForgotNewPassword,
+  ] = useState<boolean>(false);
+
+  const [
+    showForgotSecurityCode,
+    setShowForgotSecurityCode,
+  ] = useState<boolean>(false);
 
   const [
     forgotPasswordMode,
@@ -359,6 +436,32 @@ export default function Login({
   // Preserve it across uncertain retries; never persist it.
   const forgotPasswordRecoveryRequestIdRef =
     useRef<string | null>(null);
+
+  // FINORA_P1_578MA_SECURITY_CODE_RECOVERY_UI
+  const [securityCodeRecoveryMode, setSecurityCodeRecoveryMode] = useState(false);
+  const [securityCodeRecoveryPassword, setSecurityCodeRecoveryPassword] = useState("");
+  const [securityCodeRecoveryNewCode, setSecurityCodeRecoveryNewCode] = useState("");
+  const [securityCodeRecoveryConfirmCode, setSecurityCodeRecoveryConfirmCode] = useState("");
+
+  // FINORA_P1_578NQ_SECURITY_RECOVERY_EYE_TOGGLES
+  const [
+    showSecurityCodeRecoveryPassword,
+    setShowSecurityCodeRecoveryPassword,
+  ] = useState(false);
+
+  const [
+    showSecurityCodeRecoveryNewCode,
+    setShowSecurityCodeRecoveryNewCode,
+  ] = useState(false);
+
+  const [
+    showSecurityCodeRecoveryConfirmCode,
+    setShowSecurityCodeRecoveryConfirmCode,
+  ] = useState(false);
+  const [securityCodeRecoveryBusy, setSecurityCodeRecoveryBusy] = useState(false);
+  const [securityCodeRecoveryError, setSecurityCodeRecoveryError] = useState<string | undefined>();
+  const [securityCodeRecoverySuccess, setSecurityCodeRecoverySuccess] = useState<string | undefined>();
+  const securityCodeRecoveryRequestIdRef = useRef<string | null>(null);
 
   const [
     credentialMode,
@@ -388,6 +491,7 @@ export default function Login({
   ] = useState("");
   // First-login temporary credentials stay in renderer memory only.
   // Never persist or log these values.
+
   const firstLoginCurrentPasswordRef =
     useRef<string | null>(null);
 
@@ -611,7 +715,7 @@ export default function Login({
 
           setUsbStoragePath(
             available
-              ? (status.storagePath ?? status.storageId ?? "")
+              ? (typeof status === "string" ? status : "")
               : "",
           );
 
@@ -1333,6 +1437,10 @@ const loginSessionBridge =
         return;
       }
 
+      if (activateWalletOnce && !walletEnrollmentCode.trim()) {
+        setError("Enter your Security Code to activate Server Wallet.");
+        return;
+      }
       let loginResult =
         await loginSessionBridge.login({
           username:
@@ -1342,6 +1450,9 @@ const loginSessionBridge =
 
           storageMode:
             entitlementStorageMode,
+          ...(activateWalletOnce && walletEnrollmentCode.trim()
+            ? { walletSecurityCode: walletEnrollmentCode.trim() }
+            : {}),
 
           ...(legacySecurityCodeSetupRequired
             ? {
@@ -1350,8 +1461,7 @@ const loginSessionBridge =
             : ownerStorage === "usb" &&
               deviceSecurityCode.trim().length > 0
             ? {
-                securityCode:
-          deviceSecurityCodeRequired ? deviceSecurityCode.trim() : undefined,
+                securityCode: deviceSecurityCode.trim(),
               }
             : {}),
         });
@@ -1582,7 +1692,7 @@ const loginSessionBridge =
 
           setLegacySecurityCodeSetupRequired(false);
 setError(
-            "Invalid username or password",
+            "Invalid username or password [" + loginResult.errorCode + "]",
           );
         }
         else {
@@ -1892,6 +2002,17 @@ setError(
   // ==========================================================
 
   function returnToLoginMode(): void {
+
+    // FINORA_P1_579CK_RETURN_FROM_PASSWORD_RESET
+    // Close Forgot Password UI before restoring normal LOGIN credential mode.
+    setForgotPasswordMode(false);
+    setForgotPasswordError(undefined);
+    setForgotPasswordSuccess(undefined);
+    setForgotConfirmNewPassword("");
+    setForgotNewPassword("");
+    setForgotSecurityCode("");
+    forgotPasswordRecoveryRequestIdRef.current =
+      null;
 
     // Clear verified temporary first-login secrets when leaving this page.
     firstLoginCurrentPasswordRef.current =
@@ -2214,7 +2335,280 @@ setError(
   // LOGIN / SET PASSWORD CLICK
   // ==========================================================
 
-  function handleLogin(): void {
+    // FINORA_P1_679O_SUBSCRIPTION_DASHBOARD
+  const [accountSubscriptionPlans, setAccountSubscriptionPlans] =
+    useState<Array<{
+      months: number;
+      regularPriceInr: string;
+      offerPriceInr: string;
+    }>>([]);
+
+  const [accountSubscription, setAccountSubscription] =
+    useState<{
+      status: string;
+      expiresAt: string | null;
+      daysRemaining: number | null;
+    } | null>(null);
+
+  const [accountPricingStatus, setAccountPricingStatus] =
+    useState<string>("NOT_LOADED");
+
+  // FINORA_P1_679B_ACCOUNT_DASHBOARD
+  // Account/Wallet state only. Never authorizes Reception.
+  const [accountWalletBalance, setAccountWalletBalance] =
+    useState<string | null>(null);
+
+  const [accountWalletStatus, setAccountWalletStatus] =
+    useState<string>("NOT_AUTHENTICATED");
+    // FINORA_P1_678U_ACCOUNT_LOGIN_ACTION
+  // Server-authenticated Account/Wallet login.
+  // Never creates or commits a Business/Reception session.
+  async function handleAccountPasswordLogin(): Promise<void> {
+    if (loginBusy) return;
+
+    const accountUsername = username.trim();
+
+    if (!accountUsername || !password) {
+      setError("Enter User ID and Password.");
+      return;
+    }
+
+    setLoginBusy(true);
+    setError("");
+
+    try {
+      // P1-684Y: Android uses its native HTTPS account authority.
+      // Windows retains Electron's main-process account authority.
+      const result =
+        FinoraP1075Capacitor.isNativePlatform() &&
+        FinoraP1075Capacitor.getPlatform() === "android"
+          ? await (finoraControlShared as {
+              accountPasswordLogin: (request: {
+                username: string;
+                password: string;
+              }) => Promise<{
+                success: boolean;
+                errorCode?: string;
+              }>;
+            }).accountPasswordLogin({
+              username: accountUsername,
+              password,
+            })
+          : await authenticateFinoraAccountOnly(
+              accountUsername,
+              password,
+            );
+
+      if (!result.success) {
+        setError(
+          "Account Login failed [" +
+          (result.errorCode ?? "UNKNOWN") +
+          "].",
+        );
+        return;
+      }
+
+      setError("");
+      // FINORA_P1_679C_LIVE_BALANCE
+      setAccountWalletStatus("AUTHENTICATED");
+      setAccountWalletBalance(null);
+
+      const walletHost = window as Window & {
+        finoraAccountWallet?: {
+          balance: () => Promise<{
+            success: boolean;
+            errorCode?: string;
+            wallet?: {
+              balanceInr?: string;
+              currency?: string;
+              source?: string;
+            };
+          }>;
+        };
+      };
+
+      if (walletHost.finoraAccountWallet?.balance) {
+        try {
+          const balanceResult =
+            await walletHost.finoraAccountWallet.balance();
+
+          const wallet = balanceResult.wallet;
+
+          if (
+            balanceResult.success &&
+            wallet?.currency === "INR" &&
+            wallet.source === "POSTGRESQL_WALLETS" &&
+            typeof wallet.balanceInr === "string" &&
+            /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(wallet.balanceInr)
+          ) {
+            setAccountWalletBalance(wallet.balanceInr);
+            setAccountWalletStatus("WALLET_BALANCE_VERIFIED");
+          } else {
+            setAccountWalletStatus("WALLET_BALANCE_UNAVAILABLE");
+          }
+        } catch {
+          setAccountWalletStatus("WALLET_BALANCE_UNAVAILABLE");
+        }
+      } else {
+        setAccountWalletStatus("WALLET_BRIDGE_UNAVAILABLE");
+      }
+
+      // FINORA_P1_679O_READ_ONLY_PRICING_FETCH
+      setAccountSubscriptionPlans([]);
+      setAccountSubscription(null);
+      setAccountPricingStatus("LOADING");
+
+      const pricingHost = window as Window & {
+        finoraAccountPricing?: {
+          get: () => Promise<{
+            success: boolean;
+            pricing?: {
+              source?: string;
+              plans?: Array<{
+                months: number;
+                regularPriceInr: string;
+                offerPriceInr: string;
+              }>;
+              currentSubscription?: {
+                status: string;
+                expiresAt: string | null;
+                daysRemaining: number | null;
+              } | null;
+            };
+          }>;
+        };
+      };
+
+      try {
+        if (!pricingHost.finoraAccountPricing?.get) {
+          setAccountPricingStatus("BRIDGE_UNAVAILABLE");
+        } else {
+          const result = await pricingHost.finoraAccountPricing.get();
+          const pricing = result.pricing;
+
+          if (
+            result.success &&
+            pricing?.source === "FINORA_POSTGRESQL_PRICING" &&
+            Array.isArray(pricing.plans) &&
+            pricing.plans.length === 4 &&
+            new Set(pricing.plans.map(p => p.months)).size === 4 &&
+            pricing.plans.every(p =>
+              [1, 3, 6, 12].includes(p.months) &&
+              /^(?:0|[1-9]\d{0,9})\.\d{2}$/.test(p.regularPriceInr) &&
+              /^(?:0|[1-9]\d{0,9})\.\d{2}$/.test(p.offerPriceInr)
+            )
+          ) {
+            setAccountSubscriptionPlans(pricing.plans);
+            setAccountSubscription(
+              pricing.currentSubscription ?? null
+            );
+            setAccountPricingStatus("VERIFIED");
+          } else {
+            setAccountPricingStatus("UNAVAILABLE");
+          }
+        }
+      } catch {
+        setAccountPricingStatus("UNAVAILABLE");
+      }
+      setCredentialEnrollmentMessage(
+        "Account Login verified. Wallet status: check Account Dashboard.",
+      );
+    } catch {
+      setError("Account Login service is unavailable.");
+    } finally {
+      setLoginBusy(false);
+    }
+  }
+  // FINORA_P1_687Z_SERVER_BUSINESS_AUTHENTICATION
+  // This verifies the Server Business Session but deliberately
+  // does not grant a local Reception session.
+  async function verifyServerBusinessLogin(): Promise<boolean> {
+    const bridge = (
+      window as Window & {
+        finoraBusinessLogin?: {
+          login: (input: {
+            username: string;
+            password: string;
+          }) => Promise<{
+            success: boolean;
+            errorCode?: string;
+            sessionType?: string;
+            businessDataAccess: boolean;
+          }>;
+        };
+      }
+    ).finoraBusinessLogin;
+
+    if (!bridge?.login) {
+      setError("FINORA Server Business Login is unavailable.");
+      return false;
+    }
+
+    try {
+      const result = await bridge.login({
+        username: username.trim(),
+        password,
+      });
+
+      if (
+        result.success !== true ||
+        result.sessionType !== "BUSINESS_RECEPTION"
+      ) {
+        setError(
+          `FINORA Server Login: ${
+            result.errorCode ?? "BUSINESS_AUTHORIZATION_FAILED"
+          }`,
+        );
+        return false;
+      }
+
+      // FINORA_P1_688J_SERVER_SESSION_REVALIDATION
+      // Never grant Reception from a success flag alone.
+      const sessionBridge = (
+        window as Window & {
+          finoraBusinessSession?: {
+            validate: () => Promise<{
+              success: boolean;
+              sessionType?: string;
+              businessDataAccess: boolean;
+              errorCode?: string;
+            }>;
+          };
+        }
+      ).finoraBusinessSession;
+
+      if (!sessionBridge?.validate) {
+        setError("FINORA Business Session authority is unavailable.");
+        return false;
+      }
+
+      const verification = await sessionBridge.validate();
+
+      if (
+        verification.success !== true ||
+        verification.sessionType !== "BUSINESS_RECEPTION"
+      ) {
+        setError(
+          `Business Session verification failed: ${
+            verification.errorCode ?? "NOT_AUTHORIZED"
+          }`,
+        );
+        return false;
+      }
+
+      // Server identity/subscription verified.
+      // Operational authorization and Reception handoff pending.
+      setError(
+        "Server Business Session verified. Reception operational authorization pending.",
+      );
+
+      return true;
+    } catch {
+      setError("Unable to contact FINORA Business Login Server.");
+      return false;
+    }
+  }
+function handleLogin(): void {
 if (
       credentialMode ===
         "RESTORE_BACKUP"
@@ -2226,6 +2620,9 @@ if (
     }
 
 
+    // FINORA_P1_688M_PRESERVE_WORKING_LOGIN
+    // Keep legacy Reception authentication available until
+    // server-authorized operational handoff is fully tested.
     void authenticateOwner();
 
   }
@@ -2383,6 +2780,108 @@ if (
     }
   }
 
+  function openSecurityCodeRecoveryMode(): void {
+    if (loginBusy || forgotPasswordBusy || securityCodeRecoveryBusy) return;
+    setForgotPasswordMode(false);
+    setSecurityCodeRecoveryMode(true);
+    setSecurityCodeRecoveryPassword("");
+    setSecurityCodeRecoveryNewCode("");
+    setSecurityCodeRecoveryConfirmCode("");
+    setSecurityCodeRecoveryError(undefined);
+    setSecurityCodeRecoverySuccess(undefined);
+    securityCodeRecoveryRequestIdRef.current = null;
+  }
+
+  function closeSecurityCodeRecoveryMode(): void {
+    if (securityCodeRecoveryBusy) return;
+    setSecurityCodeRecoveryMode(false);
+    setSecurityCodeRecoveryPassword("");
+    setSecurityCodeRecoveryNewCode("");
+    setSecurityCodeRecoveryConfirmCode("");
+    setSecurityCodeRecoveryError(undefined);
+    setSecurityCodeRecoverySuccess(undefined);
+    securityCodeRecoveryRequestIdRef.current = null;
+  }
+
+  async function submitSecurityCodeRecovery(): Promise<void> {
+    if (securityCodeRecoveryBusy) return;
+
+    setSecurityCodeRecoveryError(undefined);
+    setSecurityCodeRecoverySuccess(undefined);
+    const trimmedUsername = username.trim();
+
+    if (!trimmedUsername) {
+      setSecurityCodeRecoveryError("Enter your User ID.");
+      return;
+    }
+
+    if (!securityCodeRecoveryPassword) {
+      setSecurityCodeRecoveryError("Enter your current Password.");
+      return;
+    }
+
+    if (!securityCodeRecoveryNewCode) {
+      setSecurityCodeRecoveryError("Enter a new Security Code.");
+      return;
+    }
+
+    if (!securityCodeRecoveryConfirmCode) {
+      setSecurityCodeRecoveryError("Confirm your new Security Code.");
+      return;
+    }
+
+    if (securityCodeRecoveryNewCode !== securityCodeRecoveryConfirmCode) {
+      setSecurityCodeRecoveryError("New Security Code and confirmation do not match.");
+      return;
+    }
+
+    // FINORA_P1_578PD_RECOVERY_EYE_LAYOUT
+    // FINORA_P1_578OU_RECONVERGENCE_UI
+    const bridge = window.finora?.credentials;
+
+    if (!bridge || typeof bridge.reconvergeSecurityCodeV2 !== "function") {
+      setSecurityCodeRecoveryError("FINORA secure Security Code recovery is unavailable in this build.");
+      return;
+    }
+
+    if (!securityCodeRecoveryRequestIdRef.current) {
+      if (typeof crypto === "undefined" || typeof crypto.randomUUID !== "function") {
+        setSecurityCodeRecoveryError("Secure request identifier generation is unavailable.");
+        return;
+      }
+      securityCodeRecoveryRequestIdRef.current = crypto.randomUUID();
+    }
+
+    setSecurityCodeRecoveryBusy(true);
+
+    try {
+      const result = await bridge.reconvergeSecurityCodeV2({
+        rotationRequestId: securityCodeRecoveryRequestIdRef.current,
+        username: trimmedUsername,
+        currentPassword: securityCodeRecoveryPassword,
+        newSecurityCode: securityCodeRecoveryNewCode,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error ?? "FINORA Security Code recovery failed.");
+      }
+
+      setSecurityCodeRecoverySuccess("Local Security Code recovered successfully.");
+      setSecurityCodeRecoveryPassword("");
+      setSecurityCodeRecoveryNewCode("");
+      setSecurityCodeRecoveryConfirmCode("");
+      securityCodeRecoveryRequestIdRef.current = null;
+    } catch (error) {
+      setSecurityCodeRecoveryError(
+        error instanceof Error
+          ? error.message
+          : "Unable to recover the FINORA Security Code.",
+      );
+    } finally {
+      setSecurityCodeRecoveryBusy(false);
+    }
+  }
+
   function closeForgotPasswordMode(): void {
     if (forgotPasswordBusy) {
       return;
@@ -2495,6 +2994,72 @@ if (
       : <HardDrive />;
 
   // ==========================================================
+  // FINORA_P1_685H_LIVE_STATUS
+  // API and PostgreSQL reachability only, never authorization.
+  const [finoraLiveStatus, setFinoraLiveStatus] =
+    useState<"CHECKING" | "LIVE" | "OFFLINE">("CHECKING");
+
+  useEffect(() => {
+    let mounted = true;
+    let controller: AbortController | null = null;
+
+    const checkServer = async () => {
+      controller?.abort();
+      const current = new AbortController();
+      controller = current;
+
+      try {
+        const host = window as Window & {
+          finoraLoginHealth?: {
+            check: () => Promise<{ live: boolean }>;
+          };
+        };
+
+        let live = false;
+
+        if (host.finoraLoginHealth?.check) {
+          // Windows Electron: Main Process avoids browser CORS.
+          const result = await host.finoraLoginHealth.check();
+          live = result.live === true;
+        } else {
+          // Android: existing path pending native health bridge.
+          const responses = await Promise.all(
+            ["/health", "/db-health"].map((endpoint) =>
+              fetch(
+                `https://api.finoraenterprise.com${endpoint}`,
+                {
+                  method: "GET",
+                  cache: "no-store",
+                  signal: current.signal,
+                },
+              ),
+            ),
+          );
+          live = responses.every((response) => response.ok);
+        }
+
+        if (mounted && controller === current) {
+          setFinoraLiveStatus(live ? "LIVE" : "OFFLINE");
+        }
+      } catch {
+        if (mounted && controller === current) {
+          setFinoraLiveStatus("OFFLINE");
+        }
+      }
+    };
+
+    void checkServer();
+
+    const interval = window.setInterval(() => {
+      void checkServer();
+    }, 15000);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+      controller?.abort();
+    };
+  }, []);
   // LOGIN THEME SELECTION
   // ==========================================================
 
@@ -2559,12 +3124,7 @@ if (
             FINORA LOGIN THEME PICKER
         ================================================== */}
 
-        <div
-          style={
-            loginStyles.themePicker
-          }
-          aria-label="FINORA login themes"
-        >
+        <div style={{ ...loginStyles.themePicker, position: "relative", width: "100%", justifyContent: "center", alignItems: "center" }} aria-label="FINORA login themes">
 
           {LOGIN_THEME_OPTIONS.map(
             option => {
@@ -2632,7 +3192,48 @@ if (
             },
           )}
 
-        </div>
+                  {/* FINORA_P1_685H_THEME_STATUS */}
+          <span
+            role="status"
+            aria-live="polite"
+            title="FINORA API and PostgreSQL connectivity"
+            style={{
+              ...loginStyles.themeOptionActive,
+              position: "absolute",
+              right: 0,
+              top: "50%",
+              transform: "translateY(-50%)",
+              marginLeft: 0,
+              display: "inline-flex",
+              flexDirection: "row",
+              flexWrap: "nowrap",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 5,
+              padding: "5px 9px",
+              borderRadius: 20,
+              fontSize: 12,
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+              lineHeight: 1,
+              color:
+                finoraLiveStatus === "LIVE"
+                  ? "#16844b"
+                  : finoraLiveStatus === "OFFLINE"
+                    ? "#dc3545"
+                    : "#727b86",
+              borderColor:
+                finoraLiveStatus === "LIVE"
+                  ? "#16844b"
+                  : finoraLiveStatus === "OFFLINE"
+                    ? "#dc3545"
+                    : "#727b86",
+            }}
+          >
+            <span aria-hidden="true" style={{ fontSize: 15, lineHeight: 1 }}>●</span>
+            {finoraLiveStatus}
+          </span>
+</div>
 
           <div
             style={
@@ -2759,9 +3360,7 @@ if (
                 style={
                   loginStyles.fieldLabel
                 }
-              >
-                Storage
-              </div>
+              >Storage <span style={{ marginLeft: 6, fontSize: "inherit", fontWeight: "inherit" }}> - Owner authentication - FINORA Pendrive</span></div>
 
 
               <div
@@ -2983,23 +3582,78 @@ if (
             )}
 
 
+            {/* FINORA_P1_679D_WALLET_DISPLAY */}
+            {accountWalletStatus !== "NOT_AUTHENTICATED" && (
+              <section
+                aria-label="FINORA Account Wallet"
+                style={{
+                  padding: "16px",
+                  margin: "14px 0",
+                  borderRadius: "12px",
+                  border: `1px solid ${activeLoginTheme.borderStrong}`,
+                  background: activeLoginTheme.surface,
+                  color: activeLoginTheme.text,
+                }}
+              >
+                <strong>FINORA Account Dashboard</strong>
+                <p>Account Status: Authenticated</p>
+                <p>
+                  Wallet Balance: {
+                    accountWalletBalance !== null
+                      ? `₹${accountWalletBalance}`
+                      : "Unavailable"
+                  }
+                </p>
+                <p>
+                  Wallet Status: {accountWalletStatus}
+                </p>
+                <small>
+                  Server Account/Wallet access only.
+                  Business records require separate authorization.
+                </small>
+                              {/* FINORA_P1_679O_SUBSCRIPTION_DISPLAY */}
+                <div>
+                  <strong>Subscription Plans</strong>
+                  <p>Pricing Status: {accountPricingStatus}</p>
+                  {accountPricingStatus === "VERIFIED" && (
+                    <>
+                      {accountSubscriptionPlans.map(plan => (
+                        <p key={plan.months}>
+                          {plan.months} Month(s):
+                          {" ₹"}{plan.offerPriceInr}
+                        </p>
+                      ))}
+                      <p>
+                        Current Subscription: {
+                          accountSubscription?.status ?? "NONE"
+                        }
+                      </p>
+                      <p>
+                        Expiry: {
+                          accountSubscription?.expiresAt ?? "Not available"
+                        }
+                      </p>
+                      <p>
+                        Days Remaining: {
+                          accountSubscription?.daysRemaining ?? "N/A"
+                        }
+                      </p>
+                    </>
+                  )}
+                </div>
+</section>
+            )}
             {/* ==============================================
                 OWNER MODE NOTICE
             ============================================== */}
 
             <div
-              style={
-                ownerStorage === "usb"
-                  ? loginStyles.modeNoticeUsb
-                  : loginStyles.modeNoticeNormal
-              }
+              style={{
+                display: "contents",
+              }}
             >
 
-              <div
-                style={
-                  loginStyles.modeNoticeHeader
-                }
-              >
+              <div style={{ display: "none" }}>
                 {ownerStorage === "usb"
                   ? <Usb />
                   : <HardDrive />}
@@ -3017,20 +3671,198 @@ if (
                   loginStyles.modeNoticeSubtext
                 }
               >
+                {securityCodeRecoveryMode && (
+                  <section
+                    aria-labelledby="finora-security-code-recovery-title"
+                    style={{
+              // P1-685U: Modal position only; preserve existing form styles.
+              position: "fixed",
+              zIndex: 10000,
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              maxWidth: "calc(100vw - 32px)",
+              maxHeight: "calc(100dvh - 32px)",
+              overflowY: "auto",
+              margin: 0,
+                      width: "min(420px, calc(100vw - 32px))",
+                      marginTop: "18px",
+                      marginBottom: "18px",
+                      padding: responsive.isMobile ? "18px" : "22px",
+                      border: `1px solid ${activeLoginTheme.borderStrong}`,
+                      borderRadius: responsive.isMobile ? "14px" : "16px",
+                      background: activeLoginTheme.surface,
+                      color: activeLoginTheme.text,
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <h2 id="finora-security-code-recovery-title" style={{ margin: 0 }}>
+                      Recover Security Code
+                    </h2>
+                    <p style={{ margin: "7px 0 18px", color: activeLoginTheme.textSoft }}>
+                      Verify your current Password, then create a new local Security Code.
+                    </p>
+
+                    <div style={{ display: "grid", gap: "12px" }}>
+                      <input
+                        type="text"
+                        value={username}
+                        onChange={(event) => {
+                          setUsername(event.target.value);
+                          securityCodeRecoveryRequestIdRef.current = null;
+                          setSecurityCodeRecoveryError(undefined);
+                          setSecurityCodeRecoverySuccess(undefined);
+                        }}
+                        placeholder="User ID"
+                        autoComplete="username"
+                        disabled={securityCodeRecoveryBusy}
+                        style={loginCredentialInputStyle}
+                      />
+
+                      <div style={loginStyles.inputWrapper}>
+                      <input
+                        type={showSecurityCodeRecoveryPassword ? "text" : "password"}
+                        value={securityCodeRecoveryPassword}
+                        onChange={(event) => {
+                          setSecurityCodeRecoveryPassword(event.target.value);
+                          securityCodeRecoveryRequestIdRef.current = null;
+                          setSecurityCodeRecoveryError(undefined);
+                          setSecurityCodeRecoverySuccess(undefined);
+                        }}
+                        placeholder="Current Password"
+                        autoComplete="current-password"
+                        disabled={securityCodeRecoveryBusy}
+                        style={{ ...(loginCredentialInputStyle), paddingRight: "48px" }}
+                      />
+                    <button
+                      type="button"
+                      style={loginStyles.passwordToggle}
+                      onClick={() =>
+                        setShowSecurityCodeRecoveryPassword((visible) => !visible)
+                      }
+                      aria-label={showSecurityCodeRecoveryPassword ? "Hide Current Password" : "Show Current Password"}
+                    >
+                      {showSecurityCodeRecoveryPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+                    </button>
+                      </div>
+
+                      <div style={loginStyles.inputWrapper}>
+                      <input
+                        type={showSecurityCodeRecoveryNewCode ? "text" : "password"}
+                        value={securityCodeRecoveryNewCode}
+                        onChange={(event) => {
+                          setSecurityCodeRecoveryNewCode(event.target.value);
+                          securityCodeRecoveryRequestIdRef.current = null;
+                          setSecurityCodeRecoveryError(undefined);
+                          setSecurityCodeRecoverySuccess(undefined);
+                        }}
+                        placeholder="New Security Code"
+                        disabled={securityCodeRecoveryBusy}
+                        style={{ ...(loginCredentialInputStyle), paddingRight: "48px" }}
+                      />
+                    <button
+                      type="button"
+                      style={loginStyles.passwordToggle}
+                      onClick={() =>
+                        setShowSecurityCodeRecoveryNewCode((visible) => !visible)
+                      }
+                      aria-label={showSecurityCodeRecoveryNewCode ? "Hide New Security Code" : "Show New Security Code"}
+                    >
+                      {showSecurityCodeRecoveryNewCode ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+                    </button>
+                      </div>
+
+                      <div style={loginStyles.inputWrapper}>
+                      <input
+                        type={showSecurityCodeRecoveryConfirmCode ? "text" : "password"}
+                        value={securityCodeRecoveryConfirmCode}
+                        onChange={(event) => {
+                          setSecurityCodeRecoveryConfirmCode(event.target.value);
+                          securityCodeRecoveryRequestIdRef.current = null;
+                          setSecurityCodeRecoveryError(undefined);
+                          setSecurityCodeRecoverySuccess(undefined);
+                        }}
+                        placeholder="Confirm New Security Code"
+                        disabled={securityCodeRecoveryBusy}
+                        style={{ ...(loginCredentialInputStyle), paddingRight: "48px" }}
+                      />
+                    <button
+                      type="button"
+                      style={loginStyles.passwordToggle}
+                      onClick={() =>
+                        setShowSecurityCodeRecoveryConfirmCode((visible) => !visible)
+                      }
+                      aria-label={showSecurityCodeRecoveryConfirmCode ? "Hide Confirm New Security Code" : "Show Confirm New Security Code"}
+                    >
+                      {showSecurityCodeRecoveryConfirmCode ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+                    </button>
+                      </div>
+
+                      {securityCodeRecoveryError && (
+                        <div role="alert">{securityCodeRecoveryError}</div>
+                      )}
+
+                      {securityCodeRecoverySuccess && (
+                        <div role="status">{securityCodeRecoverySuccess}</div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => void submitSecurityCodeRecovery()}
+                        disabled={securityCodeRecoveryBusy}
+                        style={loginStyles.primaryButton}
+                      >
+                        {securityCodeRecoveryBusy ? "Recovering..." : "Recover Security Code"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={closeSecurityCodeRecoveryMode}
+                        disabled={securityCodeRecoveryBusy}
+                        style={loginStyles.forgotPassword}
+                      >
+                        Back to Login
+                      </button>
+                    </div>
+                  </section>
+                )}
+
                 {forgotPasswordMode && (
             <section
               aria-labelledby="finora-change-password-title"
               style={{
-                width: "100%",
+              // P1-685U: Modal position only; preserve existing form styles.
+              position: "fixed",
+              zIndex: 10000,
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              maxWidth: "calc(100vw - 32px)",
+              maxHeight: "calc(100dvh - 32px)",
+              overflowY: "auto",
+              margin: 0,
+                width: "min(420px, calc(100vw - 32px))",
                 marginTop: "18px",
                 marginBottom: "18px",
-                padding: responsive === "mobile"
+                padding: responsive.isMobile
                   ? "18px"
                   : "22px",
                 border:
                   `1px solid ${activeLoginTheme.borderStrong}`,
                 borderRadius:
-                  responsive === "mobile"
+                  responsive.isMobile
                     ? "14px"
                     : "16px",
                 background:
@@ -3096,7 +3928,7 @@ if (
                       color:
                         activeLoginTheme.text,
                       fontSize:
-                        responsive === "mobile"
+                        responsive.isMobile
                           ? "18px"
                           : "20px",
                       fontWeight: 800,
@@ -3149,6 +3981,76 @@ if (
                         "uppercase",
                     }}
                   >
+                    User ID
+                  </span>
+
+                  <div
+                    style={{
+                      ...loginStyles.inputWrapper,
+                      border:
+                        `1px solid ${activeLoginTheme.border}`,
+                      borderRadius: "12px",
+                      background:
+                        activeLoginTheme.surfaceSoft,
+                    }}
+                  >
+                    <span style={loginStyles.inputIcon}>
+                      <UserRound />
+                    </span>
+
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(event) => {
+                        setUsername(event.target.value);
+                        forgotPasswordRecoveryRequestIdRef.current =
+                          null;
+                        setForgotPasswordError(
+                          undefined,
+                        );
+                        setForgotPasswordSuccess(
+                          undefined,
+                        );
+                      }}
+                      placeholder="Enter User ID"
+                      aria-label="Reset Password User ID"
+                      autoComplete="username"
+                      disabled={
+                        forgotPasswordBusy
+                      }
+                      style={{
+                        ...loginCredentialInputStyle,
+                        width: "100%",
+                        minHeight: "46px",
+                        border: "none",
+                        background:
+                          "transparent",
+                        color:
+                          activeLoginTheme.text,
+                        boxShadow: "none",
+                      }}
+                    />
+                  </div>
+                </label>
+
+                <label
+                  style={{
+                    display: "grid",
+                    gap: "7px",
+                  }}
+                >
+                  <span
+                    style={{
+                      color:
+                        activeLoginTheme.textSoft,
+                      fontSize: "10px",
+                      fontWeight: 750,
+                      letterSpacing:
+                        "0.08em",
+                      textTransform:
+                        "uppercase",
+                    }}
+                  >
                     Confirm New Password
                   </span>
 
@@ -3163,7 +4065,7 @@ if (
                     }}
                   >
                     <input
-                      type="password"
+                      type={showForgotConfirmNewPassword ? "text" : "password"}
                       value={
                         forgotConfirmNewPassword
                       }
@@ -3196,8 +4098,26 @@ if (
                         color:
                           activeLoginTheme.text,
                         boxShadow: "none",
+                        paddingRight: "48px",
                       }}
                     />
+                    <button
+                      type="button"
+                      aria-label={showForgotConfirmNewPassword ? "Hide Confirm New Password" : "Show Confirm New Password"}
+                      onClick={() => {
+                        setShowForgotConfirmNewPassword(
+                          (current) => !current,
+                        );
+                      }}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                      }}
+                      style={loginStyles.passwordToggle}
+                    >
+                      {showForgotConfirmNewPassword
+                        ? <EyeOff />
+                        : <Eye />}
+                    </button>
                   </div>
                 </label>
 
@@ -3233,7 +4153,7 @@ if (
                     }}
                   >
                     <input
-                      type="password"
+                      type={showForgotNewPassword ? "text" : "password"}
                       value={
                         forgotNewPassword
                       }
@@ -3266,8 +4186,26 @@ if (
                         color:
                           activeLoginTheme.text,
                         boxShadow: "none",
+                        paddingRight: "48px",
                       }}
                     />
+                    <button
+                      type="button"
+                      aria-label={showForgotNewPassword ? "Hide New Password" : "Show New Password"}
+                      onClick={() => {
+                        setShowForgotNewPassword(
+                          (current) => !current,
+                        );
+                      }}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                      }}
+                      style={loginStyles.passwordToggle}
+                    >
+                      {showForgotNewPassword
+                        ? <EyeOff />
+                        : <Eye />}
+                    </button>
                   </div>
                 </label>
 
@@ -3303,7 +4241,7 @@ if (
                     }}
                   >
                     <input
-                      type="password"
+                      type={showForgotSecurityCode ? "text" : "password"}
                       value={
                         forgotSecurityCode
                       }
@@ -3336,11 +4274,30 @@ if (
                         color:
                           activeLoginTheme.text,
                         boxShadow: "none",
+                        paddingRight: "48px",
                       }}
                     />
+                    <button
+                      type="button"
+                      aria-label={showForgotSecurityCode ? "Hide Security Code" : "Show Security Code"}
+                      onClick={() => {
+                        setShowForgotSecurityCode(
+                          (current) => !current,
+                        );
+                      }}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                      }}
+                      style={loginStyles.passwordToggle}
+                    >
+                      {showForgotSecurityCode
+                        ? <EyeOff />
+                        : <Eye />}
+                    </button>
                   </div>
                 </label>
 
+                {/* FINORA_P1_579BN_RESET_STATUS_COLORS */}
                 {forgotPasswordError && (
                   <div
                     role="alert"
@@ -3349,12 +4306,12 @@ if (
                       padding:
                         "10px 12px",
                       border:
-                        `1px solid ${activeLoginTheme.border}`,
+                        "1px solid #ef4444",
                       borderRadius: "10px",
                       background:
-                        activeLoginTheme.surfaceSoft,
+                        "color-mix(in srgb, #ef4444 14%, " + activeLoginTheme.surfaceSoft + ")",
                       color:
-                        activeLoginTheme.text,
+                        "#f87171",
                       fontSize: "12px",
                       lineHeight: 1.5,
                     }}
@@ -3371,12 +4328,12 @@ if (
                       padding:
                         "10px 12px",
                       border:
-                        `1px solid ${activeLoginTheme.borderStrong}`,
+                        "1px solid #22c55e",
                       borderRadius: "10px",
                       background:
-                        activeLoginTheme.surfaceSoft,
+                        "color-mix(in srgb, #22c55e 14%, " + activeLoginTheme.surfaceSoft + ")",
                       color:
-                        activeLoginTheme.text,
+                        "#4ade80",
                       fontSize: "12px",
                       lineHeight: 1.5,
                     }}
@@ -3389,7 +4346,7 @@ if (
                   style={{
                     display: "grid",
                     gridTemplateColumns:
-                      responsive === "mobile"
+                      responsive.isMobile
                         ? "1fr"
                         : "minmax(0, 1.15fr) minmax(0, 0.85fr)",
                     gap: "10px",
@@ -3464,7 +4421,7 @@ if (
             </section>
           )}
           {ownerStorage === "usb"
-                    ? "Owner authentication - FINORA Pendrive"
+                    ? ""
                     : "Owner authentication - Local storage"}
               </div>
 
@@ -3904,8 +4861,8 @@ if (
                     type="password"
                     autoComplete="off"
                     disabled={
-                      loginBusy ||
-                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
+                      loginBusy
+
                     }
                     onKeyDown={
                       handlePasswordKeyDown
@@ -3925,7 +4882,7 @@ if (
             </div>
 
 
-            {credentialMode === "LOGIN" &&
+            {false && credentialMode === "LOGIN" &&
               legacySecurityCodeSetupRequired && (
                 <>
                   <div
@@ -3997,7 +4954,50 @@ if (
 
 
 
-                        {/* FINORA_NEW_DEVICE_SECURITY_CHALLENGE */}
+{/* FINORA_P1_579NM_WALLET_ACTIVATION */}
+{false && credentialMode === "LOGIN" &&
+  !legacySecurityCodeSetupRequired &&
+  getFinoraServerWalletBridge() !== null && (
+    <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
+      <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <input
+          type="checkbox"
+          checked={activateWalletOnce}
+          onChange={(event) => {
+            setActivateWalletOnce(event.target.checked);
+            if (!event.target.checked) setWalletEnrollmentCode("");
+            setError("");
+          }}
+          disabled={loginBusy}
+        />
+        Activate Server Wallet (Owner - first time only)
+      </label>
+      {activateWalletOnce && (
+        <>
+          <input
+            type="password"
+            value={walletEnrollmentCode}
+            onChange={(event) => {
+              setWalletEnrollmentCode(event.target.value);
+              setError("");
+            }}
+            placeholder="Wallet activation Security Code"
+            aria-label="Wallet activation Security Code"
+            autoComplete="off"
+            maxLength={128}
+            disabled={loginBusy}
+            onKeyDown={handlePasswordKeyDown}
+            style={loginStyles.input}
+          />
+          <span style={{ fontSize: 12 }}>
+            One-time server verification. Normal future logins do not require this code.
+          </span>
+        </>
+      )}
+    </div>
+  )}
+
+{/* FINORA_NEW_DEVICE_SECURITY_CHALLENGE */}
 
 {credentialMode === "LOGIN" && deviceSecurityCodeRequired && (
                 <div
@@ -4150,8 +5150,8 @@ if (
                         handleForgotPassword
                       }
                       disabled={
-                      loginBusy ||
-                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
+                      loginBusy
+
                     }
                       style={
                         loginStyles.forgotPassword
@@ -4161,12 +5161,20 @@ if (
                     </button>
                     <button
                       type="button"
+                      onClick={openSecurityCodeRecoveryMode}
+                      disabled={loginBusy || securityCodeRecoveryBusy}
+                      style={loginStyles.forgotPassword}
+                    >
+                      Recover Security Code
+                    </button>
+                    <button
+                      type="button"
                       onClick={
                         openRestoreBackupMode
                       }
                       disabled={
-                      loginBusy ||
-                      credentialMode === "FORCE_CREDENTIAL_CHANGE"
+                      loginBusy
+
                     }
                       style={
                         loginStyles.forgotPassword

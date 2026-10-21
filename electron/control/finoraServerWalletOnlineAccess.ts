@@ -101,6 +101,19 @@ export function createFinoraServerWalletOnlineAccess(options: {
     try {
       const supplied = structuredClone(credentials);
       const result = await identify(supplied);
+      // FINORA_P1_579NU_IDENTITY_TRACE
+      if (process.env.FINORA_WALLET_DIAGNOSTICS === "1") {
+        console.info("[FINORA WALLET IDENTITY STAGE]", JSON.stringify({
+          stage: "IDENTITY_RESPONSE",
+          success: result?.success === true,
+          errorCode: result?.success === true
+            ? "NONE"
+            : typeof result?.errorCode === "string" &&
+                /^[A-Z0-9_]{1,80}$/.test(result.errorCode)
+              ? result.errorCode
+              : "UNCLASSIFIED",
+        }));
+      }
       if (current !== operation) return fail("STALE_OPERATION");
 
       if (result?.success !== true) {
@@ -140,6 +153,13 @@ export function createFinoraServerWalletOnlineAccess(options: {
       };
       internalNonce = randomUUID();
       const context = Object.freeze({ walletOperationNonce: internalNonce });
+
+      if (process.env.FINORA_WALLET_DIAGNOSTICS === "1") {
+        console.info("[FINORA WALLET IDENTITY STAGE]", JSON.stringify({
+          stage: "IDENTITY_VALIDATED_ACCESS_START",
+          mode: mode === "enroll" ? "ENROLL" : "LOGIN",
+        }));
+      }
 
       const response = mode === "enroll"
         ? await access.enroll(context, supplied)

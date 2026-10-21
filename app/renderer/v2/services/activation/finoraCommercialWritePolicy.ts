@@ -191,7 +191,7 @@ export function evaluateFinoraCommercialWrite(
         accessDecision.state === "EXPIRED" &&
         accessDecision.grant?.accessType ===
           "REGISTERED"
-          ? "FINORA annual registration has expired. Commercial writes are disabled until renewal."
+          ? "Subscription expired. Renew to continue. Commercial writes are disabled until renewal."
           : accessDecision.reason,
 
       grant:

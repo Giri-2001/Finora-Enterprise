@@ -1116,6 +1116,44 @@ interface FinoraElectronCredentialRotationViewV2 {
     | "ALREADY_MATCHED";
 }
 
+interface FinoraElectronCredentialPasswordRecoveryRequestV2 {
+
+  recoveryRequestId:
+    string;
+
+  username:
+    string;
+
+  currentSecurityCode:
+    string;
+
+  newPassword:
+    string;
+}
+
+interface FinoraElectronCredentialFirstLoginCompletionRequestV2 {
+  rotationRequestId:
+    string;
+
+  username:
+    string;
+
+  currentPassword:
+    string;
+
+  currentSecurityCode:
+    string;
+
+  newPassword:
+    string;
+
+  newSecurityCode:
+    string;
+}
+
+type FinoraElectronCredentialSecurityCodeReconvergenceRequestV2 =
+  FinoraCredentialSecurityCodeRecoveryRequestV2;
+
 interface FinoraElectronCredentialBridge {
   enroll(
     request:
@@ -1138,6 +1176,18 @@ interface FinoraElectronCredentialBridge {
         FinoraElectronCredentialRotationViewV2
       >
     >;
+
+  resetPasswordV2?: (
+    request: FinoraElectronCredentialPasswordRecoveryRequestV2
+  ) => Promise<FinoraElectronCredentialResult<FinoraElectronCredentialRotationViewV2>>;
+
+  reconvergeSecurityCodeV2?: (
+    request: FinoraElectronCredentialSecurityCodeReconvergenceRequestV2
+  ) => Promise<FinoraElectronCredentialResult<FinoraElectronCredentialRotationViewV2>>;
+
+  completeFirstLoginV2?: (
+    request: FinoraElectronCredentialFirstLoginCompletionRequestV2
+  ) => Promise<FinoraElectronCredentialResult<FinoraElectronCredentialRotationViewV2>>;
 }
 
 // ============================================================

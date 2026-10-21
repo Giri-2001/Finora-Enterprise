@@ -118,8 +118,10 @@ export function createFinoraMainLoginWalletSessionClient(
   }
 
   const base =
-    process.env.FINORA_LOCAL_WALLET_TEST === "1"
-      ? "http://127.0.0.1:3000"
+    process.env.FINORA_LOCAL_WALLET_SSO_3002 === "1"
+      ? "http://127.0.0.1:3002"
+      : process.env.FINORA_LOCAL_WALLET_TEST === "1"
+      ? "http://127.0.0.1:3001"
       : "https://api.finoraenterprise.com";
 
   return async function authorize(
@@ -241,6 +243,15 @@ export function createFinoraMainLoginWalletSessionClient(
           expectedScope,
         )
       ) {
+        // FINORA_P1_578AP_SCOPE_DIAGNOSTICS
+        if (process.env.FINORA_WALLET_DIAGNOSTICS === "1") {
+          console.info("[FINORA WALLET SCOPE CHECK]", JSON.stringify({
+            userIdMatches: body.scope.userId === expectedScope.userId,
+            ownerIdMatches: body.scope.ownerId === expectedScope.ownerId,
+            businessIdMatches: body.scope.businessId === expectedScope.businessId,
+            branchIdMatches: body.scope.branchId === expectedScope.branchId,
+          }));
+        }
         return {
           success: false,
           errorCode: "SCOPE_MISMATCH",

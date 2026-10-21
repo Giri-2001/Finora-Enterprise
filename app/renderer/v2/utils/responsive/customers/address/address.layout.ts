@@ -208,7 +208,7 @@ export function createAddressSectionStyle(
       "hidden",
 
     clipPath:
-  `inset(0 round ${tokens.sectionRadius}px)`,  
+  `inset(0 round ${tokens.sectionRadius}px)`,
 
   };
 
@@ -1052,7 +1052,7 @@ export function createAddressPreviewLabelStyle(
    PREVIEW VALUE
 =========================================================== */
 
-export function createAddressPreviewValueStyle($tokens: AddressResponsiveTokens): CSSProperties {  return {    fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)",    margin:
+export function createAddressPreviewValueStyle(tokens: AddressResponsiveTokens): CSSProperties {  return {    fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)",    margin:
       0,
 
     color:
@@ -1061,7 +1061,7 @@ export function createAddressPreviewValueStyle($tokens: AddressResponsiveTokens)
     fontSize:
       `${tokens.previewValueSize}px`,
 
-    fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)",
+
 
     fontWeight: 650,
 

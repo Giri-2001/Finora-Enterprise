@@ -1,3 +1,119 @@
+import {
+  contextBridge,
+  ipcRenderer,
+} from "electron";
+// FINORA_P1_679J_PRICING_BRIDGE
+// Read-only pricing. Authorization remains in Electron Main.
+contextBridge.exposeInMainWorld(
+  "finoraAccountPricing",
+  Object.freeze({
+    get: async () => {
+      const result: unknown = await ipcRenderer.invoke(
+        "finora:account:subscription-pricing",
+      );
+
+      if (
+        !result ||
+        typeof result !== "object" ||
+        Array.isArray(result)
+      ) {
+        return {
+          success: false,
+          errorCode: "INVALID_RESPONSE",
+        };
+      }
+
+      const data = result as Record<string, unknown>;
+
+      if (data.success !== true) {
+        return {
+          success: false,
+          errorCode:
+            typeof data.errorCode === "string"
+              ? data.errorCode
+              : "PRICING_UNAVAILABLE",
+        };
+      }
+
+      const pricing = data.pricing;
+
+      if (
+        !pricing ||
+        typeof pricing !== "object" ||
+        Array.isArray(pricing)
+      ) {
+        return {
+          success: false,
+          errorCode: "INVALID_PRICING_RESPONSE",
+        };
+      }
+
+      const safe = pricing as Record<string, unknown>;
+
+      // Fixed allowlist; never forward a bearer token.
+      return {
+        success: true,
+        pricing: {
+          ok: safe.ok === true,
+          source:
+            typeof safe.source === "string"
+              ? safe.source
+              : undefined,
+          // FINORA_P1_679N_PRICING_CONTRACT
+          plans: Array.isArray(safe.plans)
+            ? safe.plans
+                .filter((item: unknown) => {
+                  if (
+                    !item ||
+                    typeof item !== "object" ||
+                    Array.isArray(item)
+                  ) return false;
+
+                  const p = item as Record<string, unknown>;
+                  return (
+                    [1, 3, 6, 12].includes(p.months as number) &&
+                    typeof p.regularPriceInr === "string" &&
+                    /^(?:0|[1-9]\d{0,9})\.\d{2}$/.test(p.regularPriceInr) &&
+                    typeof p.offerPriceInr === "string" &&
+                    /^(?:0|[1-9]\d{0,9})\.\d{2}$/.test(p.offerPriceInr)
+                  );
+                })
+                .map((item: unknown) => {
+                  const p = item as Record<string, unknown>;
+                  return {
+                    months: p.months,
+                    regularPriceInr: p.regularPriceInr,
+                    offerPriceInr: p.offerPriceInr,
+                  };
+                })
+            : [],
+          currentSubscription:
+            safe.currentSubscription === null
+              ? null
+              : safe.currentSubscription &&
+                  typeof safe.currentSubscription === "object" &&
+                  !Array.isArray(safe.currentSubscription)
+                ? {
+                    status:
+                      typeof (safe.currentSubscription as Record<string, unknown>).status === "string"
+                        ? (safe.currentSubscription as Record<string, unknown>).status
+                        : "UNKNOWN",
+                    expiresAt:
+                      typeof (safe.currentSubscription as Record<string, unknown>).expiresAt === "string"
+                        ? (safe.currentSubscription as Record<string, unknown>).expiresAt
+                        : null,
+                    daysRemaining:
+                      typeof (safe.currentSubscription as Record<string, unknown>).daysRemaining === "number"
+                        ? (safe.currentSubscription as Record<string, unknown>).daysRemaining
+                        : null,
+                  }
+                : null,
+        },
+      };
+    },
+  }),
+);
+
 // ============================================================
 // FINORA ENTERPRISE OS
 // ELECTRON PRELOAD
@@ -29,10 +145,6 @@
 // IMPORTS
 // ============================================================
 
-import {
-  contextBridge,
-  ipcRenderer,
-} from "electron";
 
 
 // ============================================================
@@ -1749,6 +1861,13 @@ const BRANCH_CREDENTIAL_CHANNELS = {
   PASSWORD_RECOVERY_V2:
     "finora:credential:password-recovery-v2",
 
+  // FINORA_P1_578LL_SECURITY_CODE_RECOVERY_PRELOAD
+  SECURITY_CODE_RECOVERY_V2:
+    "finora:credential:security-code-recovery-v2",
+
+  // FINORA_P1_578OQ_SECURITY_CODE_RECONVERGENCE_PRELOAD
+  SECURITY_CODE_RECONVERGENCE_V2:
+    "finora:credential:security-code-reconvergence-v2",
   FIRST_LOGIN_COMPLETION_V2:
     "finora:credential:first-login-completion-v2",
 
@@ -1872,6 +1991,23 @@ interface FinoraCredentialPasswordRecoveryRequestV2 {
     string;
 }
 
+interface FinoraCredentialSecurityCodeRecoveryRequestV2 {
+  rotationRequestId:
+    string;
+
+  username:
+    string;
+
+  currentPassword:
+    string;
+
+  newSecurityCode:
+    string;
+}
+
+type FinoraCredentialSecurityCodeReconvergenceRequestV2 =
+  FinoraCredentialSecurityCodeRecoveryRequestV2;
+
 interface FinoraCredentialFirstLoginCompletionRequestV2 {
   rotationRequestId:
     string;
@@ -1940,6 +2076,25 @@ interface FinoraCredentialBridge {
         FinoraCredentialRotationViewV2
       >
     >;
+  recoverSecurityCodeV2:
+    (
+      request:
+        FinoraCredentialSecurityCodeRecoveryRequestV2,
+    ) => Promise<
+      FinoraCredentialBridgeResult<
+        FinoraCredentialRotationViewV2
+      >
+    >;
+
+  reconvergeSecurityCodeV2:
+    (
+      request:
+        FinoraCredentialSecurityCodeReconvergenceRequestV2,
+    ) => Promise<
+      FinoraCredentialBridgeResult<
+        FinoraCredentialRotationViewV2
+      >
+    >;
 
   completeFirstLoginV2:
     (
@@ -1986,6 +2141,7 @@ interface FinoraLoginSessionLoginRequest {
 
   securityCode?:
     string;
+  walletSecurityCode?: string;
 }
 
 interface FinoraLoginSessionRequest {
@@ -2831,6 +2987,32 @@ const credentialBridge:
             FinoraCredentialRotationViewV2
           >
         >,
+    recoverSecurityCodeV2:
+      (
+        request:
+          FinoraCredentialSecurityCodeRecoveryRequestV2,
+      ) =>
+        ipcRenderer.invoke(
+          BRANCH_CREDENTIAL_CHANNELS.SECURITY_CODE_RECOVERY_V2,
+          request,
+        ) as Promise<
+          FinoraCredentialBridgeResult<
+            FinoraCredentialRotationViewV2
+          >
+        >,
+    reconvergeSecurityCodeV2:
+      (
+        request:
+          FinoraCredentialSecurityCodeReconvergenceRequestV2,
+      ) =>
+        ipcRenderer.invoke(
+          BRANCH_CREDENTIAL_CHANNELS.SECURITY_CODE_RECONVERGENCE_V2,
+          request,
+        ) as Promise<
+          FinoraCredentialBridgeResult<
+            FinoraCredentialRotationViewV2
+          >
+        >,
     completeFirstLoginV2:
       (
         request:
@@ -3452,6 +3634,86 @@ const windowControlsBridge = {
 // Fixed channels only. Main validates sender and the complete input payload.
 // No token, private key, filesystem path or arbitrary IPC capability is exposed.
 const serverWalletBridge = Object.freeze({
+  // FINORA_P1_580P_HISTORY_BRIDGE
+  // Fixed read-only channels. No renderer-supplied scope or token.
+  transactions: async () => {
+    try {
+      return await ipcRenderer.invoke("finora:server-wallet:transactions");
+    } catch {
+      return { success: false, errorCode: "SERVER_UNAVAILABLE" };
+    }
+  },
+  recharges: async () => {
+    try {
+      return await ipcRenderer.invoke("finora:server-wallet:recharges");
+    } catch {
+      return { success: false, errorCode: "SERVER_UNAVAILABLE" };
+    }
+  },
+  // FINORA_P1_648C_PENDING_BRIDGE
+  // Zero-argument read. Main returns status only, never the UUID.
+  subscriptionPending: async () => {
+    try {
+      return await ipcRenderer.invoke(
+        "finora:server-wallet:subscription-pending"
+      );
+    } catch {
+      return { success: false, errorCode: "SERVER_UNAVAILABLE" };
+    }
+  },  // FINORA_P1_648F2_RESUME_BRIDGE
+  // No input. Main securely resolves the original encrypted UUID.
+  subscriptionResume: async () => {
+    try {
+      return await ipcRenderer.invoke(
+        "finora:server-wallet:subscription-resume"
+      );
+    } catch {
+      return {
+        success: false,
+        errorCode: "PURCHASE_RECONCILIATION_REQUIRED",
+      };
+    }
+  },  // FINORA_P1_634I_PURCHASE_PRELOAD
+  subscriptionPurchase: async (input: unknown) => {
+    const fail = (errorCode: string) => ({
+      success: false as const,
+      errorCode,
+    });
+
+    if (
+      input === null ||
+      typeof input !== "object" ||
+      Array.isArray(input) ||
+      Object.getPrototypeOf(input) !== Object.prototype
+    ) {
+      return fail("INVALID_REQUEST");
+    }
+
+    const value = input as Record<string, unknown>;
+
+    if (
+      Object.keys(value).length !== 2 ||
+      ![1, 3, 6, 12].includes(value.planMonths as number) ||
+      typeof value.idempotencyKey !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        value.idempotencyKey,
+      )
+    ) {
+      return fail("INVALID_REQUEST");
+    }
+
+    try {
+      return await ipcRenderer.invoke(
+        "finora:server-wallet:subscription-purchase",
+        {
+          planMonths: value.planMonths,
+          idempotencyKey: value.idempotencyKey.toLowerCase(),
+        },
+      );
+    } catch {
+      return fail("SERVER_UNAVAILABLE");
+    }
+  },
   recharge: async (input: unknown) => {
     try {
       return await ipcRenderer.invoke("finora:server-wallet:recharge", input);
@@ -3493,6 +3755,25 @@ const serverWalletBridge = Object.freeze({
         success: false,
         errorCode: "SERVER_UNAVAILABLE",
       };
+    }
+  },
+  // FINORA_P1_588H_READ_ONLY_RECOVERY
+  // Only operation UUID crosses IPC. No session token or branch scope.
+  recovery: async (operationId: string) => {
+    if (
+      typeof operationId !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId)
+    ) {
+      return { success: false, errorCode: "INVALID_REQUEST" };
+    }
+
+    try {
+      return await ipcRenderer.invoke(
+        "finora:server-wallet:usage-recovery",
+        operationId,
+      );
+    } catch {
+      return { success: false, errorCode: "SERVER_UNAVAILABLE" };
     }
   },
   logout: async () => {
@@ -3553,3 +3834,274 @@ contextBridge.exposeInMainWorld(
 // ============================================================
 
 export {};
+
+
+// FINORA_P1_686T_LIVE_HEALTH_BRIDGE
+contextBridge.exposeInMainWorld(
+  "finoraLoginHealth",
+  Object.freeze({
+    check: async (): Promise<{ live: boolean }> => {
+      const result: unknown = await ipcRenderer.invoke(
+        "finora:login:live-health",
+      );
+
+      if (
+        !result ||
+        typeof result !== "object" ||
+        Array.isArray(result)
+      ) {
+        return { live: false };
+      }
+
+      return {
+        live: (result as { live?: unknown }).live === true,
+      };
+    },
+  }),
+);
+// FINORA_P1_678P_ACCOUNT_LOGIN_BRIDGE
+// Account/Wallet authentication only; no business-data authorization.
+contextBridge.exposeInMainWorld(
+  "finoraAccountLogin",
+  Object.freeze({
+    login: async (input: {
+      username: string;
+      password: string;
+    }) => {
+      if (
+        !input ||
+        typeof input.username !== "string" ||
+        typeof input.password !== "string"
+      ) {
+        return {
+          success: false,
+          errorCode: "INVALID_REQUEST",
+          businessDataAccess: false,
+        };
+      }
+
+      const result: unknown = await ipcRenderer.invoke(
+        "finora:account:password-login",
+        {
+          username: input.username,
+          password: input.password,
+        },
+      );
+
+      if (
+        !result ||
+        typeof result !== "object" ||
+        Array.isArray(result)
+      ) {
+        return {
+          success: false,
+          errorCode: "INVALID_RESPONSE",
+          businessDataAccess: false,
+        };
+      }
+
+      const data = result as Record<string, unknown>;
+
+      return {
+        success: data.success === true,
+        errorCode:
+          typeof data.errorCode === "string"
+            ? data.errorCode
+            : undefined,
+        sessionType:
+          data.success === true &&
+          data.sessionType === "ACCOUNT_WALLET_ONLY"
+            ? "ACCOUNT_WALLET_ONLY"
+            : undefined,
+        businessDataAccess: false,
+      };
+    },
+  }),
+);
+
+// FINORA_P1_678X_WALLET_BALANCE_BRIDGE
+// Read-only Wallet operation, using Electron Main's private token.
+// No generic IPC or bearer-token access is exposed.
+contextBridge.exposeInMainWorld(
+  "finoraAccountWallet",
+  Object.freeze({
+    balance: async () => {
+      const result: unknown = await ipcRenderer.invoke(
+        "finora:account:wallet-balance",
+      );
+
+      if (
+        !result ||
+        typeof result !== "object" ||
+        Array.isArray(result)
+      ) {
+        return {
+          success: false,
+          errorCode: "INVALID_RESPONSE",
+        };
+      }
+
+      const value = result as Record<string, unknown>;
+
+      if (value.success !== true) {
+        return {
+          success: false,
+          errorCode:
+            typeof value.errorCode === "string"
+              ? value.errorCode
+              : "WALLET_BALANCE_UNAVAILABLE",
+        };
+      }
+
+      const wallet = value.wallet;
+
+      if (
+        !wallet ||
+        typeof wallet !== "object" ||
+        Array.isArray(wallet)
+      ) {
+        return {
+          success: false,
+          errorCode: "INVALID_WALLET_RESPONSE",
+        };
+      }
+
+      // Do not forward any token-like fields from backend data.
+      const safe = wallet as Record<string, unknown>;
+
+      return {
+        success: true,
+        wallet: {
+          ok: safe.ok === true,
+          /* FINORA_P1_678Z_BALANCE_INR */
+          balanceInr:
+            typeof safe.balanceInr === "string" &&
+            /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(safe.balanceInr)
+              ? safe.balanceInr
+              : undefined,
+          currency:
+            safe.currency === "INR" ? "INR" : undefined,
+          walletId:
+            typeof safe.walletId === "string"
+              ? safe.walletId
+              : undefined,
+          updatedAt:
+            typeof safe.updatedAt === "string"
+              ? safe.updatedAt
+              : undefined,
+          source:
+            typeof safe.source === "string"
+              ? safe.source
+              : undefined,
+        },
+      };
+    },
+  }),
+);
+// FINORA_P1_688G_BUSINESS_SESSION_REVALIDATION
+contextBridge.exposeInMainWorld(
+  "finoraBusinessSession",
+  Object.freeze({
+    validate: async (): Promise<{
+      success: boolean;
+      sessionType?: string;
+      businessDataAccess: boolean;
+      errorCode?: string;
+    }> => {
+      const result: unknown = await ipcRenderer.invoke(
+        "finora:business:session-validate",
+      );
+
+      if (
+        !result ||
+        typeof result !== "object" ||
+        Array.isArray(result)
+      ) {
+        return {
+          success: false,
+          businessDataAccess: false,
+          errorCode: "INVALID_RESPONSE",
+        };
+      }
+
+      const value = result as Record<string, unknown>;
+
+      return {
+        success: value.success === true,
+        sessionType:
+          value.sessionType === "BUSINESS_RECEPTION"
+            ? "BUSINESS_RECEPTION"
+            : undefined,
+        businessDataAccess: false,
+        errorCode:
+          typeof value.errorCode === "string"
+            ? value.errorCode
+            : undefined,
+      };
+    },
+  }),
+);
+// FINORA_P1_687Y_SERVER_BUSINESS_LOGIN_BRIDGE
+// Credentials go to trusted Electron Main Process only.
+// Business session token is never exposed to renderer.
+contextBridge.exposeInMainWorld(
+  "finoraBusinessLogin",
+  Object.freeze({
+    login: async (input: {
+      username: string;
+      password: string;
+    }): Promise<{
+      success: boolean;
+      errorCode?: string;
+      sessionType?: string;
+      businessDataAccess: boolean;
+    }> => {
+      if (
+        !input ||
+        typeof input.username !== "string" ||
+        typeof input.password !== "string"
+      ) {
+        return {
+          success: false,
+          errorCode: "INVALID_REQUEST",
+          businessDataAccess: false,
+        };
+      }
+
+      const result: unknown = await ipcRenderer.invoke(
+        "finora:business:password-login",
+        {
+          username: input.username,
+          password: input.password,
+        },
+      );
+
+      if (
+        !result ||
+        typeof result !== "object" ||
+        Array.isArray(result)
+      ) {
+        return {
+          success: false,
+          errorCode: "INVALID_RESPONSE",
+          businessDataAccess: false,
+        };
+      }
+
+      const value = result as Record<string, unknown>;
+
+      return {
+        success: value.success === true,
+        errorCode:
+          typeof value.errorCode === "string"
+            ? value.errorCode
+            : undefined,
+        sessionType:
+          value.sessionType === "BUSINESS_RECEPTION"
+            ? "BUSINESS_RECEPTION"
+            : undefined,
+        businessDataAccess: false,
+      };
+    },
+  }),
+);

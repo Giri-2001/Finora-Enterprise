@@ -550,3 +550,383 @@ export async function fetchFinoraServerLiveWallets(
 
   return candidate as unknown as FinoraServerLiveWalletPage;
 }
+
+// FINORA_P1_579IC_SERVER_GLOBAL_PRICING
+
+export interface FinoraServerGlobalPricingInput {
+  customerCreateFee: number;
+  loanDisbursementFee: number;
+  collectionBelow25000Fee: number;
+  collection25000To50000Fee: number;
+  collectionAbove50000Fee: number;
+  subscription1MonthFee: number;
+  subscription3MonthFee: number;
+  subscription6MonthFee: number;
+  subscription12MonthFee: number;
+  pricingNoticeTitle?: string;
+  pricingNoticeMessage?: string;
+}
+
+export interface FinoraServerGlobalPricingView {
+  source: "CONTROL_CENTER";
+  revision: number;
+  updatedAt?: string;
+  customerCreateFee: number;
+  loanDisbursementFee: number;
+  collectionBelow25000Fee: number;
+  collection25000To50000Fee: number;
+  collectionAbove50000Fee: number;
+  subscription1MonthFee: number;
+  subscription3MonthFee: number;
+  subscription6MonthFee: number;
+  subscription12MonthFee: number;
+  pricingNoticeTitle?: string;
+  pricingNoticeMessage?: string;
+}
+
+// FINORA_P1_579IL_PRICING_NUMBER_NORMALIZATION
+function requireFinoraServerGlobalPricingAmount(
+  value: unknown,
+  field: string,
+): number {
+  // FINORA_P1_579IT_PRICING_RUNTIME_TRACE
+  console.log(
+    "[FINORA PRICING INPUT]",
+    JSON.stringify({
+      field,
+      type: typeof value,
+      value:
+        typeof value === "number" ||
+        typeof value === "string"
+          ? value
+          : value === null
+            ? null
+            : "[NON_PRIMITIVE]",
+    }),
+  );
+  const normalized =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" &&
+          value.trim() !== ""
+        ? Number(value.trim())
+        : Number.NaN;
+
+  if (
+    !Number.isFinite(normalized) ||
+    normalized < 0 ||
+    normalized > 1_000_000 ||
+    Math.round(normalized * 100) !==
+      normalized * 100
+  ) {
+    throw new Error(`FINORA ${field} is invalid.`);
+  }
+
+  return normalized;
+}
+
+function mapFinoraServerGlobalPricing(
+  body: unknown,
+): FinoraServerGlobalPricingView {
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    Array.isArray(body) ||
+    (body as { ok?: unknown }).ok !== true
+  ) {
+    throw new Error(
+      "FINORA global pricing server response is invalid.",
+    );
+  }
+
+  const root = body as Record<string, unknown>;
+  const rawPricing = root.pricing;
+
+  if (
+    typeof rawPricing !== "object" ||
+    rawPricing === null ||
+    Array.isArray(rawPricing)
+  ) {
+    throw new Error(
+      "FINORA global pricing is not configured on the server.",
+    );
+  }
+
+  const pricing = rawPricing as Record<string, unknown>;
+
+  const revision =
+    typeof root.revision === "object" &&
+    root.revision !== null &&
+    !Array.isArray(root.revision)
+      ? root.revision as Record<string, unknown>
+      : undefined;
+
+  const title =
+    revision && typeof revision.title === "string"
+      ? revision.title
+      : undefined;
+
+  const message =
+    revision && typeof revision.message === "string"
+      ? revision.message
+      : undefined;
+
+  const updatedAt =
+    revision && typeof revision.createdAt === "string"
+      ? revision.createdAt
+      : undefined;
+
+  // FINORA_P1_579IV_PRICING_ROW_AMOUNT
+  // The canonical admin API may return each pricing code either as the
+  // amount itself or as a PostgreSQL-derived row object.  Extract only the
+  // amount field; never infer or fabricate a price.
+  const readPricingAmount = (
+    value: unknown,
+  ): unknown => {
+    if (
+      typeof value === "number" ||
+      typeof value === "string"
+    ) {
+      return value;
+    }
+
+    if (
+      value !== null &&
+      typeof value === "object" &&
+      !Array.isArray(value)
+    ) {
+      const row = value as Record<string, unknown>;
+
+      if ("amountInr" in row) {
+        return row.amountInr;
+      }
+
+      if ("amount_inr" in row) {
+        return row.amount_inr;
+      }
+
+      if ("amount" in row) {
+        return row.amount;
+      }
+    }
+
+    return value;
+  };
+
+  return {
+    source: "CONTROL_CENTER",
+    revision: 1,
+
+    customerCreateFee:
+      requireFinoraServerGlobalPricingAmount(
+        readPricingAmount(pricing.CUSTOMER_CREATE),
+        "Customer Create price",
+      ),
+
+    loanDisbursementFee:
+      requireFinoraServerGlobalPricingAmount(
+        readPricingAmount(pricing.LOAN_DISBURSEMENT),
+        "Loan Disbursement price",
+      ),
+
+    collectionBelow25000Fee:
+      requireFinoraServerGlobalPricingAmount(
+        readPricingAmount(pricing.COLLECTION_BELOW_25000),
+        "Collection Below 25000 price",
+      ),
+
+    collection25000To50000Fee:
+      requireFinoraServerGlobalPricingAmount(
+        readPricingAmount(pricing.COLLECTION_25000_TO_50000),
+        "Collection 25000 To 50000 price",
+      ),
+
+    collectionAbove50000Fee:
+      requireFinoraServerGlobalPricingAmount(
+        readPricingAmount(pricing.COLLECTION_ABOVE_50000),
+        "Collection Above 50000 price",
+      ),
+
+    subscription1MonthFee:
+      requireFinoraServerGlobalPricingAmount(
+        readPricingAmount(pricing.SUBSCRIPTION_1_MONTH),
+        "1 Month Subscription price",
+      ),
+
+    subscription3MonthFee:
+      requireFinoraServerGlobalPricingAmount(
+        readPricingAmount(pricing.SUBSCRIPTION_3_MONTH),
+        "3 Month Subscription price",
+      ),
+
+    subscription6MonthFee:
+      requireFinoraServerGlobalPricingAmount(
+        readPricingAmount(pricing.SUBSCRIPTION_6_MONTH),
+        "6 Month Subscription price",
+      ),
+
+    subscription12MonthFee:
+      requireFinoraServerGlobalPricingAmount(
+        readPricingAmount(pricing.SUBSCRIPTION_12_MONTH),
+        "12 Month Subscription price",
+      ),
+
+    ...(title ? { pricingNoticeTitle: title } : {}),
+    ...(message ? { pricingNoticeMessage: message } : {}),
+    ...(updatedAt ? { updatedAt } : {}),
+  };
+}
+
+async function readFinoraServerGlobalPricingBody(
+  response: Response,
+): Promise<unknown> {
+  let body: unknown;
+
+  try {
+    body = await response.json();
+  } catch {
+    throw new Error(
+      "FINORA global pricing response is unreadable.",
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      getServerErrorMessage(
+        response.status,
+        typeof body === "object" &&
+          body !== null &&
+          !Array.isArray(body)
+          ? body as FinoraServerErrorResponse
+          : undefined,
+      ),
+    );
+  }
+
+  return body;
+}
+
+export async function fetchFinoraServerGlobalPricing(
+  adminApiKey: string,
+): Promise<FinoraServerGlobalPricingView> {
+  const protectedKey = assertAdminApiKey(adminApiKey);
+
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${FINORA_API_BASE_URL}/admin/pricing/global`,
+      {
+        method: "GET",
+        headers: {
+          "x-finora-admin-key": protectedKey,
+        },
+        signal: AbortSignal.timeout(
+          FINORA_SERVER_REQUEST_TIMEOUT_MS,
+        ),
+        cache: "no-store",
+      },
+    );
+  } catch {
+    throw new Error(
+      "Unable to reach the FINORA global pricing server.",
+    );
+  }
+
+  return mapFinoraServerGlobalPricing(
+    await readFinoraServerGlobalPricingBody(response),
+  );
+}
+
+export async function updateFinoraServerGlobalPricing(
+  adminApiKey: string,
+  input: FinoraServerGlobalPricingInput,
+): Promise<FinoraServerGlobalPricingView> {
+  const protectedKey = assertAdminApiKey(adminApiKey);
+
+  const pricing = {
+    CUSTOMER_CREATE:
+      requireFinoraServerGlobalPricingAmount(
+        input.customerCreateFee,
+        "Customer Create price",
+      ),
+    LOAN_DISBURSEMENT:
+      requireFinoraServerGlobalPricingAmount(
+        input.loanDisbursementFee,
+        "Loan Disbursement price",
+      ),
+    COLLECTION_BELOW_25000:
+      requireFinoraServerGlobalPricingAmount(
+        input.collectionBelow25000Fee,
+        "Collection Below 25000 price",
+      ),
+    COLLECTION_25000_TO_50000:
+      requireFinoraServerGlobalPricingAmount(
+        input.collection25000To50000Fee,
+        "Collection 25000 To 50000 price",
+      ),
+    COLLECTION_ABOVE_50000:
+      requireFinoraServerGlobalPricingAmount(
+        input.collectionAbove50000Fee,
+        "Collection Above 50000 price",
+      ),
+    SUBSCRIPTION_1_MONTH:
+      requireFinoraServerGlobalPricingAmount(
+        input.subscription1MonthFee,
+        "1 Month Subscription price",
+      ),
+    SUBSCRIPTION_3_MONTH:
+      requireFinoraServerGlobalPricingAmount(
+        input.subscription3MonthFee,
+        "3 Month Subscription price",
+      ),
+    SUBSCRIPTION_6_MONTH:
+      requireFinoraServerGlobalPricingAmount(
+        input.subscription6MonthFee,
+        "6 Month Subscription price",
+      ),
+    SUBSCRIPTION_12_MONTH:
+      requireFinoraServerGlobalPricingAmount(
+        input.subscription12MonthFee,
+        "12 Month Subscription price",
+      ),
+  };
+
+  const payload: Record<string, unknown> = { pricing };
+
+  if (input.pricingNoticeTitle !== undefined) {
+    payload.title = input.pricingNoticeTitle;
+  }
+
+  if (input.pricingNoticeMessage !== undefined) {
+    payload.message = input.pricingNoticeMessage;
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `${FINORA_API_BASE_URL}/admin/pricing/global`,
+      {
+        method: "PUT",
+        headers: {
+          "content-type": "application/json",
+          "x-finora-admin-key": protectedKey,
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(
+          FINORA_SERVER_REQUEST_TIMEOUT_MS,
+        ),
+        cache: "no-store",
+      },
+    );
+  } catch {
+    throw new Error(
+      "Unable to reach the FINORA global pricing server.",
+    );
+  }
+
+  await readFinoraServerGlobalPricingBody(response);
+
+  return fetchFinoraServerGlobalPricing(protectedKey);
+}

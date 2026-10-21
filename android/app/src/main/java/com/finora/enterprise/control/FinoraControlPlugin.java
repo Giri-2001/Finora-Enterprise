@@ -11700,4 +11700,25 @@ private boolean isValidEntitlement(
             response
         );
     }
+
+    // P1-684X: Account/Wallet authentication only.
+    // Business and Reception authorization remain separate.
+    @PluginMethod
+    public void accountPasswordLogin(PluginCall call) {
+        final String username = call.getString("username");
+        final String password = call.getString("password");
+
+        getBridge().execute(() -> {
+            org.json.JSONObject result =
+                FinoraAccountPasswordLoginClient.login(username, password);
+
+            try {
+                com.getcapacitor.JSObject response =
+                    com.getcapacitor.JSObject.fromJSONObject(result);
+                call.resolve(response);
+            } catch (Exception ignored) {
+                call.reject("ACCOUNT_LOGIN_RESPONSE_INVALID");
+            }
+        });
+    }
 }

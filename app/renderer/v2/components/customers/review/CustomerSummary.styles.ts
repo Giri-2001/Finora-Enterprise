@@ -497,7 +497,7 @@ export function createCustomerSummaryStyles(
      RETURN
   ========================================================= */
 
-  return { fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  return {
 
     cardStyle,
 

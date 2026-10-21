@@ -1,4 +1,4 @@
-﻿/* ===========================================================
+/* ===========================================================
    FINORA ENTERPRISE OS™
 
    LOAN CUSTOMER CARD™
@@ -59,7 +59,7 @@ import {
 } from "./LoanCustomerCard.styles";
 
 import finoraLogo
-  from "../../../app/assets/finoraenterprise.png";
+  from "../../../app/assets/finoraenterprise.png?url";
 
 
 /* ===========================================================

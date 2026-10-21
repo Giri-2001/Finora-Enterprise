@@ -1,4 +1,4 @@
-import {
+﻿import {
   Buffer,
 } from "node:buffer";
 
@@ -1224,6 +1224,249 @@ export async function decryptFinoraPortableBranchAuthEnvelopeV2WithRecoveryCode(
   }
 }
 
+
+// FINORA_P1_578YA_AUTHENTICATED_CREATED_AT_REPAIR
+//
+// Narrow compatibility repair for the pre-XR reconvergence defect.
+// Security Code authenticates the existing recovery wrap first.
+// Only payload.createdAt may change.
+export async function repairFinoraPortableBranchAuthV2CreatedAtByRecoveryCode(
+  envelope:
+    FinoraPortableBranchAuthEnvelopeV2,
+  securityCode:
+    string,
+  authoritativeCreatedAt:
+    string,
+): Promise<
+  FinoraPortableBranchAuthEnvelopeV2
+> {
+  validateFinoraPortableBranchAuthEnvelopeV2(
+    envelope,
+  );
+
+  assertSecret(
+    securityCode,
+    "Security Code",
+    SECURITY_CODE_MIN_LENGTH,
+  );
+
+  const authoritativeCreatedAtMillis =
+    Date.parse(
+      authoritativeCreatedAt,
+    );
+
+  if (
+    typeof authoritativeCreatedAt !==
+      "string" ||
+    !Number.isFinite(
+      authoritativeCreatedAtMillis,
+    ) ||
+    new Date(
+      authoritativeCreatedAtMillis,
+    ).toISOString() !==
+      authoritativeCreatedAt
+  ) {
+    throw new FinoraPortableBranchAuthV2CryptoError(
+      "INVALID_INPUT",
+      "Authoritative credential createdAt is invalid.",
+    );
+  }
+
+  const recoveryDerived =
+    await deriveFactor(
+      securityCode,
+      envelope.securityFactor,
+    );
+
+  try {
+    if (
+      !verifierMatches(
+        recoveryDerived,
+        envelope.securityFactor,
+      )
+    ) {
+      throw new FinoraPortableBranchAuthV2CryptoError(
+        "INVALID_CREDENTIALS",
+        "Invalid Security Code.",
+      );
+    }
+
+    const recoverySecretFactor =
+      getSecretFactor(
+        recoveryDerived,
+      );
+
+    const recoveryWrapKey =
+      deriveWrapKey(
+        recoverySecretFactor,
+        RECOVERY_WRAP_DOMAIN,
+      );
+
+    let masterKey:
+      Buffer | null =
+      null;
+
+    try {
+      masterKey =
+        unwrapMasterKey(
+          envelope.recoveryWrap,
+          recoveryWrapKey,
+          buildWrapAad(
+            envelope,
+            "RECOVERY",
+            envelope.securityFactor,
+          ),
+        );
+
+      const currentPayload =
+        decryptPayloadWithMasterKey(
+          envelope,
+          masterKey,
+        );
+
+      if (
+        currentPayload.createdAt ===
+          authoritativeCreatedAt
+      ) {
+        return structuredClone(
+          envelope,
+        );
+      }
+
+      const replacementPayload:
+        FinoraPortableBranchAuthPayloadV1 =
+        {
+          ...structuredClone(
+            currentPayload,
+          ),
+          createdAt:
+            authoritativeCreatedAt,
+        };
+
+      validateFinoraPortableBranchAuthPayloadV1(
+        replacementPayload,
+      );
+
+      // Compare typed clones with createdAt explicitly normalized.
+      // No Record<string, unknown> cast is required.
+      const currentComparison:
+        FinoraPortableBranchAuthPayloadV1 =
+        {
+          ...structuredClone(
+            currentPayload,
+          ),
+          createdAt:
+            authoritativeCreatedAt,
+        };
+
+      if (
+        JSON.stringify(
+          currentComparison,
+        ) !==
+        JSON.stringify(
+          replacementPayload,
+        )
+      ) {
+        throw new FinoraPortableBranchAuthV2CryptoError(
+          "AUTHENTICATION_FAILED",
+          "CreatedAt repair attempted to alter protected Portable Auth lineage.",
+        );
+      }
+
+      const replacementEnvelope:
+        FinoraPortableBranchAuthEnvelopeV2 =
+        structuredClone(
+          envelope,
+        );
+
+      const plaintext =
+        Buffer.from(
+          JSON.stringify(
+            replacementPayload,
+          ),
+          "utf8",
+        );
+
+      try {
+        const payloadEncrypted =
+          encryptAesGcm(
+            masterKey,
+            plaintext,
+            buildPayloadAad(
+              replacementEnvelope,
+            ),
+          );
+
+        replacementEnvelope.payloadEncryption =
+          {
+            algorithm:
+              FINORA_PORTABLE_BRANCH_AUTH_ENCRYPTION_ALGORITHM,
+            iv:
+              payloadEncrypted.iv.toString(
+                "base64",
+              ),
+            authTag:
+              payloadEncrypted.authTag.toString(
+                "base64",
+              ),
+          };
+
+        replacementEnvelope.ciphertext =
+          payloadEncrypted.ciphertext.toString(
+            "base64",
+          );
+
+        validateFinoraPortableBranchAuthEnvelopeV2(
+          replacementEnvelope,
+        );
+
+        const verifiedPayload =
+          decryptPayloadWithMasterKey(
+            replacementEnvelope,
+            masterKey,
+          );
+
+        if (
+          JSON.stringify(
+            verifiedPayload,
+          ) !==
+          JSON.stringify(
+            replacementPayload,
+          )
+        ) {
+          throw new FinoraPortableBranchAuthV2CryptoError(
+            "AUTHENTICATION_FAILED",
+            "CreatedAt repair verification failed.",
+          );
+        }
+
+        return replacementEnvelope;
+      }
+      finally {
+        plaintext.fill(
+          0,
+        );
+      }
+    }
+    finally {
+      recoverySecretFactor.fill(
+        0,
+      );
+      recoveryWrapKey.fill(
+        0,
+      );
+      masterKey?.fill(
+        0,
+      );
+    }
+  }
+  finally {
+    recoveryDerived.fill(
+      0,
+    );
+  }
+}
+
 // ============================================================
 // PASSWORD WRAP ROTATION
 //
@@ -1549,6 +1792,8 @@ export async function rotateFinoraPortableBranchAuthV2RecoveryCodeByPassword(
     string,
   newSecurityCode:
     string,
+  successor?:
+    FinoraPortableBranchAuthPasswordRotationSuccessorV2,
 ): Promise<
   FinoraPortableBranchAuthRecoveryRotationV2
 > {
@@ -1681,12 +1926,72 @@ export async function rotateFinoraPortableBranchAuthV2RecoveryCodeByPassword(
               ),
           };
 
+        // FINORA_P1_578KN_GENERATION_SAFE_SECURITY_ROTATION
+        //
+        // Existing three-argument Security-Code rotation keeps its
+        // original behavior. A password-authorized recovery coordinator
+        // may provide an exact successor generation/timestamp.
+        if (
+          successor !==
+            undefined
+        ) {
+          if (
+            !Number.isSafeInteger(
+              successor.authGeneration,
+            ) ||
+            successor.authGeneration !==
+              currentPayload.authGeneration +
+                1
+          ) {
+            throw new FinoraPortableBranchAuthV2CryptoError(
+              "INVALID_INPUT",
+              "Security Code rotation successor authGeneration is invalid.",
+            );
+          }
+
+          const successorUpdatedAtMillis =
+            Date.parse(
+              successor.updatedAt,
+            );
+
+          if (
+            typeof successor.updatedAt !==
+              "string" ||
+            !Number.isFinite(
+              successorUpdatedAtMillis,
+            ) ||
+            new Date(
+              successorUpdatedAtMillis,
+            ).toISOString() !==
+              successor.updatedAt ||
+            successorUpdatedAtMillis <
+              Date.parse(
+                currentPayload.updatedAt,
+              )
+          ) {
+            throw new FinoraPortableBranchAuthV2CryptoError(
+              "INVALID_INPUT",
+              "Security Code rotation successor updatedAt is invalid.",
+            );
+          }
+        }
+
         const replacementPayload:
           FinoraPortableBranchAuthPayloadV1 =
           {
             ...structuredClone(
               currentPayload,
             ),
+
+            ...(successor
+              ? {
+                  authGeneration:
+                    successor.authGeneration,
+
+                  updatedAt:
+                    successor.updatedAt,
+                }
+              : {}),
 
             securityVerifier,
           };

@@ -1,3 +1,4 @@
+import { IndianRupee } from "lucide-react";
 import {
   useEffect,
   useState,
@@ -475,30 +476,30 @@ export default function FinoraControlCenterIncomePricingPanel({
           "collectionBelow25000Fee",
 
         title:
-          "Collection < ₹25,000",
+          "Collection < INR 25,000",
 
         description:
-          "Default Collection Processing fee below ₹25,000.",
+          "Default Collection Processing fee below INR 25,000.",
       },
       {
         key:
           "collection25000To50000Fee",
 
         title:
-"Collection ₹25,000 - ₹50,000",
+"Collection INR 25,000 - INR 50,000",
 
         description:
-          "Default Collection Processing fee from ₹25,000 through ₹50,000 inclusive.",
+          "Default Collection Processing fee from INR 25,000 through INR 50,000 inclusive.",
       },
       {
         key:
           "collectionAbove50000Fee",
 
         title:
-          "Collection > ₹50,000",
+          "Collection > INR 50,000",
 
         description:
-          "Default Collection Processing fee above ₹50,000.",
+          "Default Collection Processing fee above INR 50,000.",
       },
     ];
 
@@ -756,7 +757,7 @@ export default function FinoraControlCenterIncomePricingPanel({
                       "#cbd5e1",
                   }}
                 >
-                  ₹
+                  <IndianRupee size={16} aria-hidden="true" />
                 </span>
 
                 <input
@@ -1228,13 +1229,31 @@ export default function FinoraControlCenterIncomePricingPanel({
                     ? (
                         <>
                           {" · "}
-                          Updated: <strong>{current.updatedAt}</strong>
+                          Updated:{" "}
+<strong>
+  {(() => {
+    const date = new Date(current.updatedAt);
+
+    if (Number.isNaN(date.getTime())) {
+      return current.updatedAt;
+    }
+
+    const pad = (value: number) =>
+      String(value).padStart(2, "0");
+
+    return `${pad(date.getDate())}-${pad(
+      date.getMonth() + 1,
+    )}-${date.getFullYear()} ${pad(
+      date.getHours(),
+    )}:${pad(date.getMinutes())}`;
+  })()}
+</strong>
                         </>
                       )
                     : null}
                 </>
               )
-            : "Loading current FINORA Income defaults…"}
+            : "Loading current FINORA Income defaults..."}
         </div>
 
         <button
@@ -1284,7 +1303,7 @@ export default function FinoraControlCenterIncomePricingPanel({
           }}
         >
           {state === "SAVING"
-            ? "Saving…"
+            ? "Saving..."
             : "Save Global Pricing"}
         </button>
       </div>

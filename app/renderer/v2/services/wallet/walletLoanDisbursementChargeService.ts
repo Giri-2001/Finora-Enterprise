@@ -80,7 +80,7 @@ export interface LoanWalletChargePreflightSuccess {
       number;
 
     availableBalanceAfterCharge:
-      number;
+      number | undefined;
   };
 }
 

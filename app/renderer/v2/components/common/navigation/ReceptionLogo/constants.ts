@@ -5,7 +5,7 @@
    CONSTANTS
 =========================================================== */
 
-import finoraLogo from "../../../../app/assets/finoraenterprise.png";
+import finoraLogo from "../../../../app/assets/finoraenterprise.png?url";
 
 export const LOGO_IMAGE = finoraLogo;
 

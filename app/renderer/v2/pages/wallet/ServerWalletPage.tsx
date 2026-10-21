@@ -1,8 +1,9 @@
+import ServerWalletLiveHistory from "../../components/wallet/ServerWalletLiveHistory";
 import { formatFinoraDateTime } from "../../../shared/finoraDateTimeDisplay";
 import { useEffect, useRef, useState } from "react";
 import { useTheme } from "../../themes/provider";
 import type { CSSProperties, FormEvent } from "react";
-import { Wallet, RefreshCw, LogOut, ShieldCheck, KeyRound, Eye, EyeOff } from "lucide-react";
+import { Wallet, RefreshCw, LogOut, ShieldCheck, KeyRound, Eye, EyeOff, Sparkles, Crown, CalendarDays, Clock3, Repeat2, BadgeCheck } from "lucide-react";
 import {
   getFinoraServerWalletBridge,
 } from "../../services/wallet/finoraServerWalletBridge";
@@ -72,6 +73,7 @@ type FinoraSubscriptionView = {
   planMonths: number;
   status: string;
   expiresAt: string | null;
+  startsAt?: string | null;
 };
 
 function finoraSubscriptionBadge(
@@ -130,16 +132,80 @@ function finoraSubscriptionBadgeColors(
       return { background: "#334155", color: "#FFFFFF" };
   }
 }
+function finoraPlanCountdown(
+  expiryValue: string | null,
+  now: number,
+): string {
+  if (!expiryValue) return "Expiry unavailable";
+
+  const expiry = Date.parse(expiryValue);
+  if (!Number.isFinite(expiry)) return "Expiry unavailable";
+
+  const difference = expiry - now;
+  const absolute = Math.abs(difference);
+
+  if (absolute < 60_000) {
+    return difference > 0
+      ? "Less than 1 minute remaining"
+      : "Expired less than 1 minute ago";
+  }
+
+  if (absolute < 86_400_000) {
+    const totalMinutes = Math.floor(absolute / 60_000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const clock = `${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m`;
+
+    return difference > 0
+      ? `${clock} remaining`
+      : `Expired ${clock} ago`;
+  }
+
+  const days = difference > 0
+    ? Math.ceil(absolute / 86_400_000)
+    : Math.floor(absolute / 86_400_000);
+
+  return difference > 0
+    ? `Expires in ${days} days`
+    : `Expired ${days} day${days === 1 ? "" : "s"} ago`;
+}
 export default function ServerWalletPage({
   username,
-  subscription,
 }: {
   username: string;
-  subscription?: FinoraSubscriptionView | null;
 }) {
   const { theme } = useTheme();
   const [showPassword, setShowPassword] = useState(false);
-  const [previewPlan, setPreviewPlan] = useState(12);
+  const [previewPlan, setPreviewPlan] = useState(1);
+  // FINORA_P1_634J_PURCHASE_REVIEW
+  const [purchaseReviewOpen, setPurchaseReviewOpen] = useState(false);
+  // FINORA_P1_647C_PURCHASE_UI_GATE
+  // Never activate real money movement before release verification.
+  const purchaseUiEnabled = true;
+  // FINORA_P1_647J_SUCCESS_LOCK
+  const purchaseSettled = useRef(false);
+  const [purchaseBusy, setPurchaseBusy] = useState(false);
+  const [purchaseMessage, setPurchaseMessage] = useState("");
+  // FINORA_P1_648D_PENDING_UI
+  // Fail closed until Main Process verifies pending purchase state.
+  const [pendingPurchase, setPendingPurchase] = useState<{
+    state: "CHECKING" | "CLEAR" | "PENDING" | "UNAVAILABLE";
+    planMonths: 1 | 3 | 6 | 12 | null;
+  }>({ state: "CHECKING", planMonths: null });
+  const purchaseIntent = useRef<{
+    walletId: string;
+    planMonths: 1 | 3 | 6 | 12;
+    idempotencyKey: string;
+  } | null>(null);
+  const [planClock, setPlanClock] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(
+      () => setPlanClock(Date.now()),
+      60_000,
+    );
+    return () => window.clearInterval(timer);
+  }, []);
   // FINORA_P565N3B_PRICING
   const [livePricing, setLivePricing] = useState<{
     plans: Array<{
@@ -149,8 +215,10 @@ export default function ServerWalletPage({
       fees: Record<string, string>;
     }>;
   } | null>(null);
+  const [subscription, setSubscription] =
+    useState<FinoraSubscriptionView | null>(null);
   const [pricingUnavailable, setPricingUnavailable] = useState(true);
-  const [previewAutoRenew, setPreviewAutoRenew] = useState(false);
+  const [previewRenewMonths, setPreviewRenewMonths] = useState<number | null>(null);
   const [showSecurityCode, setShowSecurityCode] = useState(false);
 
   const panel: CSSProperties = {
@@ -211,6 +279,14 @@ export default function ServerWalletPage({
   const [password, setPassword] = useState("");
   const [securityCode, setSecurityCode] = useState("");
   const [balance, setBalance] = useState<ServerWalletBalance | null>(null);
+
+  // FINORA_P1_582F_VERIFIED_HEADER: notification only; no trusted amount in event.
+  useEffect(() => {
+    if (!balance || !validBalance(balance)) return;
+    window.dispatchEvent(
+      new Event("finora:verified-wallet-balance-refresh"),
+    );
+  }, [balance?.walletId, balance?.balanceInr]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("Sign in to view your server wallet.");
   const [failed, setFailed] = useState(false);
@@ -234,38 +310,151 @@ export default function ServerWalletPage({
     mounted.current = true;
     setAvailable(getFinoraServerWalletBridge() !== null);
 
-    // Server pricing only; never use fallback fee amounts.
+    // FINORA_P573B_AUTO_WALLET
+    // The Main Login has already attempted a server-scoped handoff.
+    // No Wallet credentials, local balance or fallback pricing.
+    const ticket = ++operation.current;
+
     void (async () => {
-      try {
-        const bridge = getFinoraServerWalletBridge();
-        if (!bridge) return;
+      const bridge = getFinoraServerWalletBridge();
 
-        const response = await bridge.pricing();
-
-        if (!mounted.current) return;
-
-        if (
-          response.success &&
-          response.data.source === "FINORA_POSTGRESQL_PRICING" &&
-          response.data.plans.length === 4
-        ) {
-          setLivePricing({
-            plans: response.data.plans,
-          });
-          setPricingUnavailable(false);
+      if (!bridge) {
+        if (mounted.current && operation.current === ticket) {
+          setFailed(true);
+          setMessage("Server Wallet is unavailable in this build.");
         }
-      } catch {
-        if (mounted.current) {
+        return;
+      }
+
+      setBusy(true);
+      setMessage("Verifying your branch wallet with FINORA server...");
+
+      try {
+        const result = await bridge.balance();
+
+        if (!mounted.current || operation.current !== ticket) return;
+
+        if (!result.success || !validBalance(result.data)) {
+          setBalance(null);
           setLivePricing(null);
           setPricingUnavailable(true);
+          setFailed(true);
+          setMessage(
+            !result.success
+              ? explain(result.errorCode)
+              : "Server returned an invalid Wallet balance."
+          );
+          return;
+        }
+
+        setBalance({
+          source: result.data.source,
+          walletId: result.data.walletId,
+          balanceInr: result.data.balanceInr,
+          currency: result.data.currency,
+          updatedAt: result.data.updatedAt,
+        });
+
+        setFailed(false);
+        setMessage("Verified branch Wallet loaded from FINORA server.");
+
+        const prices = await bridge.pricing();
+
+        if (!mounted.current || operation.current !== ticket) return;
+
+        if (
+          prices.success &&
+          prices.data.source === "FINORA_POSTGRESQL_PRICING" &&
+          Array.isArray(prices.data.plans) &&
+          prices.data.plans.length === 4
+        ) {
+          setLivePricing({ plans: prices.data.plans });
+
+          // P1-665T: Current plan comes only from authenticated
+          // server pricing, never a local guessed subscription.
+          const current = prices.data.currentSubscription;
+
+          // P1-665U: Recognize verified planCode when
+          // selectedPlanMonths is absent in the server response.
+          const planCodeMonths = current?.planCode.match(
+            /^SUBSCRIPTION_(1|3|6|12)_MONTHS?$/
+          );
+
+          const months = current?.selectedPlanMonths ??
+            (planCodeMonths ? Number(planCodeMonths[1]) : null);
+
+          const validCurrent = !!current &&
+            current.status === "ACTIVE" &&
+            [1, 3, 6, 12].includes(months ?? 0) &&
+            prices.data.plans.some(plan => plan.months === months) &&
+            Number.isFinite(Date.parse(current.startsAt)) &&
+            Number.isFinite(Date.parse(current.expiresAt)) &&
+            Number.isFinite(Date.parse(current.serverNow)) &&
+            Date.parse(current.startsAt) <= Date.parse(current.serverNow) &&
+            Date.parse(current.expiresAt) > Date.parse(current.serverNow);
+
+          setSubscription(validCurrent ? {
+            planMonths: months as number,
+            status: current!.status,
+            startsAt: current!.startsAt,
+            expiresAt: current!.expiresAt,
+          } : null);
+
+          setPricingUnavailable(false);
+        } else {
+          setLivePricing(null);
+          setPricingUnavailable(true);
+          setMessage(
+            "Server Wallet verified. Subscription pricing is unavailable."
+          );
+        }
+
+        // FINORA_P1_648D_PENDING_UI
+        // Read-only IPC; UUID and Wallet identity remain in Main.
+        const pendingResult = await bridge.subscriptionPending();
+        if (!mounted.current || operation.current !== ticket) return;
+
+        if (pendingResult.success) {
+          setPendingPurchase({
+            state: pendingResult.data.pending ? "PENDING" : "CLEAR",
+            planMonths: pendingResult.data.planMonths,
+          });
+        } else {
+          setPendingPurchase({
+            state: "UNAVAILABLE",
+            planMonths: null,
+          });
+        }
+      } catch {
+        if (mounted.current && operation.current === ticket) {
+          setPendingPurchase({
+            state: "UNAVAILABLE",
+            planMonths: null,
+          });
+          setBalance(null);
+          setLivePricing(null);
+          setPricingUnavailable(true);
+          setFailed(true);
+          setMessage("Unable to verify the server Wallet. Please retry.");
+        }
+      } finally {
+        if (mounted.current && operation.current === ticket) {
+          setBusy(false);
         }
       }
     })();
+
+    // FINORA P1-571M:
+    // Pricing requires an authenticated server Wallet session.
+    // Fetch after successful balance verification, not on mount.
     return () => {
       mounted.current = false;
       operation.current++;
-      // Cancel access and pending login when leaving this wallet screen.
-      void endFinoraServerWalletAccess();
+// FINORA_P1_579RV_NO_UNMOUNT_LOGOUT
+      // Cancel screen-local requests only (operation.current above).
+      // Unmount/StrictMode cleanup must not revoke an authenticated
+      // Main-Login Wallet Proof session.
+      // Explicit Wallet logout and business transitions remain authoritative.
     };
   }, []);
 
@@ -276,6 +465,23 @@ export default function ServerWalletPage({
     const current = () => mounted.current && operation.current === ticket;
     setBusy(true);
     setBalance(null);
+
+    // FINORA_P1_648L_LIFECYCLE
+    // Never retain another session's purchase state during verification.
+    // Keep Main's encrypted pending intent untouched.
+    setPendingPurchase({ state: "CHECKING", planMonths: null });
+    setPurchaseReviewOpen(false);
+    setPurchaseMessage("");
+
+    if (kind === "signIn" || kind === "enroll" || kind === "logout") {
+      purchaseIntent.current = null;
+    }
+
+    if (kind === "signIn" || kind === "enroll" || kind === "logout") {
+      setLivePricing(null);
+      setPricingUnavailable(true);
+    }
+
     setFailed(false);
     setMessage("Please wait...");
 
@@ -347,8 +553,58 @@ export default function ServerWalletPage({
         updatedAt: result.data.updatedAt,
       });
       setMessage("Balance received from the FINORA server.");
+
+      // FINORA P1-571M:
+      // Read pricing using the existing authenticated Wallet
+      // session. Never use local fallback prices.
+      try {
+        const pricingResult = await bridge.pricing();
+
+        if (!current()) return;
+
+        if (
+          pricingResult.success &&
+          pricingResult.data.source === "FINORA_POSTGRESQL_PRICING" &&
+          Array.isArray(pricingResult.data.plans) &&
+          pricingResult.data.plans.length === 4
+        ) {
+          setLivePricing({
+            plans: pricingResult.data.plans,
+          });
+          setPricingUnavailable(false);
+        } else {
+          setLivePricing(null);
+          setPricingUnavailable(true);
+        }
+      } catch {
+        if (current()) {
+          setLivePricing(null);
+          setPricingUnavailable(true);
+        }
+      }
+      // FINORA_P1_648L_LIFECYCLE
+      // Only trusted Main Process decides current branch pending status.
+      // Status failure always blocks starting or resuming a purchase.
+      const pendingResult = await bridge.subscriptionPending();
+      if (!current()) return;
+
+      if (pendingResult.success) {
+        setPendingPurchase({
+          state: pendingResult.data.pending ? "PENDING" : "CLEAR",
+          planMonths: pendingResult.data.planMonths,
+        });
+      } else {
+        setPendingPurchase({
+          state: "UNAVAILABLE",
+          planMonths: null,
+        });
+      }
     } catch {
       if (current()) {
+        setPendingPurchase({
+          state: "UNAVAILABLE",
+          planMonths: null,
+        });
         setBalance(null);
         setFailed(true);
         setMessage("Server wallet is unavailable. Please try again.");
@@ -359,6 +615,248 @@ export default function ServerWalletPage({
     }
   }
 
+  // FINORA_P1_648H_RESUME_UI
+  // Explicit confirmation only. Original UUID stays in Main Process.
+  async function resumePendingSubscriptionPurchase() {
+    if (!purchaseUiEnabled ||
+        pendingPurchase.state !== "PENDING" ||
+        !purchaseReviewOpen || purchaseSettled.current ||
+        running.current || purchaseBusy || busy || !available ||
+        !balance || !validBalance(balance) ||
+        pricingUnavailable ||
+        pendingPurchase.planMonths !== previewPlan) return;
+
+    const selectedPlan = livePricing?.plans.find(
+      plan => plan.months === pendingPurchase.planMonths
+    );
+    const price = selectedPlan
+      ? Number(selectedPlan.offerPriceInr) : NaN;
+    if (!Number.isFinite(price) || price <= 0) return;
+
+    running.current = true;
+    setPurchaseBusy(true);
+    setBusy(true);
+    setPurchaseMessage("Resuming original pending purchase...");
+
+    const walletId = balance.walletId;
+    const ticket = ++operation.current;
+    const current = () =>
+      mounted.current && operation.current === ticket;
+
+    try {
+      const bridge = getFinoraServerWalletBridge();
+      if (!bridge) throw new Error("BRIDGE_UNAVAILABLE");
+
+      const pending = await bridge.subscriptionPending();
+      if (!current()) return;
+
+      if (!pending.success || !pending.data.pending ||
+          pending.data.planMonths !== previewPlan) {
+        setPendingPurchase({
+          state: "UNAVAILABLE",
+          planMonths: null,
+        });
+        setPurchaseMessage(
+          "Pending purchase not verified. No payment was sent."
+        );
+        return;
+      }
+
+      const result = await bridge.subscriptionResume();
+      if (!current()) return;
+
+      if (!result.success) {
+        setPurchaseMessage(
+          "Purchase outcome not confirmed (" + result.errorCode +
+          "). Do not start another payment."
+        );
+        return;
+      }
+
+      purchaseSettled.current = true;
+      const receipt = result.data;
+      if (!receipt ||
+          receipt.source !== "POSTGRESQL_SUBSCRIPTION_PURCHASE" ||
+          receipt.status !== "ACTIVE" ||
+          !receipt.purchaseId ||
+          !receipt.subscriptionId ||
+          !receipt.transactionId ||
+          !/^[0-9]+[.][0-9]{2}$/.test(receipt.amountInr) ||
+          !Number.isFinite(Date.parse(receipt.startsAt)) ||
+          !Number.isFinite(Date.parse(receipt.expiresAt))) {
+        setPurchaseMessage(
+          "Server receipt requires reconciliation. Do not retry."
+        );
+        return;
+      }
+
+      setPurchaseMessage(
+        "Server confirmed purchase. Verifying Wallet balance..."
+      );
+      const refreshed = await bridge.balance();
+      if (!current()) return;
+
+      if (refreshed.success &&
+          validBalance(refreshed.data) &&
+          refreshed.data.walletId === walletId) {
+        setBalance(refreshed.data);
+        window.dispatchEvent(
+          new Event("finora:wallet-history-refresh")
+        );
+        setPurchaseMessage(
+          "Subscription activated. Verified Wallet balance refreshed."
+        );
+      } else {
+        setBalance(null);
+        setPurchaseMessage(
+          "Subscription confirmed. Balance reconciliation required."
+        );
+      }
+
+      const status = await bridge.subscriptionPending();
+      if (!current()) return;
+
+      setPendingPurchase(
+        status.success
+          ? {
+              state: status.data.pending ? "PENDING" : "CLEAR",
+              planMonths: status.data.planMonths,
+            }
+          : { state: "UNAVAILABLE", planMonths: null }
+      );
+      setPurchaseReviewOpen(false);
+    } catch {
+      if (current()) {
+        setPurchaseMessage(
+          "Resume outcome unknown. Do not initiate another payment."
+        );
+      }
+    } finally {
+      running.current = false;
+      if (current()) {
+        setPurchaseBusy(false);
+        setBusy(false);
+      }
+    }
+  }
+  // FINORA_P1_647C_PURCHASE_HANDLER
+  async function confirmSubscriptionPurchase() {
+    if (!purchaseUiEnabled || pendingPurchase.state !== "CLEAR" || purchaseSettled.current || running.current || purchaseBusy ||
+        !available || busy || !purchaseReviewOpen ||
+        pricingUnavailable || !balance || !validBalance(balance)) return;
+
+    if (![1, 3, 6, 12].includes(previewPlan)) return;
+    const planMonths = previewPlan as 1 | 3 | 6 | 12;
+    const selectedPlan = livePricing?.plans.find(
+      plan => plan.months === planMonths
+    );
+    const price = selectedPlan ? Number(selectedPlan.offerPriceInr) : NaN;
+    if (!Number.isFinite(price) || price <= 0 ||
+        Number(balance.balanceInr) < price) return;
+
+    let intent = purchaseIntent.current;
+    if (intent && (intent.walletId !== balance.walletId ||
+        intent.planMonths !== planMonths)) {
+      setPurchaseMessage(
+        "An earlier purchase requires reconciliation. Do not create another purchase."
+      );
+      return;
+    }
+
+    if (!intent) {
+      try {
+        intent = {
+          walletId: balance.walletId,
+          planMonths,
+          idempotencyKey: crypto.randomUUID(),
+        };
+      } catch {
+        setPurchaseMessage("Cannot prepare secure purchase. Nothing was sent.");
+        return;
+      }
+      purchaseIntent.current = intent;
+    }
+
+    running.current = true;
+    setPurchaseBusy(true);
+    setBusy(true);
+    setPurchaseMessage("Submitting confirmed purchase to FINORA server...");
+
+    const ticket = ++operation.current;
+    const current = () => mounted.current && operation.current === ticket;
+
+    try {
+      const bridge = getFinoraServerWalletBridge();
+      if (!bridge) throw new Error("BRIDGE_UNAVAILABLE");
+
+      const result = await bridge.subscriptionPurchase({
+        planMonths: intent.planMonths,
+        idempotencyKey: intent.idempotencyKey,
+      });
+
+      if (!current()) return;
+      if (!result.success) {
+        setPurchaseMessage(
+          "Purchase not confirmed (" + result.errorCode +
+          "). Original request is retained. Do not start a new purchase."
+        );
+        return;
+      }
+
+      // A successful server reply may already represent a committed debit.
+      // Lock immediately, even when receipt parsing or refresh later fails.
+      purchaseSettled.current = true;
+      const receipt = result.data;
+      if (!receipt ||
+          receipt.source !== "POSTGRESQL_SUBSCRIPTION_PURCHASE" ||
+          receipt.status !== "ACTIVE" ||
+          !receipt.purchaseId || !receipt.subscriptionId ||
+          !receipt.transactionId ||
+          !/^[0-9]+[.][0-9]{2}$/.test(receipt.amountInr) ||
+          !Number.isFinite(Date.parse(receipt.startsAt)) ||
+          !Number.isFinite(Date.parse(receipt.expiresAt))) {
+        setPurchaseMessage(
+          "Server returned an unverified purchase receipt. Reconciliation required."
+        );
+        return;
+      }
+
+      setPurchaseMessage(
+        "Server confirmed subscription purchase. Refreshing Wallet balance..."
+      );
+      const refreshed = await bridge.balance();
+      if (!current()) return;
+
+      if (refreshed.success && validBalance(refreshed.data) &&
+          refreshed.data.walletId === intent.walletId) {
+        setBalance(refreshed.data);
+        window.dispatchEvent(new Event("finora:wallet-history-refresh"));
+        setPurchaseMessage(
+          "Subscription activated on server. Verified Wallet balance refreshed."
+        );
+      } else {
+        setBalance(null);
+        setPurchaseMessage(
+          "Subscription confirmed, but Wallet refresh needs verification. Do not retry payment."
+        );
+      }
+
+      // No second purchase while this screen remains mounted.
+      setPurchaseReviewOpen(false);
+    } catch {
+      if (current()) {
+        setPurchaseMessage(
+          "Purchase outcome unknown. Original request retained for reconciliation."
+        );
+      }
+    } finally {
+      running.current = false;
+      if (current()) {
+        setPurchaseBusy(false);
+        setBusy(false);
+      }
+    }
+  }
   async function submitRecharge(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (running.current || !available || !balance || receipt) return;
@@ -446,8 +944,12 @@ export default function ServerWalletPage({
         },
         replayed: result.data.replayed,
       });
-      // Read a fresh balance only through Refresh; never add the request amount.
-      setBalance(null);
+      // FINORA_P1_629B_KEEP_VERIFIED_BALANCE
+      // A PENDING request never changes the Wallet balance.
+      // Keep the last server-verified balance; do not add credit locally.
+      window.dispatchEvent(
+        new Event("finora:wallet-history-refresh")
+      );
       setRechargeMessage(
         request.status === "PENDING"
           ? "Recharge request received. Payment verification and approval are pending."
@@ -520,6 +1022,79 @@ export default function ServerWalletPage({
           min-width: 0;
         }
 
+        /* FINORA P1-571H2 - PREMIUM PLAN TYPOGRAPHY */
+        .finora-premium-plan-card {
+          position: relative;
+          min-height: 515px;
+          height: 100%;
+          font-family: Inter, sans-serif !important;
+          font-weight: 400;
+          transition: transform 180ms ease, box-shadow 180ms ease;
+        }
+
+        .finora-premium-plan-card:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 12px 28px rgba(15, 23, 42, 0.10) !important;
+        }
+
+        .finora-premium-plan-card:focus-visible {
+          outline: 3px solid currentColor;
+          outline-offset: 3px;
+        }
+
+        .finora-premium-heading {
+          display: flex;
+          flex-direction: column;
+          gap: 7px;
+          min-width: 0;
+        }
+
+        .finora-premium-plan-name {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 17px;
+          line-height: 1.35;
+        }
+
+        .finora-premium-plan-name strong {
+          font-weight: 700;
+        }
+
+        .finora-premium-subtitle {
+          display: block;
+          min-height: 36px;
+          font-size: 12px;
+          font-weight: 450;
+          line-height: 1.5;
+          opacity: 0.78;
+        }
+
+        .finora-premium-benefits-heading {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          font-size: 11px;
+          font-weight: 650;
+          letter-spacing: 0.04em;
+          opacity: 0.8;
+        }
+
+        @media (max-width: 900px) {
+          .finora-premium-plan-card {
+            min-height: 475px;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .finora-premium-plan-card {
+            transition: none;
+          }
+
+          .finora-premium-plan-card:hover {
+            transform: none;
+          }
+        }
         .finora-wallet-header {
           grid-area: header;
         }
@@ -567,6 +1142,28 @@ export default function ServerWalletPage({
           box-sizing: border-box;
         }
 
+        /* FINORA_P1_582D_RESPONSIVE */
+        .finora-wallet-balance,
+        .finora-wallet-recharge,
+        .finora-wallet-access {
+          min-width: 0;
+          max-width: 100%;
+          box-sizing: border-box;
+        }
+
+        .finora-wallet-access {
+          overflow: hidden;
+        }
+
+        .finora-wallet-access table {
+          min-width: 600px;
+        }
+
+        @media (min-width: 901px) {
+          .finora-server-wallet-dashboard {
+            grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+          }
+        }
         @media (max-width: 900px) {
           .finora-server-wallet-dashboard {
             grid-template-columns: minmax(0, 1fr);
@@ -590,7 +1187,22 @@ export default function ServerWalletPage({
       </header>
 
       <section className="finora-wallet-balance" style={panel} aria-label="Server wallet balance" aria-busy={busy}>
-        <div style={{ color: theme.colors.text.secondary }}>Available balance</div>
+        {/* FINORA_P1_580U_BALANCE_REFRESH_TOP_RIGHT */}
+<div style={{
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 12,
+  flexWrap: "wrap"
+}}>
+  <div style={{ color: theme.colors.text.secondary }}>
+    Available balance
+  </div>
+  <button type="button" style={button} disabled={!available || busy}
+            onClick={() => void run("balance")}>
+            <RefreshCw size={17} aria-hidden="true" /> Refresh
+          </button>
+</div>
         <div style={{ fontSize: "clamp(28px, 5vw, 44px)", fontWeight: 700, margin: "12px 0" }}>
           {busy ? "Checking..." : balance ? "\u20B9" + balance.balanceInr : "Unavailable"}
         </div>
@@ -600,115 +1212,87 @@ export default function ServerWalletPage({
           </p>
         )}
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button type="button" style={button} disabled={!available || busy}
-            onClick={() => void run("balance")}>
-            <RefreshCw size={17} aria-hidden="true" /> Refresh
-          </button>
-          <button type="button" style={button} disabled={!available || busy}
-            onClick={() => void run("logout")}>
-            <LogOut size={17} aria-hidden="true" /> Sign out of wallet
-          </button>
-        </div>
-      </section>
 
-      <div className="finora-wallet-status" role={failed ? "alert" : "status"} aria-live="polite"
-        style={{ ...panel, padding: 16, color: failed ? "#9f1239" : "#334155" }}>
+        </div>
+
+<div className="finora-wallet-status" role={failed ? "alert" : "status"} aria-live="polite"
+        style={{ ...panel, padding: 16, color: theme.colors.text.primary }}>
         {!available
           ? "Server wallet access is unavailable in this application environment."
           : message}
       </div>
+</section>
 
-      <section className="finora-wallet-access" style={panel} aria-label="Wallet sign in">
-        <h2 style={{ marginTop: 0, display: "flex", gap: 10, alignItems: "center" }}>
-          <ShieldCheck size={22} aria-hidden="true" /> Secure wallet access
-        </h2>
-        <form onSubmit={submit}>
-          <fieldset disabled={!available || busy}
-            style={{ border: 0, padding: 0, margin: 0, display: "grid", gap: 16 }}>
-            <label>Username
-              <input name="walletUsername" value={username} readOnly
-                autoComplete="username" style={field} />
-            </label>
-            <div>
-              <label htmlFor="finora-wallet-password">Password</label>
-              <div style={{ position: "relative" }}>
-                <input
-                  id="finora-wallet-password"
-                  name="walletPassword"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={event => setPassword(event.target.value)}
-                  autoComplete="off"
-                  required
-                  maxLength={72}
-                  style={{ ...field, paddingRight: 56 }}
-                />
-                <button
-                  type="button"
-                  style={eyeButton}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  aria-pressed={showPassword}
-                  title={showPassword ? "Hide password" : "Show password"}
-                  onClick={() => setShowPassword(value => !value)}
-                >
-                  {showPassword
-                    ? <EyeOff size={19} aria-hidden="true" />
-                    : <Eye size={19} aria-hidden="true" />}
-                </button>
-              </div>
-            </div>
-            <div>
-              <label htmlFor="finora-wallet-security-code">Security code</label>
-              <div style={{ position: "relative" }}>
-                <input
-                  id="finora-wallet-security-code"
-                  name="walletSecurityCode"
-                  type={showSecurityCode ? "text" : "password"}
-                  value={securityCode}
-                  onChange={event => setSecurityCode(event.target.value)}
-                  autoComplete="off"
-                  required
-                  maxLength={72}
-                  style={{ ...field, paddingRight: 56 }}
-                />
-                <button
-                  type="button"
-                  style={eyeButton}
-                  aria-label={showSecurityCode ? "Hide security code" : "Show security code"}
-                  aria-pressed={showSecurityCode}
-                  title={showSecurityCode ? "Hide security code" : "Show security code"}
-                  onClick={() => setShowSecurityCode(value => !value)}
-                >
-                  {showSecurityCode
-                    ? <EyeOff size={19} aria-hidden="true" />
-                    : <Eye size={19} aria-hidden="true" />}
-                </button>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button type="submit" disabled={!canAuthenticate}
-                style={{ ...button, background: theme.components.button.primaryBackground, color: theme.components.button.primaryText }}>
-                <ShieldCheck size={17} aria-hidden="true" /> Sign in
-              </button>
-              <button type="button" disabled={!canAuthenticate} style={button}
-                onClick={() => void run("enroll")}>
-                <KeyRound size={17} aria-hidden="true" /> Enable wallet access on this device
-              </button>
-            </div>
-          </fieldset>
-        </form>
-        <p style={{ color: theme.colors.text.secondary, fontSize: 13 }}>
-          First time on this device? Enable wallet access, then sign in.
+      {/* FINORA_P1_580J_HISTORY_LAYOUT */}
+      <section className="finora-wallet-access" style={panel}
+        aria-label="FINORA Wallet Transaction History">
+        <div style={{
+          display: "flex", justifyContent: "space-between",
+          alignItems: "center", flexWrap: "wrap", gap: 10
+        }}>
+          <h2 style={{ margin: 0, fontSize: 20 }}>
+            FINORA Wallet Transaction History
+          </h2>
+          <div style={{
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-end",
+  gap: 8
+}}>
+
+  {/* FINORA_P1_580S_REFRESH_POSITION */}
+  <button
+    type="button"
+    onClick={() => window.dispatchEvent(
+      new Event("finora:wallet-history-refresh")
+    )}
+    style={{
+      padding: "7px 12px",
+      borderRadius: 8,
+      border: `1px solid ${theme.components.card.border}`,
+      background: "transparent",
+      color: theme.colors.text.primary,
+      font: "inherit",
+      fontSize: 12,
+      cursor: "pointer"
+    }}
+  >
+    Refresh history
+  </button>
+</div>
+        </div>
+        <p style={{
+          fontSize: 12, color: theme.colors.text.secondary
+        }}>
+          Customer, loan, collection and recharge transactions
+          for this verified branch.
         </p>
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table style={{
+            width: "100%", borderCollapse: "collapse",
+            fontSize: 12, textAlign: "left"
+          }}>
+            <thead>
+              <tr>
+                {["Date / Time", "Transaction", "Reference / Customer ID",
+                  "Amount", "Status"].map(heading => (
+                  <th key={heading} scope="col" style={{
+                    padding: "10px 8px",
+                    borderBottom: `1px solid ${theme.components.card.border}`,
+                    whiteSpace: "nowrap"
+                  }}>
+                    {heading}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <ServerWalletLiveHistory walletId={balance?.walletId ?? null} />
+          </table>
+        </div>
       </section>
-
-      <section className="finora-wallet-recharge" style={panel} aria-label="Server wallet recharge" aria-busy={busy}>
+{/* FINORA_P1_580Y_RECHARGE_UI */}
+<section className="finora-wallet-recharge" style={panel} aria-label="Server wallet recharge" aria-busy={busy}>
         <h2 style={{ marginTop: 0 }}>Request a recharge</h2>
-        <p style={{ color: theme.colors.text.secondary }}>
-          INR 50 to INR 2000, in whole rupees. Submitting a request does not
-          transfer money or increase your balance. Credit requires verified
-          payment and administrator approval.
-        </p>
 
         <form onSubmit={submitRecharge}>
           <fieldset disabled={!available || busy || !balance || hasIntent}
@@ -717,9 +1301,39 @@ export default function ServerWalletPage({
               gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))" }}>
             <label>Recharge amount (INR)
               <input name="rechargeAmount" type="text" inputMode="numeric"
-                value={amount} onChange={event => setAmount(event.target.value)}
+                value={amount} onChange={event => setAmount(event.target.value.replace(/\D/g, ""))}
                 autoComplete="off" maxLength={4} required
-                pattern="[0-9]{2,4}" style={field} />
+                pattern="[0-9]{2,4}"
+                aria-invalid={amount !== "" && (Number(amount) < 50 || Number(amount) > 2000)}
+                style={{
+                  ...field,
+                  borderColor: amount !== "" &&
+                    (Number(amount) < 50 || Number(amount) > 2000)
+                    ? "#e11d48"
+                    : theme.components.card.border
+                }}
+                placeholder="MIN 50 - MAX 2000" />
+              {/* FINORA_P1_582I_AMOUNT_VALIDATION */}
+              {amount !== "" && Number(amount) < 50 && (
+                <div role="alert" style={{
+                  color: "#e11d48",
+                  fontSize: 12,
+                  marginTop: 6,
+                  fontWeight: 600
+                }}>
+                  Minimum recharge amount is ₹50.
+                </div>
+              )}
+              {amount !== "" && Number(amount) > 2000 && (
+                <div role="alert" style={{
+                  color: "#e11d48",
+                  fontSize: 12,
+                  marginTop: 6,
+                  fontWeight: 600
+                }}>
+                  Maximum recharge amount is ₹2,000.
+                </div>
+              )}
             </label>
             <label>Payment method
               <select name="rechargePaymentMethod" value={paymentMethod}
@@ -738,6 +1352,9 @@ export default function ServerWalletPage({
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
             <button type="submit" style={{ ...button, background: theme.components.button.primaryBackground, color: theme.components.button.primaryText }}
               disabled={!available || busy || !balance || !!receipt ||
+                !/^[0-9]{2,4}$/.test(amount) ||
+                Number(amount) < 50 ||
+                Number(amount) > 2000 ||
                 (!!rechargeIntent.current &&
                   rechargeIntent.current.walletId !== balance.walletId)}>
               {hasIntent ? "Retry same request" : "Submit recharge request"}
@@ -786,6 +1403,174 @@ export default function ServerWalletPage({
         style={panel}
         aria-label="FINORA subscription plans"
       >
+        {/* FINORA_P1_634J_PURCHASE_REVIEW_UI */}
+        {(() => {
+          const selectedPlan = livePricing?.plans.find(
+            plan => plan.months === previewPlan
+          );
+          const price = selectedPlan
+            ? Number(selectedPlan.offerPriceInr)
+            : NaN;
+          const walletAmount = balance
+            ? Number(balance.balanceInr)
+            : NaN;
+          const available =
+            !pricingUnavailable &&
+            selectedPlan !== undefined &&
+            Number.isFinite(price) &&
+            price > 0 &&
+            Number.isFinite(walletAmount) &&
+            walletAmount >= price;
+          const remaining = available ? walletAmount - price : null;
+
+          return (
+            <div
+              style={{
+                border: `1px solid ${theme.components.card.border}`,
+                borderRadius: 14,
+                padding: 16,
+                marginBottom: 20,
+                display: "grid",
+                gap: 12,
+              }}
+            >
+              <div>
+                <strong>Subscription Purchase</strong>
+                {/* FINORA_P1_648H_RESUME_UI */}
+                {purchaseMessage && (
+                  <p role="status" aria-live="polite">
+                    {purchaseMessage}
+                  </p>
+                )}
+                <p
+                  style={{
+                    margin: "5px 0 0",
+                    color: theme.colors.text.secondary,
+                    fontSize: 13,
+                  }}
+                >
+                  Review the server price before confirming a Wallet debit.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                disabled={!available}
+                onClick={() => setPurchaseReviewOpen(true)}
+                style={{
+                  padding: "11px 16px",
+                  borderRadius: 10,
+                  border: `1px solid ${theme.components.card.border}`,
+                  cursor: available ? "pointer" : "not-allowed",
+                  opacity: available ? 1 : 0.55,
+                  fontWeight: 700,
+                }}
+              >
+                {available
+                  ? `Review ${previewPlan}-Month Purchase`
+                  : "Purchase Review Unavailable"}
+              </button>
+
+              {purchaseReviewOpen && (
+                <div
+                  role="group"
+                  aria-label="Subscription purchase confirmation"
+                  style={{
+                    display: "grid",
+                    gap: 10,
+                    padding: 16,
+                    borderRadius: 12,
+                    border: `1px solid ${theme.components.card.border}`,
+                  }}
+                >
+                  <strong>Confirm Subscription Purchase</strong>
+                  {/* FINORA_P1_648D_PENDING_UI */}
+                  <p role="status" aria-live="polite">
+                    {pendingPurchase.state === "PENDING"
+                      ? `A previous ${pendingPurchase.planMonths}-month purchase requires reconciliation. No new payment is allowed.`
+                      : pendingPurchase.state === "CLEAR"
+                        ? "No pending purchase found on this device."
+                        : pendingPurchase.state === "CHECKING"
+                          ? "Checking previous purchases securely..."
+                          : "Purchase recovery status unavailable. New payment blocked."}
+                  </p>
+                  <div>Selected Plan: {previewPlan} Month(s)</div>
+                  <div>
+                    Server Price: {available
+                      ? `₹${price.toLocaleString("en-IN")}`
+                      : "Unavailable"}
+                  </div>
+                  <div>
+                    Current Wallet Balance: {Number.isFinite(walletAmount)
+                      ? `₹${walletAmount.toLocaleString("en-IN")}`
+                      : "Unavailable"}
+                  </div>
+                  <div>
+                    Expected Remaining Balance: {remaining !== null
+                      ? `₹${remaining.toLocaleString("en-IN")}`
+                      : "Unavailable"}
+                  </div>
+
+                  <p
+                    role="status"
+                    style={{
+                      margin: 0,
+                      color: theme.colors.text.secondary,
+                      fontSize: 13,
+                    }}
+                  >
+                    Confirming will request a Wallet debit at the verified server price. Do not submit a second purchase while the first is pending.
+                  </p>
+
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      disabled={!purchaseUiEnabled || pendingPurchase.state !== "CLEAR" || purchaseSettled.current || purchaseBusy || busy || !available}
+                      onClick={() => void confirmSubscriptionPurchase()}
+                      title={purchaseUiEnabled ? "Confirm Wallet debit" : "Live purchase verification pending"}
+                      style={{
+                        padding: "10px 16px",
+                        borderRadius: 10,
+                        opacity: purchaseBusy || busy ? 0.6 : 1, cursor: purchaseBusy || busy ? "wait" : "pointer",
+                      }}
+                    >
+                      Confirm & Pay
+                    </button>
+
+                    {/* FINORA_P1_648H_RESUME_UI */}
+                    {pendingPurchase.state === "PENDING" && (
+                      <button
+                        type="button"
+                        disabled={
+                          !purchaseUiEnabled ||
+                          pendingPurchase.planMonths !== previewPlan ||
+                          purchaseSettled.current ||
+                          purchaseBusy || busy || !available
+                        }
+                        onClick={() =>
+                          void resumePendingSubscriptionPurchase()
+                        }
+                        title="Resume original pending request only after verification"
+                      >
+                        Resume Original Pending Purchase — Verification Pending
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setPurchaseReviewOpen(false)}
+                      style={{
+                        padding: "10px 16px",
+                        borderRadius: 10,
+                      }}
+                    >
+                      Close Review
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
             <h2 style={{ margin: 0, fontSize: "clamp(20px, 2.5vw, 28px)" }}>
@@ -822,17 +1607,70 @@ export default function ServerWalletPage({
               };
             }),
           ].map(plan => {
-            const selected = previewPlan === plan.months;
+            // FINORA_P1_632N5_BALANCE_ELIGIBILITY
+            // Selection preview only. Server must recheck at purchase.
+            const walletAmount =
+              balance && validBalance(balance)
+                ? Number(balance.balanceInr)
+                : null;
+            const priceValid =
+              plan.price !== null &&
+              Number.isFinite(plan.price) &&
+              plan.price > 0;
+            const affordable =
+              walletAmount !== null &&
+              priceValid &&
+              walletAmount >= (plan.price ?? Infinity);
+            const shortfall =
+              walletAmount !== null && priceValid
+                ? Math.max(0, (plan.price ?? 0) - walletAmount)
+                : null;
+            const eligibilityMessage =
+              walletAmount === null
+                ? "Verified Wallet balance unavailable"
+                : !priceValid
+                  ? "Live subscription price unavailable"
+                  : !affordable
+                    ? `Insufficient Wallet Balance. Recharge ₹${shortfall!.toLocaleString("en-IN")} more.`
+                    : "Sufficient Wallet Balance";
+            const selected = affordable && previewPlan === plan.months;
             return (
-              <button
-                key={plan.months}
-                type="button"
+              <div
+                key={plan.months} className="finora-premium-plan-card"
+                role="button"
+                tabIndex={affordable ? 0 : -1}
                 aria-pressed={selected}
-                onClick={() => setPreviewPlan(plan.months)}
+                aria-disabled={!affordable}
+                title={eligibilityMessage}
+                onClick={() => {
+                  if (!affordable) return;
+                  if (
+                    previewRenewMonths === null ||
+                    previewRenewMonths === plan.months
+                  ) {
+                    setPreviewPlan(plan.months);
+                  }
+                }}
+                onKeyDown={event => {
+                  if (
+                    event.target === event.currentTarget &&
+                    (event.key === "Enter" || event.key === " ")
+                  ) {
+                    event.preventDefault();
+                    if (!affordable) return;
+                    if (
+                      previewRenewMonths === null ||
+                      previewRenewMonths === plan.months
+                    ) {
+                      setPreviewPlan(plan.months);
+                    }
+                  }
+                }}
                 style={{
                   minHeight: 220,
                   textAlign: "left",
-                  cursor: "pointer",
+                  cursor: affordable ? "pointer" : "not-allowed",
+                  opacity: affordable ? 1 : 0.65,
                   display: "flex",
                   flexDirection: "column",
                   gap: 12,
@@ -853,7 +1691,25 @@ export default function ServerWalletPage({
                   display: "flex", justifyContent: "space-between",
                   alignItems: "center", minHeight: 23, gap: 8
                 }}>
-                  <strong>{plan.months} {plan.months === 1 ? "Month" : "Months"}</strong>
+                  <div className="finora-premium-heading">
+  <div className="finora-premium-plan-name">
+    {plan.months === 12
+      ? <Crown size={18} aria-hidden="true" />
+      : <Sparkles size={17} aria-hidden="true" />}
+    <strong>
+      {plan.months} {plan.months === 1 ? "Month" : "Months"}
+    </strong>
+  </div>
+  <span className="finora-premium-subtitle">
+    {plan.months === 1
+      ? "Flexible access, every month."
+      : plan.months === 3
+        ? "More continuity, less renewal hassle."
+        : plan.months === 6
+          ? "Built for growing businesses."
+          : "A full year of business confidence."}
+  </span>
+</div>
                   {plan.label && (
                     <span style={{
                       fontSize: 10, fontWeight: 800, letterSpacing: ".05em",
@@ -866,17 +1722,11 @@ export default function ServerWalletPage({
                   )}
                 </div>
                 <div>
-                  <div style={{
-                    textDecoration: "line-through",
-                    color: theme.colors.text.secondary, fontSize: 13
-                  }}>
-                    {plan.original === null ? "—" : `₹${plan.original.toLocaleString("en-IN")}`}
-                  </div>
-                  <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-.04em" }}>
-                    {plan.price === null ? "Price unavailable" : `₹${plan.price.toLocaleString("en-IN")}`}
-                  </div>
-                  <div style={{ color: theme.colors.text.secondary, fontSize: 13 }}>
-                    {plan.original === null || plan.price === null ? "Awaiting server pricing" : `Save ₹${Math.max(0, plan.original - plan.price).toLocaleString("en-IN")}`}
+                  {/* FINORA_P1_580C_SINGLE_PRICE */}
+                  <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-.04em", marginTop: -14 /* FINORA_P1_580D_PRICE_GAP */ }}>
+                    {plan.price === null
+                      ? "Price unavailable"
+                      : `₹${plan.price.toLocaleString("en-IN")}`}
                   </div>
                 </div>
                 {/* FINORA_P565B_STATUS: Actual subscribed plan only */}
@@ -908,7 +1758,130 @@ export default function ServerWalletPage({
       </div>
     );
   })()}
-{/* FINORA_P564L_PLAN_FEES - Display-only preview; billing uses server prices */}
+<div style={{
+  padding: 12,
+  borderRadius: 12,
+  background: theme.colors.background.page,
+  border: `1px solid ${theme.components.card.border}`,
+  display: "grid",
+  gap: 9,
+}}>
+  <div style={{
+    fontSize: 11,
+    fontWeight: 800,
+    letterSpacing: ".06em",
+    color: theme.colors.text.secondary,
+  }}>
+    <CalendarDays size={14} aria-hidden="true" style={{ verticalAlign: "middle", marginRight: 6 }} /> SUBSCRIPTION PERIOD
+  </div>
+
+  {subscription?.planMonths === plan.months ? (
+    <>
+      <div style={{ display: "grid", gap: 4 }}>
+        <span style={{ fontSize: 12, color: theme.colors.text.secondary }}>
+          Plan started
+        </span>
+        <strong style={{ fontSize: 13 }}>
+          {subscription.startsAt &&
+           Number.isFinite(Date.parse(subscription.startsAt))
+            ? formatFinoraDateTime(subscription.startsAt)
+            : "Awaiting server start date"}
+        </strong>
+      </div>
+
+      <div style={{ display: "grid", gap: 4 }}>
+        <span style={{ fontSize: 12, color: theme.colors.text.secondary }}>
+          Plan expires
+        </span>
+        <strong style={{ fontSize: 13 }}>
+          {subscription.expiresAt &&
+           Number.isFinite(Date.parse(subscription.expiresAt))
+            ? formatFinoraDateTime(subscription.expiresAt)
+            : "Expiry unavailable"}
+        </strong>
+      </div>
+
+      <div
+        aria-live="off"
+        style={{
+          fontSize: 13,
+          fontWeight: 800,
+          color: subscription.expiresAt &&
+            Date.parse(subscription.expiresAt) <= planClock
+              ? "#ef4444"
+              : theme.colors.text.primary,
+        }}
+      >
+        <Clock3 size={15} aria-hidden="true" style={{ verticalAlign: "middle", marginRight: 6 }} />{finoraPlanCountdown(subscription.expiresAt, planClock)}
+      </div>
+    </>
+  ) : (
+    <span style={{
+      color: theme.colors.text.secondary,
+      fontSize: 13,
+    }}>
+      No verified subscription dates for this plan
+    </span>
+  )}
+</div>
+
+<div
+  onClick={event => event.stopPropagation()}
+  onKeyDown={event => event.stopPropagation()}
+  style={{
+    padding: "12px 0",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  }}
+>
+  <div>
+    <strong style={{ fontSize: 13, fontWeight: 650, display: "inline-flex", gap: 7, alignItems: "center" }}><Repeat2 size={16} aria-hidden="true" />Auto-Renew</strong>
+    <div style={{
+      fontSize: 11,
+      color: theme.colors.text.secondary,
+    }}>
+      {previewRenewMonths === plan.months
+        ? "ON · Renewal preview"
+        : "OFF · Manual renewal"}
+    </div>
+  </div>
+
+  <label style={{
+    display: "inline-flex",
+    alignItems: "center",
+    cursor: "pointer",
+    gap: 8,
+  }}>
+    <input
+      type="checkbox"
+      role="switch"
+      aria-label={`Auto-renew ${plan.months} month plan (preview only)`}
+      checked={previewRenewMonths === plan.months}
+      disabled={
+        !affordable ||
+        (previewRenewMonths !== null &&
+         previewRenewMonths !== plan.months)
+      }
+      onChange={event => {
+        if (!affordable) return;
+        const next = event.target.checked;
+        setPreviewRenewMonths(next ? plan.months : null);
+        if (next) setPreviewPlan(plan.months);
+      }}
+      style={{
+        width: 20,
+        height: 20,
+        accentColor: theme.components.button.primaryBackground,
+      }}
+    />
+  </label>
+</div>
+<div className="finora-premium-benefits-heading">
+  <BadgeCheck size={15} aria-hidden="true" />
+  <span>USAGE CHARGES</span>
+</div>{/* FINORA_P564L_PLAN_FEES - Display-only preview; billing uses server prices */}
 <div style={{
   display: "grid",
   gap: 7,
@@ -955,9 +1928,24 @@ export default function ServerWalletPage({
                     : theme.colors.text.primary,
                   fontWeight: 700, fontSize: 13
                 }}>
-                  {selected ? "✓ Selected" : "Select plan"}
+                  {!affordable ? "Unavailable" : selected ? "✓ Selected" : "Select plan"}
+                  {!affordable && (
+                    <span
+                      role="status"
+                      style={{
+                        display: "block",
+                        marginTop: 8,
+                        fontSize: 12,
+                        lineHeight: 1.4,
+                        color: "#b45309",
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {eligibilityMessage}
+                    </span>
+                  )}
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
@@ -972,19 +1960,10 @@ export default function ServerWalletPage({
           <div>
             <strong>Automatic renewal</strong>
             <div style={{ fontSize: 12, color: theme.colors.text.secondary, marginTop: 4 }}>
-              Preview only — server billing is not yet connected.
+              Only one plan can be selected for automatic renewal. Turn it OFF before switching plans. Automatic renewal is not enabled. Subscription purchases require separate server confirmation.
             </div>
           </div>
-          <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              role="switch"
-              checked={previewAutoRenew}
-              onChange={event => setPreviewAutoRenew(event.target.checked)}
-              style={{ width: 20, height: 20, accentColor: theme.components.button.primaryBackground }}
-            />
-            <strong>{previewAutoRenew ? "ON (Preview)" : "OFF"}</strong>
-          </label>
+          <strong>{previewRenewMonths === null ? "OFF" : `${previewRenewMonths} Month${previewRenewMonths === 1 ? "" : "s"} · ON (Preview)`}</strong>
         </div>
         <p style={{ fontSize: 12, color: theme.colors.text.secondary, marginBottom: 0 }}>
           Prices shown for design review. Final amount and renewal authorization

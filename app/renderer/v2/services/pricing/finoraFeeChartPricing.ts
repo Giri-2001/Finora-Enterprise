@@ -70,7 +70,11 @@ export interface FinoraFeeChartPricing {
 }
 
 type PricingKey =
-  keyof FinoraIncomePricingDefaults;
+  | "customerCreateFee"
+  | "loanDisbursementFee"
+  | "collectionBelow25000Fee"
+  | "collection25000To50000Fee"
+  | "collectionAbove50000Fee";
 
 /* ============================================================
    HELPERS

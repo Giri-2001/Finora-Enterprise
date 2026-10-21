@@ -1,6 +1,6 @@
 const FINORA_WALLET_API_BASE =
   process.env.FINORA_LOCAL_WALLET_TEST === "1"
-    ? "http://127.0.0.1:3000"
+    ? "http://127.0.0.1:3001"
     : "https://api.finoraenterprise.com";
 // Main-process only. A failed request does not establish server revocation.
 export type FinoraServerWalletLogoutResult =

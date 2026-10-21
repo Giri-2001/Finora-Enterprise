@@ -45,6 +45,10 @@ import {
 } from "./finoraBranchCredentialEnrollmentService.js";
 
 import {
+  // FINORA_P1_578LI_SECURITY_RECOVERY_IMPORT
+  recoverFinoraPortableBranchAuthSecurityCodeV2,
+  reconvergeFinoraPortableBranchAuthSecurityCodeV2,
+  repairFinoraPortableBranchAuthCreatedAtV2,
   rotateFinoraPortableBranchAuthCredentialV2,
 } from "./finoraPortableBranchAuthCredentialRotationCoordinatorV2.js";
 
@@ -73,6 +77,13 @@ const BRANCH_CREDENTIAL_IPC_CHANNELS = {
   PASSWORD_RECOVERY_V2:
     "finora:credential:password-recovery-v2",
 
+  // FINORA_P1_578LJ_SECURITY_CODE_RECOVERY_HANDLER
+  SECURITY_CODE_RECOVERY_V2:
+    "finora:credential:security-code-recovery-v2",
+
+  // FINORA_P1_578OQ_SECURITY_CODE_RECONVERGENCE
+  SECURITY_CODE_RECONVERGENCE_V2:
+    "finora:credential:security-code-reconvergence-v2",
   FIRST_LOGIN_COMPLETION_V2:
     "finora:credential:first-login-completion-v2",
 
@@ -422,7 +433,250 @@ export function registerFinoraBranchCredentialHandlers(
   );
 
   // ----------------------------------------------------------
-  // FIRST-LOGIN PERMANENT CREDENTIAL COMPLETION V2
+  // PASSWORD-AUTHORIZED SECURITY-CODE RECOVERY V2
+  //
+  // SECURITY:
+  // - trusted ordinary FINORA renderer only
+  // - main frame only
+  // - current Password is the recovery authority
+  // - old/broken Security Code is not required
+  // - normal ROTATE_V2 remains unchanged
+  // - secrets remain process-memory-only
+  // ----------------------------------------------------------
+
+  ipcMain.handle(
+    BRANCH_CREDENTIAL_IPC_CHANNELS.SECURITY_CODE_RECOVERY_V2,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+      if (
+        !isAuthorizedCredentialRenderer(
+          event,
+          isTrustedRenderer,
+        )
+      ) {
+        return unauthorized();
+      }
+
+      try {
+        const recoveryResult =
+          await recoverFinoraPortableBranchAuthSecurityCodeV2({
+            request:
+              request as Parameters<
+                typeof recoverFinoraPortableBranchAuthSecurityCodeV2
+              >[0]["request"],
+
+            portableStore:
+              portableV2Store,
+          });
+
+        if (!recoveryResult.success) {
+          return recoveryResult;
+        }
+
+        const credential =
+          recoveryResult.data.credential;
+
+        return {
+          success:
+            true,
+
+          data: {
+            transactionId:
+              recoveryResult.data.transactionId,
+
+            credential: {
+              credentialId:
+                credential.credentialId,
+
+              userId:
+                credential.userId,
+
+              username:
+                credential.username,
+
+              fullName:
+                credential.fullName,
+
+              role:
+                credential.role,
+
+              ownerId:
+                credential.ownerId,
+
+              businessId:
+                credential.businessId,
+
+              branchId:
+                credential.branchId,
+
+              storageMode:
+                credential.storageMode,
+
+              dataContext:
+                credential.dataContext,
+
+              ...(
+                credential.demoId === undefined
+                  ? {}
+                  : {
+                      demoId:
+                        credential.demoId,
+                    }
+              ),
+
+              enrolledAt:
+                credential.updatedAt,
+            },
+
+            authGeneration:
+              recoveryResult.data.authGeneration,
+
+            portableReplaceResult:
+              recoveryResult.data.portableReplaceResult,
+          },
+        };
+      }
+      catch {
+        return serviceFailure();
+      }
+    },
+  );
+
+  // FINORA_P1_578OQ_RECONVERGENCE_HANDLER
+  ipcMain.handle(
+    BRANCH_CREDENTIAL_IPC_CHANNELS.SECURITY_CODE_RECONVERGENCE_V2,
+    async (
+      event,
+      request:
+        unknown,
+    ) => {
+      if (
+        !isAuthorizedCredentialRenderer(
+          event,
+          isTrustedRenderer,
+        )
+      ) {
+        return unauthorized();
+      }
+
+      try {
+        // FINORA_P1_578YO_CREATED_AT_REPAIR_FIRST
+        //
+        // Compatibility path for the already-committed pre-XR reconvergence.
+        // YL itself fails closed unless BOTH factors decrypt the same payload
+        // and every authoritative lineage field except createdAt already matches.
+        //
+        // No Control credential, generation, verifier, server credential,
+        // wallet balance or business data is changed by this repair.
+        const reconvergenceRequest =
+          request as Parameters<
+            typeof reconvergeFinoraPortableBranchAuthSecurityCodeV2
+          >[0]["request"];
+
+        const createdAtRepairResult =
+          await repairFinoraPortableBranchAuthCreatedAtV2({
+            request: {
+              username:
+                reconvergenceRequest.username,
+
+              currentPassword:
+                reconvergenceRequest.currentPassword,
+
+              currentSecurityCode:
+                reconvergenceRequest.newSecurityCode,
+            },
+
+            portableStore:
+              portableV2Store,
+          });
+
+        /*
+         * For this controlled compatibility build we MUST NOT fall through
+         * into another generation-changing reconvergence.
+         *
+         * Success means the exact pre-XR createdAt defect was repaired.
+         * Any failure is returned unchanged and therefore fails closed.
+         */
+        if (!createdAtRepairResult.success) {
+          return createdAtRepairResult;
+        }
+
+        const reconvergenceResult =
+          createdAtRepairResult;
+
+        const credential =
+          reconvergenceResult.data.credential;
+
+        return {
+          success:
+            true,
+
+          data: {
+            transactionId:
+              reconvergenceResult.data.transactionId,
+
+            credential: {
+              credentialId:
+                credential.credentialId,
+
+              userId:
+                credential.userId,
+
+              username:
+                credential.username,
+
+              fullName:
+                credential.fullName,
+
+              role:
+                credential.role,
+
+              ownerId:
+                credential.ownerId,
+
+              businessId:
+                credential.businessId,
+
+              branchId:
+                credential.branchId,
+
+              storageMode:
+                credential.storageMode,
+
+              dataContext:
+                credential.dataContext,
+
+              ...(
+                credential.demoId === undefined
+                  ? {}
+                  : {
+                      demoId:
+                        credential.demoId,
+                    }
+              ),
+
+              enrolledAt:
+                credential.updatedAt,
+            },
+
+            authGeneration:
+              reconvergenceResult.data.authGeneration,
+
+            portableReplaceResult:
+              reconvergenceResult.data.portableReplaceResult,
+          },
+        };
+      }
+      catch {
+        return serviceFailure();
+      }
+    },
+  );
+
+  // ----------------------------------------------------------  // FIRST-LOGIN PERMANENT CREDENTIAL COMPLETION V2
   //
   // SECURITY:
   // - trusted ordinary FINORA renderer only

@@ -2,6 +2,9 @@
 import { useEffect, useState } from "react";
 import type { FinoraSelectedServerBranchIdentity } from "./FinoraControlCenterServerBranchDirectoryPanel";
 
+type DirectoryBridge = NonNullable<
+  Window["finoraControlCenter"]
+>;
 // FINORA_P567S - Reuse Directory bridge accessor.
 function getBridge(): DirectoryBridge | undefined {
   const host = window as unknown as {

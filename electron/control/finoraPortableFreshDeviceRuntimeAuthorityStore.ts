@@ -530,6 +530,149 @@ export class FinoraPortableFreshDeviceRuntimeAuthorityStore {
     };
   }
 
+  // FINORA_P1_675Y_RUNTIME_CAS
+  //
+  // Replacement is allowed only when the existing package
+  // exactly matches the expected predecessor.
+  // The store's write barrier serializes local operations.
+  // This method does not independently authorize migration.
+
+  async replaceExact(
+    storageMode:
+      FinoraPortableFreshDeviceRuntimeAuthorityStorageMode,
+    expectedCurrent:
+      FinoraPortableFreshDeviceRuntimeAuthorityPackageV1,
+    replacement:
+      FinoraPortableFreshDeviceRuntimeAuthorityPackageV1,
+  ): Promise<"REPLACED" | "ALREADY_MATCHED"> {
+    const operation =
+      this.writeBarrier.then(
+        () =>
+          this.replaceExactInternal(
+            storageMode,
+            expectedCurrent,
+            replacement,
+          ),
+        () =>
+          this.replaceExactInternal(
+            storageMode,
+            expectedCurrent,
+            replacement,
+          ),
+      );
+
+    this.writeBarrier =
+      operation.then(
+        () => undefined,
+        () => undefined,
+      );
+
+    return operation;
+  }
+
+  private async replaceExactInternal(
+    storageMode:
+      FinoraPortableFreshDeviceRuntimeAuthorityStorageMode,
+    expectedCurrent:
+      FinoraPortableFreshDeviceRuntimeAuthorityPackageV1,
+    replacement:
+      FinoraPortableFreshDeviceRuntimeAuthorityPackageV1,
+  ): Promise<"REPLACED" | "ALREADY_MATCHED"> {
+    try {
+      validateFinoraPortableFreshDeviceRuntimeAuthorityPackageV1(
+        expectedCurrent,
+      );
+
+      validateFinoraPortableFreshDeviceRuntimeAuthorityPackageV1(
+        replacement,
+      );
+    }
+    catch {
+      throw new FinoraPortableFreshDeviceRuntimeAuthorityStoreError(
+        "INVALID_STORAGE",
+        "Invalid runtime authority replacement package.",
+      );
+    }
+
+    const root =
+      await this.resolveRoot(
+        storageMode,
+      );
+
+    const filePath =
+      getFinoraPortableFreshDeviceRuntimeAuthorityFilePath(
+        root,
+      );
+
+    let current:
+      FinoraPortableFreshDeviceRuntimeAuthorityPackageV1;
+
+    try {
+      const fileStat =
+        await stat(
+          filePath,
+        );
+
+      if (
+        !fileStat.isFile() ||
+        fileStat.size <= 0 ||
+        fileStat.size >
+          FINORA_PORTABLE_FRESH_DEVICE_RUNTIME_AUTHORITY_MAX_BYTES
+      ) {
+        throw new Error("INVALID_FILE");
+      }
+
+      const contents =
+        await readFile(
+          filePath,
+          "utf8",
+        );
+
+      const parsed: unknown =
+        JSON.parse(contents);
+
+      validateFinoraPortableFreshDeviceRuntimeAuthorityPackageV1(
+        parsed,
+      );
+
+      current =
+        parsed as FinoraPortableFreshDeviceRuntimeAuthorityPackageV1;
+    }
+    catch {
+      throw new FinoraPortableFreshDeviceRuntimeAuthorityStoreError(
+        "INVALID_STORAGE",
+        "Existing runtime authority is missing or invalid.",
+      );
+    }
+
+    const currentSerialized =
+      JSON.stringify(current);
+
+    if (
+      currentSerialized ===
+        JSON.stringify(replacement)
+    ) {
+      return "ALREADY_MATCHED";
+    }
+
+    if (
+      currentSerialized !==
+        JSON.stringify(expectedCurrent)
+    ) {
+      throw new FinoraPortableFreshDeviceRuntimeAuthorityStoreError(
+        "INVALID_STORAGE",
+        "Runtime authority predecessor mismatch.",
+      );
+    }
+
+    await this.writeInternal(
+      storageMode,
+      replacement,
+    );
+
+    return "REPLACED";
+  }
+
   async write(
     storageMode:
       FinoraPortableFreshDeviceRuntimeAuthorityStorageMode,
@@ -657,17 +800,11 @@ export class FinoraPortableFreshDeviceRuntimeAuthorityStore {
         );
       }
       catch {
-        await rm(
-          filePath,
-          {
-            force:
-              true,
-          },
-        );
-
-        await rename(
-          temporaryPath,
-          filePath,
+        // FINORA_P1_675Z_SAFE_REPLACE
+        // Never delete the existing authority when an atomic
+        // replacement fails. Preserve the last valid record.
+        throw new Error(
+          "RUNTIME_AUTHORITY_ATOMIC_REPLACE_FAILED",
         );
       }
     }

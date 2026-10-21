@@ -175,6 +175,11 @@ export function registerFinoraBranchLoginSessionHandlers(
       ownerId: string;
       businessId: string;
       branchId: string;
+      oneTimeCredentials: {
+        username: string;
+        password: string;
+        securityCode: string;
+      };
     }) => Promise<void>,
 ): void {
   if (
@@ -233,12 +238,135 @@ export function registerFinoraBranchLoginSessionHandlers(
               )
             : undefined;
 
+        // FINORA_P1_578AL2_STRICT_REQUEST
+        // Exclude the Wallet-only field from strict local authentication.
+        const localLoginRequest =
+          request && typeof request === "object" && !Array.isArray(request)
+            ? Object.fromEntries(
+                Object.entries(request).filter(
+                  ([key]) => key !== "walletSecurityCode",
+                ),
+              )
+            : request;
+
         loginResult = await createFinoraBranchLoginSession(
-          request,
+          localLoginRequest,
           portableStore,
           recoverFreshDevice,
           requestScopedPortableV2Store,
         );
+
+        // FINORA_P576N2_ACTUAL_PROVENANCE
+        // Diagnostics only. No secrets, identifiers or signed packages logged.
+        if (
+          process.env.FINORA_WALLET_DIAGNOSTICS === "1" &&
+          loginResult?.success === true
+        ) {
+          const diagnostic = {
+            stage: "LOCAL_AUTH_PROVENANCE",
+            storeAvailable: Boolean(requestScopedPortableV2Store),
+            envelopePresent: false,
+            decrypted: false,
+            provenanceType: "UNAVAILABLE",
+            evidenceValidated: false,
+            localScopeMatchesLogin: false,
+          };
+
+          // FINORA_P576P2_STAGE
+          let failureStep = "PRECHECK";
+          try {
+            const candidate =
+              request &&
+              typeof request === "object" &&
+              !Array.isArray(request)
+                ? request as Record<string, unknown>
+                : null;
+
+            const mode = candidate?.storageMode;
+            const password = candidate?.password;
+
+            if (
+              requestScopedPortableV2Store &&
+              (mode === "LOCAL" || mode === "USB") &&
+              typeof password === "string" &&
+              password.length > 0
+            ) {
+              failureStep = "READ_ENVELOPE";
+              const envelope =
+                await requestScopedPortableV2Store.read(mode);
+
+              diagnostic.envelopePresent = Boolean(envelope);
+
+              if (envelope) {
+                failureStep = "LOAD_CRYPTO";
+                const crypto =
+                  await import("./finoraPortableBranchAuthV2Crypto.js");
+
+                const contract:
+                  typeof import("./finoraPortableBranchAuthContract.js") =
+                    await import("./finoraPortableBranchAuthContract.js");
+
+                failureStep = "DECRYPT_ENVELOPE";
+                const payload =
+                  await crypto.decryptFinoraPortableBranchAuthEnvelopeV2WithPassword(
+                    envelope,
+                    password,
+                  );
+
+                diagnostic.decrypted = true;
+
+                const evidence =
+                  payload.sourceAuthorizationVerificationEvidence;
+
+                diagnostic.provenanceType =
+                  "provenanceType" in evidence
+                    ? String(evidence.provenanceType)
+                    : "CONTROL_SIGNED_ENROLLMENT";
+
+                failureStep = "VALIDATE_SIGNED_EVIDENCE";
+                contract.validateFinoraPortableBranchAuthSourceAuthorizationVerificationEvidenceV1(
+                  evidence,
+                );
+
+                diagnostic.evidenceValidated = true;
+
+                diagnostic.localScopeMatchesLogin =
+                  payload.userId === loginResult.data.userId &&
+                  payload.ownerId === loginResult.data.ownerId &&
+                  payload.businessId === loginResult.data.businessId &&
+                  payload.branchId === loginResult.data.branchId;
+              }
+            }
+          } catch (error) {
+            // FINORA_P1_578BD_SAFE_ERROR_CLASSIFICATION
+            // Never log exception messages, credentials or payloads.
+            const errorClass =
+              error instanceof Error
+                ? error.name
+                : "UNKNOWN";
+
+            diagnostic.stage =
+              "LOCAL_AUTH_PROVENANCE_CHECK_FAILED_" + failureStep;
+
+            if (process.env.FINORA_WALLET_DIAGNOSTICS === "1") {
+              console.info("[FINORA PROVENANCE FAILURE CLASS]", JSON.stringify({
+                failureStep,
+                errorClass: [
+                  "Error",
+                  "TypeError",
+                  "RangeError",
+                  "SyntaxError"
+                ].includes(errorClass) ? errorClass : "OTHER"
+              }));
+            }
+          }
+
+          console.info(
+            "[FINORA WALLET PROVENANCE]",
+            JSON.stringify(diagnostic),
+          );
+        }
+
       }
       catch {
         return serviceFailure();
@@ -253,29 +381,107 @@ export function registerFinoraBranchLoginSessionHandlers(
         }
       }
 
-      // FINORA_P566E2_HANDOFF
+      // FINORA_P572P_UNIFIED_WALLET_HANDOFF
+      // FINORA_P573F3_MAIN_GATE
+      if (process.env.FINORA_WALLET_DIAGNOSTICS === "1") {
+        console.info("[FINORA WALLET MAIN GATE]", JSON.stringify({
+          mainLoginSuccess: loginResult?.success === true,
+          ownerRole: loginResult?.success === true &&
+            loginResult.data.role === "OWNER",
+          activeAccess: loginResult?.success === true &&
+            loginResult.data.accessMode === "ACTIVE",
+          callbackInstalled: typeof onVerifiedOwnerLogin === "function",
+        }));
+      }
       // Only a verified, active Owner session qualifies.
-      // Wallet authority must still be verified independently by server.
+      // The session callback is an Electron-main-process dependency.
+      // It must independently obtain server Wallet authorization.
+      // A Main Login session is NOT a Wallet bearer token.
+      // No renderer-selected Owner, Business or Branch scope is trusted.
       if (
         finoraLoginGenerationBySender.get(event.sender) ===
           loginGeneration &&
         !event.sender.isDestroyed() &&
         loginResult?.success === true &&
         loginResult.data.role === "OWNER" &&
-        loginResult.data.accessMode === "ACTIVE" &&
+        (
+          loginResult.data.accessMode === "ACTIVE" ||
+          loginResult.data.accessMode === "REGISTERED_EXPIRED_READ_ONLY"
+        ) &&
+        loginResult.data.dataContext === "REAL" &&
         onVerifiedOwnerLogin
       ) {
         try {
-          await onVerifiedOwnerLogin({
-            sessionId: loginResult.data.sessionId,
-            userId: loginResult.data.userId,
-            ownerId: loginResult.data.ownerId,
-            businessId: loginResult.data.businessId,
-            branchId: loginResult.data.branchId,
-          });
+          // FINORA P1-572R: Internal one-time credentials.
+          // Main Login success alone never authorizes Wallet access.
+          // The future handoff must independently verify server scope.
+          const candidate =
+            request &&
+            typeof request === "object" &&
+            !Array.isArray(request)
+              ? request as Record<string, unknown>
+              : null;
+
+          const username =
+            typeof candidate?.username === "string"
+              ? candidate.username
+              : "";
+
+          const password =
+            typeof candidate?.password === "string"
+              ? candidate.password
+              : "";
+
+          const securityCode =
+            typeof candidate?.walletSecurityCode === "string" &&
+            candidate.walletSecurityCode.length > 0
+              ? candidate.walletSecurityCode
+              : typeof candidate?.securityCode === "string"
+                ? candidate.securityCode
+                : "";
+
+          // FINORA_P573F3_CREDENTIAL_GATE
+          if (process.env.FINORA_WALLET_DIAGNOSTICS === "1") {
+            console.info("[FINORA WALLET CREDENTIAL GATE]", JSON.stringify({
+              usernamePresent: username.length > 0,
+              usernameMatches:
+                username.trim().normalize("NFKC").toLowerCase() ===
+                loginResult.data.username.trim().normalize("NFKC").toLowerCase(),
+              passwordPresent: password.length > 0,
+              securityCodePresent: securityCode.length > 0,
+            }));
+          }
+          if (
+            username.length > 0 &&
+            username.length <= 128 &&
+            username.trim().normalize("NFKC").toLowerCase() ===
+              loginResult.data.username.trim().normalize("NFKC").toLowerCase() &&
+            password.length > 0 &&
+            password.length <= 128 &&
+            // FINORA_P573X_PASSWORD_HANDOFF
+            // Signed proof uses password + enrolled server key.
+            // Initial Main Login security requirements are unchanged.
+            securityCode.length <= 128 &&
+            finoraLoginGenerationBySender.get(event.sender) ===
+              loginGeneration &&
+            !event.sender.isDestroyed()
+          ) {
+            await onVerifiedOwnerLogin({
+              sessionId: loginResult.data.sessionId,
+              userId: loginResult.data.userId,
+              ownerId: loginResult.data.ownerId,
+              businessId: loginResult.data.businessId,
+              branchId: loginResult.data.branchId,
+              oneTimeCredentials: {
+                username,
+                password,
+                securityCode,
+              },
+            });
+          }
         } catch {
-          // Keep Main Login result; Wallet remains inaccessible
-          // unless its separate server authorization succeeds.
+          // Main Login remains independent of Wallet authorization.
+          // No successful Wallet access is implied by this callback.
         }
       }
 

@@ -46,6 +46,14 @@ import path from "node:path";
 
 import fs from "node:fs/promises";
 
+import {
+  loadFinoraInstallationBindingVault,
+} from "./finoraInstallationBindingVault.js";
+
+import {
+  toFinoraWindowsInstallationBindingPublic,
+} from "./finoraInstallationBindingCrypto.js";
+
 import { evaluateFinoraControlReplay } from "./finoraControlReplayPolicy.js";
 
 import { evaluateFinoraPortableBusinessProfileSequence } from "./finoraPortableBusinessProfileSequenceAuthority.js";
@@ -10428,6 +10436,187 @@ async function applyPortableBranchAuthV2CredentialRotationControlStateInternal(
   }
 
   const currentCredential = branchCredentials[credentialIndex];
+
+  /*
+   * FINORA_P1_578XI_CONTROL_NATIVE_REAUTH
+   *
+   * Durable crash-resume authority:
+   * coordinator evidence alone is not sufficient.
+   * Re-load the current encrypted installation binding and verify
+   * the exact ACTIVE native Storage Entitlement from this same
+   * authoritative Control Store snapshot before Control mutation.
+   */
+  if (
+    transaction.credentialMutationAuthority ===
+      "CONTROL_AUTHENTICATED_NATIVE_RECONVERGENCE"
+  ) {
+    const sourceEvidence =
+      transaction.sourceAuthorizationVerificationEvidence;
+
+    if (
+      !(
+        "legacyNativeBoundMigrationEvidence" in
+        sourceEvidence
+      )
+    ) {
+      return failure(
+        "Native reconvergence requires legacy native-bound migration evidence.",
+      );
+    }
+
+    const migrationEvidence =
+      sourceEvidence.legacyNativeBoundMigrationEvidence;
+
+    const retainedVerificationEvidence =
+      (
+        controlStore
+          .branchCredentialAuthorizationVerificationEvidence ??
+        []
+      ).filter(
+        (item) =>
+          item.authorizationId ===
+          currentCredential.sourceAuthorizationId,
+      );
+
+    const retainedPortabilityAuthorities =
+      (
+        controlStore
+          .branchCredentialPortabilityAuthorities ??
+        []
+      ).filter(
+        (item) =>
+          item.sourceAuthorizationId ===
+          currentCredential.sourceAuthorizationId,
+      );
+
+    if (
+      retainedVerificationEvidence.length !== 0 ||
+      retainedPortabilityAuthorities.length !== 0
+    ) {
+      return failure(
+        "Native reconvergence requires exact zero retained signed portability provenance.",
+      );
+    }
+
+    if (
+      sourceEvidence.authorizationId !==
+        currentCredential.sourceAuthorizationId ||
+      migrationEvidence.schemaVersion !== 1 ||
+      migrationEvidence.migrationMethod !==
+        "PASSWORD_AND_ACTIVE_NATIVE_STORAGE_ENTITLEMENT" ||
+      migrationEvidence.sourceAuthorizationId !==
+        currentCredential.sourceAuthorizationId ||
+      migrationEvidence.ownerId !==
+        currentCredential.ownerId ||
+      migrationEvidence.businessId !==
+        currentCredential.businessId ||
+      migrationEvidence.branchId !==
+        currentCredential.branchId ||
+      migrationEvidence.userId !==
+        currentCredential.userId ||
+      migrationEvidence.username !==
+        currentCredential.username ||
+      migrationEvidence.storageMode !==
+        currentCredential.storageMode ||
+      migrationEvidence.authGeneration !==
+        transaction.targetGeneration ||
+      migrationEvidence.fingerprintAlgorithm !==
+        "SHA-256"
+    ) {
+      return failure(
+        "Native reconvergence durable authority lineage is invalid.",
+      );
+    }
+
+    let currentNativeBinding;
+
+    try {
+      const nativeMaterial =
+        await loadFinoraInstallationBindingVault();
+
+      if (!nativeMaterial) {
+        return failure(
+          "Current native installation binding is unavailable.",
+        );
+      }
+
+      currentNativeBinding =
+        toFinoraWindowsInstallationBindingPublic(
+          nativeMaterial,
+        );
+    } catch {
+      return failure(
+        "Current native installation binding could not be verified.",
+      );
+    }
+
+    if (
+      currentNativeBinding.installationId !==
+        migrationEvidence.installationId ||
+      currentNativeBinding.bindingKeyId !==
+        migrationEvidence.bindingKeyId ||
+      currentNativeBinding.fingerprintAlgorithm !==
+        migrationEvidence.fingerprintAlgorithm ||
+      currentNativeBinding.publicKeyFingerprint !==
+        migrationEvidence.publicKeyFingerprint
+    ) {
+      return failure(
+        "Current native installation binding does not match durable reconvergence authority.",
+      );
+    }
+
+    const installation =
+      controlStore.installation;
+
+    if (
+      !installation ||
+      installation.ownerId !==
+        currentCredential.ownerId ||
+      installation.businessId !==
+        currentCredential.businessId ||
+      installation.branchId !==
+        currentCredential.branchId ||
+      installation.installationId !==
+        currentNativeBinding.installationId
+    ) {
+      return failure(
+        "Current native installation scope does not match the authoritative credential.",
+      );
+    }
+
+    const matchingActiveEntitlements =
+      (
+        controlStore.storageEntitlements ??
+        []
+      ).filter(
+        (item) =>
+          item.status === "ACTIVE" &&
+          item.userId ===
+            currentCredential.userId &&
+          item.ownerId ===
+            currentCredential.ownerId &&
+          item.businessId ===
+            currentCredential.businessId &&
+          item.branchId ===
+            currentCredential.branchId &&
+          item.storageMode ===
+            currentCredential.storageMode &&
+          item.installationId ===
+            currentNativeBinding.installationId &&
+          item.bindingKeyId ===
+            currentNativeBinding.bindingKeyId &&
+          item.fingerprintAlgorithm ===
+            currentNativeBinding.fingerprintAlgorithm &&
+          item.publicKeyFingerprint ===
+            currentNativeBinding.publicKeyFingerprint
+      );
+
+    if (matchingActiveEntitlements.length !== 1) {
+      return failure(
+        "Native reconvergence requires exactly one matching ACTIVE native Storage Entitlement.",
+      );
+    }
+  }
 
   if (
     transaction.status === "CONTROL_APPLIED" ||

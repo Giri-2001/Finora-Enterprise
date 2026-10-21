@@ -1,4 +1,4 @@
-﻿import test from "node:test";
+import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -18,7 +18,7 @@ const compiled = fs.readFileSync(
 
 function fixture(overrides = {}) {
   const handlers = new Map();
-  const owner = { mainFrame: {} };
+  const owner = { mainFrame: {}, isDestroyed: () => false };
   const event = { sender: owner, senderFrame: owner.mainFrame };
   const order = [];
   let clears = 0;

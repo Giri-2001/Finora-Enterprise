@@ -56,6 +56,9 @@ import {
 } from "../../storage/storageManager";
 
 import {
+  getFinoraServerWalletBridge,
+} from "../wallet/finoraServerWalletBridge";
+import {
   getSession,
 } from "../../store/authStore";
 
@@ -364,9 +367,66 @@ export async function authorizeFinoraCommercialWrite(
   // CURRENT-TIME COMMERCIAL ACCESS
   // ----------------------------------------------------------
 
+  // P1-667C: Fresh server subscription, scoped to the signed
+  // authenticated REAL branch. DEMO follows existing grant rules.
+  let serverSubscriptionActive = false;
+
+  if (session.dataContext === "REAL") {
+    try {
+      const bridge = getFinoraServerWalletBridge();
+      const pricing = bridge ? await bridge.pricing() : null;
+
+      if (
+        pricing?.success === true &&
+        pricing.data.source === "FINORA_POSTGRESQL_PRICING" &&
+        pricing.data.branchId === branchId &&
+        Array.isArray(pricing.data.plans) &&
+        pricing.data.plans.length === 4
+      ) {
+        const subscription = pricing.data.currentSubscription;
+
+        if (subscription && subscription.status === "ACTIVE") {
+          const start = Date.parse(subscription.startsAt);
+          const expiry = Date.parse(subscription.expiresAt);
+          const now = Date.parse(subscription.serverNow);
+
+          const months = subscription.selectedPlanMonths ??
+            Number(
+              /^SUBSCRIPTION_(1|3|6|12)_MONTHS?$/.exec(
+                subscription.planCode
+              )?.[1] ?? 0
+            );
+
+          serverSubscriptionActive =
+            [1, 3, 6, 12].includes(months) &&
+            Number.isFinite(start) &&
+            Number.isFinite(expiry) &&
+            Number.isFinite(now) &&
+            start <= now &&
+            now < expiry;
+        }
+      }
+    } catch {
+      serverSubscriptionActive = false;
+    }
+
+    if (!serverSubscriptionActive) {
+      return denyCommercialWrite(
+        capability,
+        "An ACTIVE FINORA server subscription is required.",
+      );
+    }
+  }
+
+  const legacyRegistrationExpired =
+    session.dataContext === "REAL" &&
+    accessDecision.state === "EXPIRED" &&
+    accessDecision.reason === "FINORA annual registration has expired." &&
+    serverSubscriptionActive;
   if (
-    !accessDecision.allowed ||
-    accessDecision.state !== "ACTIVE"
+    (!accessDecision.allowed ||
+     accessDecision.state !== "ACTIVE") &&
+    !legacyRegistrationExpired
   ) {
     return denyCommercialWrite(
       capability,

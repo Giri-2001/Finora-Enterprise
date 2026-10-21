@@ -37,8 +37,7 @@ export interface FinoraServerFirstLoginVerifyRequest {
   password:
     string;
 
-  securityCode:
-    string;
+  securityCode?: string;
 }
 
 export interface FinoraServerFirstLoginVerifySuccess {
@@ -134,12 +133,11 @@ export async function verifyFinoraOwnerFirstLoginOnServer(
 
   if (
     !isNonEmptyString(username) ||
-    !isNonEmptyString(input.password) ||
-    !isNonEmptyString(input.securityCode)
+    !isNonEmptyString(input.password)
   ) {
     return failure(
       "INVALID_REQUEST",
-      "User ID, password, and Security Code are required.",
+      "User ID and password are required.",
     );
   }
 
@@ -198,9 +196,28 @@ export async function verifyFinoraOwnerFirstLoginOnServer(
     }
 
     if (!response.ok) {
+      const rejected = asObject(responseBody);
+      const serverError =
+        typeof rejected?.error === "string"
+          ? rejected.error
+          : "";
+
+      const safeError =
+        response.status === 401 &&
+        serverError === "INVALID_SECURITY_CODE"
+          ? "INVALID_SECURITY_CODE"
+          : response.status === 401 &&
+              serverError === "INVALID_CREDENTIALS"
+            ? "INVALID_CREDENTIALS"
+            : response.status === 429
+              ? "RATE_LIMITED"
+              : response.status >= 500
+                ? "SERVER_UNAVAILABLE"
+                : "SERVER_REJECTED";
+
       return failure(
         "SERVER_REJECTED",
-        "FINORA server rejected the first-login verification.",
+        `FINORA_SERVER_AUTH_${safeError}`,
       );
     }
 

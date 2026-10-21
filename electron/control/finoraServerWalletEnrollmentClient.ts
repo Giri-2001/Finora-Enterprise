@@ -1,6 +1,6 @@
 const FINORA_WALLET_API_BASE =
   process.env.FINORA_LOCAL_WALLET_TEST === "1"
-    ? "http://127.0.0.1:3000"
+    ? "http://127.0.0.1:3001"
     : "https://api.finoraenterprise.com";
 // Main process only. No private key or session is returned to the renderer.
 import {
@@ -88,6 +88,14 @@ export function createFinoraServerWalletEnrollmentClient(
       }
       const expectedStatus = path.endsWith("/start") ? 201 : 200;
       if (response.status !== expectedStatus) {
+        // FINORA_P1_579NR_HTTP_DIAGNOSTICS
+        if (process.env.FINORA_WALLET_DIAGNOSTICS === "1") {
+          console.warn("[FINORA WALLET ENROLL HTTP]", JSON.stringify({
+            stage: path.endsWith("/start") ? "START" : "REDEEM",
+            category: "UNEXPECTED_HTTP_STATUS",
+            status: response.status,
+          }));
+        }
         return { success: false, errorCode: "SERVER_UNAVAILABLE" };
       }
       if (
@@ -110,8 +118,16 @@ export function createFinoraServerWalletEnrollmentClient(
       if (!parsed || parsed.ok !== true) {
         return { success: false, errorCode: "INVALID_SERVER_RESPONSE" };
       }
-      return { success: true, body: parsed };
-    } catch {
+      return { success: true, body: parsed };    } catch (error) {
+      if (process.env.FINORA_WALLET_DIAGNOSTICS === "1") {
+        console.warn("[FINORA WALLET ENROLL HTTP]", JSON.stringify({
+          stage: path.endsWith("/start") ? "START" : "REDEEM",
+          category: controller.signal.aborted
+            ? "TIMEOUT"
+            : "TRANSPORT_EXCEPTION",
+          errorType: error instanceof Error ? error.name : "UNKNOWN",
+        }));
+      }
       return { success: false, errorCode: "SERVER_UNAVAILABLE" };
     } finally {
       clearTimeout(timer);
@@ -164,6 +180,26 @@ export function createFinoraServerWalletEnrollmentClient(
     const expiry = typeof grant.expiresAt === "string"
       ? Date.parse(grant.expiresAt) : NaN;
     const remaining = expiry - Date.now();
+    // FINORA_P1_579OS_GRANT_DIAGNOSTICS
+    if (process.env.FINORA_WALLET_DIAGNOSTICS === "1") {
+      console.info("[FINORA WALLET ENROLL GRANT CHECK]", JSON.stringify({
+        authorizationIdValid: uuid(grant.enrollmentAuthorizationId),
+        challengeValid: hex(grant.challenge),
+        keyIdMatches: grant.keyId === material.keyId.toLowerCase(),
+        fingerprintMatches:
+          grant.publicKeySha256 === material.publicKeySha256,
+        scopeMatches: SCOPE_FIELDS.every(
+          field => grant[field] === expectedScope[field],
+        ),
+        generationMatches:
+          grant.authGeneration === expectedScope.authGeneration,
+        expiryValid:
+          Number.isFinite(remaining) &&
+          remaining > 0 &&
+          remaining <= 125_000,
+        expiryType: typeof grant.expiresAt,
+      }));
+    }
 
     if (
       !uuid(grant.enrollmentAuthorizationId) ||

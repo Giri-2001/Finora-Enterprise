@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OSâ„¢
 
    V2 WALLET ENGINEâ„¢
@@ -103,7 +103,7 @@ export interface CollectionProcessingWalletChargePreflightSuccess {
       number;
 
     availableBalanceAfterCharge:
-      number;
+      number | undefined;
   };
 }
 

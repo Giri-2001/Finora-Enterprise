@@ -59,6 +59,19 @@ import {
   resetFinoraOwnerPasswordOnServer,
 } from "./finoraServerPasswordResetClient.js";
 
+// FINORA_P1_578YQ_RESET_STAGE_TRACE
+function finoraP1578YQResetStage(
+  stage: string,
+  detail?: Record<string, unknown>,
+): void {
+  console.log(
+    "[FINORA RESET PASSWORD TRACE]",
+    JSON.stringify({
+      stage,
+      ...(detail ?? {}),
+    }),
+  );
+}
 // ============================================================
 // CONTRACT
 // ============================================================
@@ -668,6 +681,12 @@ async function recoverPasswordBySecurityCodeInternal(
       );
   }
   catch {
+    // FINORA_P1_578IY_RECOVERY_STAGE
+    console.log(
+      "[FINORA PASSWORD RECOVERY STAGE]",
+      "LOCAL_SECURITY_CODE_REJECTED",
+    );
+
     return failure(
       "INVALID_CREDENTIALS",
       "User ID or Security Code is invalid.",
@@ -703,6 +722,7 @@ async function recoverPasswordBySecurityCodeInternal(
 
   try {
     const proposedPasswordPayload =
+      finoraP1578YQResetStage("SERVER_RESET_REQUEST_START");
       await decryptFinoraPortableBranchAuthEnvelopeV2WithPassword(
         currentEnvelope,
         request.newPassword,
@@ -826,6 +846,13 @@ async function recoverPasswordBySecurityCodeInternal(
       newPassword:
         request.newPassword,
     });
+
+  console.log(
+    "[FINORA PASSWORD RECOVERY STAGE]",
+    serverReset.success
+      ? "SERVER_RESET_ACCEPTED"
+      : `SERVER_RESET_REJECTED:${serverReset.errorCode}`,
+  );
 
   if (!serverReset.success) {
     if (

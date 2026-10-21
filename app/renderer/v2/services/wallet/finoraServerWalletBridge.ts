@@ -60,6 +60,24 @@ export type ServerWalletLogoutStatus =
   | "SERVER_UNAVAILABLE"
   | "INVALID_SERVER_RESPONSE";
 
+/* FINORA_P1_634I_PURCHASE_BRIDGE */
+export interface ServerWalletSubscriptionPurchaseInput {
+  planMonths: 1 | 3 | 6 | 12;
+  idempotencyKey: string;
+}
+
+export interface ServerWalletSubscriptionPurchaseReceipt {
+  source: "POSTGRESQL_SUBSCRIPTION_PURCHASE";
+  replayed: boolean;
+  purchaseId: string;
+  subscriptionId: string;
+  transactionId: string;
+  amountInr: string;
+  balanceInr: string | null;
+  startsAt: string;
+  expiresAt: string;
+  status: "ACTIVE";
+}
 export interface ServerWalletRechargeInput {
   amountInr: number;
   paymentMethod: "PHONEPE" | "GOOGLE_PAY";
@@ -79,8 +97,66 @@ export interface ServerWalletRechargeReceipt {
   replayed: boolean;
 }
 
+/* FINORA_P1_580P_HISTORY_BRIDGE */
+export interface ServerWalletTransactionRow {
+  transactionId: string;
+  transactionType: string;
+  amountInr: string;
+  reference: string | null;
+  rechargeRequestId: string | null;
+  createdAt: string;
+}
+
+export interface ServerWalletRechargeRow {
+  requestId: string;
+  amountInr: string;
+  paymentMethod: string;
+  status: "PENDING" | "APPROVED" | "DECLINED";
+  createdAt: string;
+  decidedAt: string | null;
+  declineReason: string | null;
+}
+
+export interface ServerWalletHistoryPage<T> {
+  walletId: string;
+  currency: "INR";
+  entries: T[];
+  hasMore: boolean;
+}
+/* FINORA_P1_587I_READ_ONLY_RECOVERY_CONTRACT */
+export interface ServerWalletUsageRecovery {
+  operationId: string;
+  sourceType: string;
+  sourceReference: string;
+  chargeCode: string;
+  feeInr: string;
+  reservationStatus: "RESERVED" | "SETTLED" | "RELEASED" | "EXPIRED";
+  recoveryStatus: "AWAITING_RECONCILIATION" | "MANUAL_REVIEW" | "RECONCILED";
+  reportedSaveStatus: "UNKNOWN" | "NOT_STARTED" | "IN_PROGRESS" | "SAVED" | "FAILED";
+  transactionId: string | null;
+  allowNewBusinessSave: false;
+  allowAutomaticSettlement: false;
+  requiresReconciliation: true;
+}
 export interface ServerWalletBridge {
+  // FINORA_P1_588J_RENDERER_RECOVERY
+  // Read-only recovery; never authorizes another save or a debit.
+  recovery(operationId: string): Promise<ServerWalletResult<ServerWalletUsageRecovery>>;
+  transactions(): Promise<ServerWalletResult<ServerWalletHistoryPage<ServerWalletTransactionRow>>>;
+  recharges(): Promise<ServerWalletResult<ServerWalletHistoryPage<ServerWalletRechargeRow>>>;
   pricing(): Promise<ServerWalletResult<ServerWalletLivePricing>>;
+  // FINORA_P1_648C_PENDING_BRIDGE
+  subscriptionPending(): Promise<ServerWalletResult<{
+    pending: boolean;
+    planMonths: 1 | 3 | 6 | 12 | null;
+  }>>;  // FINORA_P1_648F2_RESUME_BRIDGE
+  // Explicit invocation only. UUID never enters the renderer.
+  subscriptionResume(): Promise<
+    ServerWalletResult<ServerWalletSubscriptionPurchaseReceipt>
+  >;
+  subscriptionPurchase(
+    input: ServerWalletSubscriptionPurchaseInput,
+  ): Promise<ServerWalletResult<ServerWalletSubscriptionPurchaseReceipt>>;
   recharge(input: ServerWalletRechargeInput): Promise<
     ServerWalletResult<ServerWalletRechargeReceipt>
   >;
@@ -114,7 +190,7 @@ export function resolveFinoraServerWalletBridge(
     const candidate = host.finora.serverWallet;
     if (!record(candidate)) return null;
 
-    const { enroll, signIn, balance, logout, recharge, pricing } = candidate;
+    const { enroll, signIn, balance, logout, recharge, subscriptionPurchase, subscriptionPending, subscriptionResume, pricing, transactions, recharges, recovery } = candidate;
     if (
       typeof enroll !== "function" ||
       typeof signIn !== "function" ||
@@ -130,6 +206,23 @@ export function resolveFinoraServerWalletBridge(
       signIn: (input: ServerWalletCredentials) =>
         signIn.call(candidate, input),
       balance: () => balance.call(candidate),
+      recovery: (operationId: string): Promise<ServerWalletResult<ServerWalletUsageRecovery>> => {
+        if (
+          typeof operationId !== "string" ||
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(operationId)
+        ) {
+          return Promise.resolve({
+            success: false as const,
+            errorCode: "INVALID_REQUEST",
+          });
+        }
+        return typeof recovery === "function"
+          ? recovery.call(candidate, operationId)
+          : Promise.resolve({
+              success: false as const,
+              errorCode: "UNAUTHORIZED",
+            });
+      },
       pricing: (): Promise<ServerWalletResult<ServerWalletLivePricing>> =>
         typeof pricing === "function"
           ? pricing.call(candidate)
@@ -137,6 +230,128 @@ export function resolveFinoraServerWalletBridge(
               success: false as const,
               errorCode: "UNAUTHORIZED",
             }),
+      transactions: (): Promise<ServerWalletResult<ServerWalletHistoryPage<ServerWalletTransactionRow>>> =>
+        typeof transactions === "function"
+          ? transactions.call(candidate)
+          : Promise.resolve({ success: false as const, errorCode: "UNAUTHORIZED" }),
+      recharges: (): Promise<ServerWalletResult<ServerWalletHistoryPage<ServerWalletRechargeRow>>> =>
+        typeof recharges === "function"
+          ? recharges.call(candidate)
+          : Promise.resolve({ success: false as const, errorCode: "UNAUTHORIZED" }),
+      // FINORA_P1_648C_PENDING_BRIDGE
+      subscriptionPending: async (): Promise<ServerWalletResult<{
+        pending: boolean;
+        planMonths: 1 | 3 | 6 | 12 | null;
+      }>> => {
+        if (typeof subscriptionPending !== "function") {
+          return { success: false, errorCode: "UNAUTHORIZED" };
+        }
+
+        try {
+          const response: unknown = await subscriptionPending.call(candidate);
+
+          if (!record(response)) {
+            return { success: false, errorCode: "INVALID_SERVER_RESPONSE" };
+          }
+
+          if (response.success !== true) {
+            return {
+              success: false,
+              errorCode: typeof response.errorCode === "string"
+                ? response.errorCode : "SERVER_UNAVAILABLE",
+            };
+          }
+
+          if (!record(response.data)) {
+            return { success: false, errorCode: "INVALID_SERVER_RESPONSE" };
+          }
+
+          const pending = response.data.pending;
+          const months = response.data.planMonths;
+
+          if (typeof pending !== "boolean" ||
+              !(months === null || months === 1 || months === 3 ||
+                months === 6 || months === 12) ||
+              (pending && months === null) ||
+              (!pending && months !== null)) {
+            return { success: false, errorCode: "INVALID_SERVER_RESPONSE" };
+          }
+
+          return {
+            success: true,
+            data: { pending, planMonths: months as 1 | 3 | 6 | 12 | null },
+          };
+        } catch {
+          return { success: false, errorCode: "SERVER_UNAVAILABLE" };
+        }
+      },      // FINORA_P1_648F2_RESUME_BRIDGE
+      subscriptionResume: async (): Promise<
+        ServerWalletResult<ServerWalletSubscriptionPurchaseReceipt>
+      > => {
+        if (typeof subscriptionResume !== "function") {
+          return {
+            success: false,
+            errorCode: "UNAUTHORIZED",
+          };
+        }
+
+        try {
+          const result: unknown =
+            await subscriptionResume.call(candidate);
+
+          if (!record(result)) {
+            return {
+              success: false,
+              errorCode: "PURCHASE_RECONCILIATION_REQUIRED",
+            };
+          }
+
+          if (result.success === false &&
+              typeof result.errorCode === "string") {
+            return {
+              success: false,
+              errorCode: result.errorCode,
+            };
+          }
+
+          if (result.success === true && record(result.data)) {
+            return result as unknown as
+              ServerWalletResult<ServerWalletSubscriptionPurchaseReceipt>;
+          }
+
+          return {
+            success: false,
+            errorCode: "PURCHASE_RECONCILIATION_REQUIRED",
+          };
+        } catch {
+          return {
+            success: false,
+            errorCode: "PURCHASE_RECONCILIATION_REQUIRED",
+          };
+        }
+      },
+      subscriptionPurchase: (
+        input: ServerWalletSubscriptionPurchaseInput,
+      ): Promise<ServerWalletResult<ServerWalletSubscriptionPurchaseReceipt>> => {
+        if (
+          typeof subscriptionPurchase !== "function" ||
+          ![1, 3, 6, 12].includes(input.planMonths) ||
+          typeof input.idempotencyKey !== "string" ||
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+            input.idempotencyKey,
+          )
+        ) {
+          return Promise.resolve({
+            success: false as const,
+            errorCode: "INVALID_REQUEST",
+          });
+        }
+
+        return subscriptionPurchase.call(candidate, {
+          planMonths: input.planMonths,
+          idempotencyKey: input.idempotencyKey,
+        });
+      },
       recharge: (input: ServerWalletRechargeInput) =>
         recharge.call(candidate, input),
       logout: () => logout.call(candidate),

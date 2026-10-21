@@ -1,6 +1,6 @@
-﻿import {
+import { finoraControlShared } from "../finoraControlShared";
+import {
   Capacitor,
-  registerPlugin,
 } from "@capacitor/core";
 
 
@@ -45,11 +45,7 @@ interface FinoraAndroidCredentialEnrollmentPlugin {
 
 
 const finoraAndroidCredentialEnrollmentPlugin =
-  registerPlugin<
-    FinoraAndroidCredentialEnrollmentPlugin
-  >(
-    "FinoraControl",
-  );
+  finoraControlShared as FinoraAndroidCredentialEnrollmentPlugin;
 
 
 function getElectronCredentialEnrollmentBridge():

@@ -39,6 +39,9 @@ import type { FinoraControlCenterIssuanceWorkflow } from "./FinoraControlCenterI
 
 import FinoraControlCenterBranchRegistryPanel from "./FinoraControlCenterBranchRegistryPanel";
 import FinoraControlCenterLiveWalletPanel from "./FinoraControlCenterLiveWalletPanel";
+import FinoraControlCenterPendingRechargesPanel from "./FinoraControlCenterPendingRechargesPanel";
+import FinoraControlCenterDashboardOverview from "./FinoraControlCenterDashboardOverview";
+import FinoraControlCenterServerConnectionPanel from "./FinoraControlCenterServerConnectionPanel";
 import FinoraControlCenterIssuanceWorkspace from "./FinoraControlCenterIssuanceWorkspace";
 import "./FinoraControlCenterResponsive.css";
 
@@ -2614,9 +2617,16 @@ const [
         ) && (
           <>
                         {activeView === "BRANCHES" && (
+  <>
+  <FinoraControlCenterServerConnectionPanel />
+  <FinoraControlCenterDashboardOverview />
+</>
+)}
+{activeView === "BRANCHES" && (
               <>
   {/* FINORA_P567X_TOP_WALLET_HIDDEN: Directory has wallet details. */}
   {false && (<FinoraControlCenterLiveWalletPanel />)}
+              <FinoraControlCenterPendingRechargesPanel />
 </>
 )}
 {activeView === "BRANCHES" && (

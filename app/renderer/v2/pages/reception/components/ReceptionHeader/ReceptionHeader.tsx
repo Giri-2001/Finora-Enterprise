@@ -12,7 +12,7 @@
 =========================================================== */
 
 import finoraLogo
-  from "../../../../app/assets/finoraenterprise.png";
+  from "../../../../app/assets/finoraenterprise.png?url";
 
 import {
   useResponsive,

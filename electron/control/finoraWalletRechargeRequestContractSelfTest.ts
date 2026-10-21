@@ -232,8 +232,9 @@ async function runSelfTest():
     );
 
   assert(
-    fileNameA ===
-      "FIN-WAL-REQ-GGB-BR001-UPI-100-A4C91F.finora",
+    /^FIN-WAL-REQ-GGB-BR001-UPI-100-A4C91F_\d{2}-\d{2}-\d{4}_\d{2}-\d{2}\.finora$/.test(
+      fileNameA,
+    ),
     `Unexpected Wallet Recharge Request filename: ${fileNameA}`,
   );
 

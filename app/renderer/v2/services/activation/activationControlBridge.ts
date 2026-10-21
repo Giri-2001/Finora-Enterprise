@@ -1,3 +1,4 @@
+import { finoraControlShared } from "../finoraControlShared";
 // ============================================================
 // FINORA ENTERPRISE OSâ„¢
 //
@@ -42,7 +43,6 @@ import type {
 
 import {
   Capacitor,
-  registerPlugin,
 } from "@capacitor/core";
 
 import type {
@@ -543,12 +543,7 @@ export interface FinoraActivationControlBridge {
 // ANDROID CAPACITOR PLUGIN
 // ============================================================
 
-const finoraAndroidControlPlugin =
-  registerPlugin<
-    FinoraActivationControlBridge
-  >(
-    "FinoraControl",
-  );
+const finoraAndroidControlPlugin = finoraControlShared as FinoraActivationControlBridge;
 
 // ============================================================
 // ELECTRON BRIDGE RESOLUTION

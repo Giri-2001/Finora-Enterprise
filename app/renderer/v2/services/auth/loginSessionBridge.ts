@@ -1,6 +1,6 @@
+import { finoraControlShared } from "../finoraControlShared";
 import {
   Capacitor,
-  registerPlugin,
 } from "@capacitor/core";
 
 export type FinoraLoginSessionAccessMode =
@@ -12,6 +12,7 @@ export interface FinoraLoginSessionLoginRequest {
   password: string;
   storageMode: "LOCAL" | "USB";
   securityCode?: string;
+  walletSecurityCode?: string;
 }
 
 export interface FinoraLoginSessionRequest {
@@ -93,9 +94,7 @@ interface FinoraAndroidServerFirstV2Plugin {
 }
 
 const finoraAndroidServerFirstV2Plugin =
-  registerPlugin<FinoraAndroidServerFirstV2Plugin>(
-    "FinoraControl",
-  );
+  finoraControlShared as FinoraAndroidServerFirstV2Plugin;
 
 /**
  * Android-only explicit V2 recovery operation.
@@ -152,11 +151,7 @@ export interface FinoraLoginSessionBridge {
 }
 
 const finoraAndroidLoginSessionPlugin =
-  registerPlugin<
-    FinoraLoginSessionBridge
-  >(
-    "FinoraControl",
-  );
+  finoraControlShared as FinoraLoginSessionBridge;
 
 function getElectronLoginSessionBridge():
   FinoraLoginSessionBridge | undefined {

@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OSâ„¢
 
    V2 WALLET ENGINEâ„¢
@@ -206,8 +206,19 @@ export async function ensureWalletForScope(
 
     try {
 
+      // FINORA_P1_608B_FAIL_CLOSED_INITIALIZATION
+      const walletControl = window.finora?.control;
+
+      if (
+        !walletControl ||
+        typeof walletControl.initializeCanonicalWalletAuthority !== "function"
+      ) {
+        throw new Error(
+          "FINORA canonical Wallet initialization authority is unavailable."
+        );
+      }
       const authorityResult =
-        await window.finora.control.initializeCanonicalWalletAuthority({
+        await walletControl.initializeCanonicalWalletAuthority({
           ownerId:
             wallet.ownerId,
 

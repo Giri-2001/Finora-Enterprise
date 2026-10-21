@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS
 // SERVER PASSWORD RESET CLIENT
 // MAIN PROCESS ONLY
@@ -186,6 +186,15 @@ export async function resetFinoraOwnerPasswordOnServer(
             controller.signal,
         },
       );
+
+    // FINORA_P1_579BR_RESET_HTTP_DIAGNOSTIC
+    console.log(
+      "[FINORA RESET SERVER HTTP]",
+      JSON.stringify({
+        status: response.status,
+        ok: response.ok,
+      }),
+    );
 
     let responseBody:
       unknown;

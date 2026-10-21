@@ -126,6 +126,8 @@ const ENTITY_CUSTOMER_NOTIFICATION_PREFERENCE =
 
 const ENTITY_REPORT = "REPORT";
 
+const ENTITY_WALLET_USAGE_OPERATION = "WALLET_USAGE_OPERATION";
+
 const ENTITY_GENERAL = "GENERAL";
 
 // ============================================================
@@ -180,6 +182,8 @@ const FINORA_RESET_ENTITIES: readonly string[] = [
   ENTITY_CUSTOMER_NOTIFICATION_PREFERENCE,
 
   ENTITY_REPORT,
+
+  ENTITY_WALLET_USAGE_OPERATION,
 
   ENTITY_GENERAL,
 ];
@@ -1346,6 +1350,12 @@ function resolveEntity(record: unknown): string {
   // Keep this rule narrow so existing heuristic routing for
   // Customer / Loan / Collection remains untouched.
   // ==========================================================
+
+  // FINORA_P1_589H_JOURNAL_ENTITY
+  // Keep recovery evidence separate from GENERAL records.
+  if (value.entity === ENTITY_WALLET_USAGE_OPERATION) {
+    return ENTITY_WALLET_USAGE_OPERATION;
+  }
 
   if (value.entity === ENTITY_BUSINESS_IDENTITY) {
     return ENTITY_BUSINESS_IDENTITY;

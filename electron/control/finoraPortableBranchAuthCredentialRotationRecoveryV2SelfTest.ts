@@ -67,6 +67,7 @@ import {
 } from "./finoraPortableBranchAuthCredentialRotationRecoveryServiceV2.js";
 
 import {
+  recoverFinoraPortableBranchAuthSecurityCodeV2,
   rotateFinoraPortableBranchAuthCredentialV2,
 } from "./finoraPortableBranchAuthCredentialRotationCoordinatorV2.js";
 
@@ -1380,6 +1381,321 @@ async function runSelfTest():
       );
     }
 
+
+
+    // ========================================================
+    // FINORA_P1_578LD_SECURITY_CODE_RECOVERY_SELF_TEST
+    //
+    // Dedicated Password-authorized V2 Security Code recovery.
+    // Uses only this self-test's isolated temporary Control Store
+    // and LOCAL Portable V2 store.
+    // ========================================================
+
+    {
+      const recoveryFixture:
+        FinoraControlStorePackage =
+        cloneJson(
+          emptyStore,
+        );
+
+      recoveryFixture.branchCredentials = [
+        cloneJson(
+          expectedCredential,
+        ),
+      ];
+
+      recoveryFixture.portableBranchAuthV2CredentialRotationTransactions =
+        [];
+
+      recoveryFixture.updatedAt =
+        initialAt;
+
+      await writeEncryptedControlFixture(
+        temporaryUserData!,
+        recoveryFixture,
+      );
+
+      const recoveryPortable =
+        await createPortableCase(
+          "live-security-code-recovery",
+          expectedMaterial.envelope,
+        );
+
+      const envelopeBeforeWrongPassword =
+        await recoveryPortable.store.read(
+          "LOCAL",
+        );
+
+      assert(
+        envelopeBeforeWrongPassword !==
+          null,
+        "Recovery fixture Portable V2 envelope is missing.",
+      );
+
+      const wrongPasswordResult =
+        await recoverFinoraPortableBranchAuthSecurityCodeV2({
+          request: {
+            rotationRequestId:
+              "ROTATION-REQUEST-SECURITY-RECOVERY-WRONG-000001",
+
+            username:
+              "admin",
+
+            currentPassword:
+              "Definitely-Wrong-Password-578LD",
+
+            newSecurityCode:
+              "Recovered-Security-578LD",
+          },
+
+          portableStore:
+            recoveryPortable.store,
+        });
+
+      assert(
+        !wrongPasswordResult.success,
+        "Wrong current Password unexpectedly authorized Security Code recovery.",
+      );
+
+      const envelopeAfterWrongPassword =
+        await recoveryPortable.store.read(
+          "LOCAL",
+        );
+
+      assert(
+        envelopeAfterWrongPassword !==
+          null &&
+        jsonEqual(
+          envelopeAfterWrongPassword,
+          envelopeBeforeWrongPassword,
+        ),
+        "Wrong Password mutated Portable V2 state.",
+      );
+
+      const controlAfterWrongPassword =
+        await readFinoraControlStore();
+
+      assert(
+        controlAfterWrongPassword.success &&
+        controlAfterWrongPassword.data,
+        controlAfterWrongPassword.error ??
+          "Unable to read Control Store after wrong-Password recovery attempt.",
+      );
+
+      const credentialAfterWrongPassword =
+        controlAfterWrongPassword.data.branchCredentials?.find(
+          (credential) =>
+            credential.credentialId ===
+              credentialId,
+        );
+
+      assert(
+        credentialAfterWrongPassword !==
+          undefined &&
+        jsonEqual(
+          credentialAfterWrongPassword,
+          expectedCredential,
+        ),
+        "Wrong Password mutated authoritative Control credential.",
+      );
+
+      const wrongPasswordTransactions =
+        controlAfterWrongPassword.data
+          .portableBranchAuthV2CredentialRotationTransactions ??
+        [];
+
+      assert(
+        wrongPasswordTransactions.length ===
+          0,
+        "Wrong Password created durable recovery transaction state.",
+      );
+
+      console.log(
+        "PASS: wrong Password rejected before durable Security Code recovery mutation",
+      );
+
+      const recoveredSecurityCode =
+        "Recovered-Security-578LD";
+
+      const recoveryResult =
+        await recoverFinoraPortableBranchAuthSecurityCodeV2({
+          request: {
+            rotationRequestId:
+              "ROTATION-REQUEST-SECURITY-RECOVERY-LIVE-000001",
+
+            username:
+              "admin",
+
+            currentPassword:
+              oldPassword,
+
+            newSecurityCode:
+              recoveredSecurityCode,
+          },
+
+          portableStore:
+            recoveryPortable.store,
+        });
+
+      assert(
+        recoveryResult.success,
+        recoveryResult.success
+          ? "Unexpected Security Code recovery assertion state."
+          : recoveryResult.error,
+      );
+
+      assert(
+        recoveryResult.data.authGeneration ===
+          2,
+        "Security Code recovery did not advance authGeneration exactly once.",
+      );
+
+      assert(
+        recoveryResult.data.credential.authGeneration ===
+          2,
+        "Recovered Control credential has wrong authGeneration.",
+      );
+
+      assert(
+        recoveryResult.data.credential.createdAt ===
+          initialAt,
+        "Security Code recovery changed immutable credential createdAt.",
+      );
+
+      const recoveredEnvelope =
+        await recoveryPortable.store.read(
+          "LOCAL",
+        );
+
+      assert(
+        recoveredEnvelope !==
+          null,
+        "Security Code recovery did not persist successor Portable V2 envelope.",
+      );
+
+      const recoveredPasswordPayload =
+        await decryptFinoraPortableBranchAuthEnvelopeV2WithPassword(
+          recoveredEnvelope,
+          oldPassword,
+        );
+
+      const recoveredSecurityPayload =
+        await decryptFinoraPortableBranchAuthEnvelopeV2WithRecoveryCode(
+          recoveredEnvelope,
+          recoveredSecurityCode,
+        );
+
+      assert(
+        jsonEqual(
+          recoveredPasswordPayload,
+          recoveredSecurityPayload,
+        ),
+        "Current Password and recovered Security Code do not decrypt the same successor payload.",
+      );
+
+      assert(
+        recoveredPasswordPayload.authGeneration ===
+          2 &&
+        recoveredPasswordPayload.authGeneration ===
+          recoveryResult.data.credential.authGeneration,
+        "Recovered Portable/Control authGeneration diverged.",
+      );
+
+      assert(
+        recoveredPasswordPayload.updatedAt ===
+          recoveryResult.data.credential.updatedAt,
+        "Recovered Portable/Control updatedAt diverged.",
+      );
+
+      assert(
+        recoveredPasswordPayload.createdAt ===
+          initialAt,
+        "Security Code recovery changed immutable Portable createdAt.",
+      );
+
+      let oldSecurityCodeRejected =
+        false;
+
+      try {
+        await decryptFinoraPortableBranchAuthEnvelopeV2WithRecoveryCode(
+          recoveredEnvelope,
+          oldSecurityCode,
+        );
+      }
+      catch {
+        oldSecurityCodeRejected =
+          true;
+      }
+
+      assert(
+        oldSecurityCodeRejected,
+        "Old Security Code still decrypts recovered successor Portable V2 envelope.",
+      );
+
+      const controlAfterRecovery =
+        await readFinoraControlStore();
+
+      assert(
+        controlAfterRecovery.success &&
+        controlAfterRecovery.data,
+        controlAfterRecovery.error ??
+          "Unable to read Control Store after Security Code recovery.",
+      );
+
+      const authoritativeRecoveredCredential =
+        controlAfterRecovery.data.branchCredentials?.find(
+          (credential) =>
+            credential.credentialId ===
+              credentialId,
+        );
+
+      assert(
+        authoritativeRecoveredCredential !==
+          undefined,
+        "Security Code recovery lost authoritative Control credential.",
+      );
+
+      assert(
+        authoritativeRecoveredCredential.authGeneration ===
+          recoveredPasswordPayload.authGeneration &&
+        authoritativeRecoveredCredential.updatedAt ===
+          recoveredPasswordPayload.updatedAt,
+        "Control Store and recovered Portable V2 lineage diverged.",
+      );
+
+      const recoveryTransaction =
+        controlAfterRecovery.data
+          .portableBranchAuthV2CredentialRotationTransactions
+          ?.find(
+            (transaction) =>
+              transaction.rotationRequestId ===
+                "ROTATION-REQUEST-SECURITY-RECOVERY-LIVE-000001",
+          );
+
+      assert(
+        recoveryTransaction?.status ===
+          "COMPLETE",
+        "Security Code recovery transaction did not reach COMPLETE.",
+      );
+
+      assert(
+        recoveryPortable.getUsbCalls() ===
+          0,
+        "LOCAL Security Code recovery unexpectedly consulted USB resolver.",
+      );
+
+      console.log(
+        "PASS: Password-authorized Security Code recovery advanced generation exactly once",
+      );
+
+      console.log(
+        "PASS: recovered Password/Security Code converge on one V2 payload and old Security Code is stale",
+      );
+
+      console.log(
+        "PASS: Security Code recovery committed through durable transaction to COMPLETE",
+      );
+    }
 
     // ========================================================
     // POSITIVE CRASH WINDOWS

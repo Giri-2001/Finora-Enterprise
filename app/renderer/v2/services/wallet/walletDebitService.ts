@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OSâ„¢
 
    V2 WALLET ENGINEâ„¢
@@ -513,8 +513,24 @@ export async function commitWalletDebit(
      decision source for every new debit.
   ========================================================== */
 
+  // FINORA_P1_608B_FAIL_CLOSED_CANONICAL_AUTHORITY
+  // Never begin a canonical financial mutation without the
+  // privileged Electron Wallet authority bridge.
+  const walletControl = window.finora?.control;
+
+  if (
+    !walletControl ||
+    typeof walletControl.readCanonicalWalletAuthority !== "function" ||
+    typeof walletControl.commitCanonicalWalletAuthorityMutation !== "function"
+  ) {
+    return {
+      success: false,
+      errorCode: "AUTHORITY_UNAVAILABLE",
+      error: "FINORA canonical Wallet authority is unavailable.",
+    };
+  }
   const authorityReadResult =
-    await window.finora.control.readCanonicalWalletAuthority({
+    await walletControl.readCanonicalWalletAuthority({
       ownerId:
         input.ownerId,
 
@@ -755,7 +771,7 @@ export async function commitWalletDebit(
   ========================================================== */
 
   const canonicalMutationResult =
-    await window.finora.control.commitCanonicalWalletAuthorityMutation({
+    await walletControl.commitCanonicalWalletAuthorityMutation({
       ownerId:
         input.ownerId,
 

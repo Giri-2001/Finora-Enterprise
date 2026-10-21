@@ -62,7 +62,7 @@ import {
 } from "../../loans/details/LoanCustomerCard.styles";
 
 import finoraLogo
-  from "../../../app/assets/finoraenterprise.png";
+  from "../../../app/assets/finoraenterprise.png?url";
 import type { CSSProperties } from "react";
 
 import { useEffect, useMemo, useRef, useState } from "react";

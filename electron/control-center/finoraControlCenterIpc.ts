@@ -1,3 +1,8 @@
+import { loadFinoraServerDashboard } from "./finoraServerDashboardClient.js";
+import {
+  createFinoraRechargeDecisionClient,
+  type FinoraRechargeDecisionInput,
+} from "./finoraServerRechargeDecisionClient.js";
 // FINORA_P567K - Read-only local-test pricing.
 import {
   loadFinoraServerEffectivePricing,
@@ -234,8 +239,16 @@ import {
   verifyFinoraServerAdminCredential,
   provisionFinoraServerOwner,
   fetchFinoraServerLiveWallets,
+  fetchFinoraServerGlobalPricing,
+  updateFinoraServerGlobalPricing,
+  type FinoraServerGlobalPricingInput,
   type FinoraServerProvisionOwnerInput,
 } from "./finoraServerAdminClient.js";
+// FINORA_P1_579IC_SERVER_GLOBAL_PRICING
+
+import {
+  fetchFinoraServerPendingRecharges,
+} from "./finoraServerPendingRechargeClient.js";
 
 import {
   hasFinoraServerAdminCredential,
@@ -286,7 +299,10 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
 
   GET_SERVER_EFFECTIVE_PRICING: "finora:control-center:get-server-effective-pricing",
 
-  GET_SERVER_BRANCH_DIRECTORY:
+    // FINORA_P1_594G2_DASHBOARD
+  GET_SERVER_DASHBOARD:
+    "finora:control-center:get-server-dashboard",
+GET_SERVER_BRANCH_DIRECTORY:
     "finora:control-center:get-server-branch-directory",
 
   GET_BRANCH_REGISTRY:
@@ -326,6 +342,10 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
     "finora:control-center:provision-server-owner",
   GET_SERVER_LIVE_WALLETS:
     "finora:control-center:get-server-live-wallets",
+  GET_SERVER_PENDING_RECHARGES:
+    "finora:control-center:get-server-pending-recharges",
+  DECIDE_SERVER_WALLET_RECHARGE:
+    "finora:control-center:decide-server-wallet-recharge",
 
   GET_FINORA_INCOME_PRICING:
     "finora:control-center:get-finora-income-pricing",
@@ -994,8 +1014,14 @@ export function registerFinoraControlCenterHandlers():
       }
 
       return executePrivileged(
-        () =>
-          readFinoraControlCenterIncomePricing(),
+        async () => {
+          const adminApiKey =
+            await readFinoraServerAdminCredential();
+
+          return fetchFinoraServerGlobalPricing(
+            adminApiKey,
+          );
+        },
       );
     },
   );
@@ -1019,10 +1045,82 @@ export function registerFinoraControlCenterHandlers():
       }
 
       return executePrivileged(
-        () =>
-          updateFinoraControlCenterIncomePricing(
-            request,
-          ),
+        async () => {
+          if (
+            typeof request !== "object" ||
+            request === null ||
+            Array.isArray(request)
+          ) {
+            throw new Error(
+              "FINORA global pricing request is invalid.",
+            );
+          }
+
+          const candidate =
+            request as Record<string, unknown>;
+
+          for (
+            const field of [
+              "subscription1MonthFee",
+              "subscription3MonthFee",
+              "subscription6MonthFee",
+              "subscription12MonthFee",
+            ] as const
+          ) {
+            if (candidate[field] === undefined) {
+              throw new Error(
+                `FINORA ${field} is not configured. Configure all subscription prices before publishing.`,
+              );
+            }
+          }
+
+          const adminApiKey =
+            await readFinoraServerAdminCredential();
+
+          // FINORA_P1_579IR_IPC_PRICING_SHAPE
+          const serverPricingInput:
+            FinoraServerGlobalPricingInput = {
+              customerCreateFee:
+                candidate.customerCreateFee as number,
+              loanDisbursementFee:
+                candidate.loanDisbursementFee as number,
+              collectionBelow25000Fee:
+                candidate.collectionBelow25000Fee as number,
+              collection25000To50000Fee:
+                candidate.collection25000To50000Fee as number,
+              collectionAbove50000Fee:
+                candidate.collectionAbove50000Fee as number,
+              subscription1MonthFee:
+                candidate.subscription1MonthFee as number,
+              subscription3MonthFee:
+                candidate.subscription3MonthFee as number,
+              subscription6MonthFee:
+                candidate.subscription6MonthFee as number,
+              subscription12MonthFee:
+                candidate.subscription12MonthFee as number,
+              ...(
+                typeof candidate.pricingNoticeTitle === "string"
+                  ? {
+                      pricingNoticeTitle:
+                        candidate.pricingNoticeTitle,
+                    }
+                  : {}
+              ),
+              ...(
+                typeof candidate.pricingNoticeMessage === "string"
+                  ? {
+                      pricingNoticeMessage:
+                        candidate.pricingNoticeMessage,
+                    }
+                  : {}
+              ),
+            };
+
+          return updateFinoraServerGlobalPricing(
+            adminApiKey,
+            serverPricingInput,
+          );
+        },
       );
     },
   );
@@ -1375,6 +1473,139 @@ try {
     },
   );
 
+  // FINORA_P1_590S_PENDING_IPC
+  // Read-only pending requests. Admin key never leaves Electron main.
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .GET_SERVER_PENDING_RECHARGES,
+    async (event, input: unknown) => {
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Pending Recharge access is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      if (
+        typeof input !== "object" ||
+        input === null ||
+        Array.isArray(input)
+      ) {
+        return failure(
+          "FINORA Pending Recharge pagination request is invalid.",
+        );
+      }
+
+      const request = input as Record<string, unknown>;
+      if (
+        Object.keys(request).some(
+          key => key !== "limit" && key !== "offset",
+        )
+      ) {
+        return failure(
+          "FINORA Pending Recharge request contains unsupported fields.",
+        );
+      }
+
+      const limit = request.limit;
+      const offset = request.offset;
+      if (
+        typeof limit !== "number" ||
+        typeof offset !== "number" ||
+        !Number.isSafeInteger(limit) ||
+        !Number.isSafeInteger(offset) ||
+        limit < 1 ||
+        limit > 100 ||
+        offset < 0 ||
+        offset > 10000000
+      ) {
+        return failure(
+          "FINORA Pending Recharge pagination request is invalid.",
+        );
+      }
+
+      return executePrivileged(
+        async () => {
+          const adminApiKey =
+            await readFinoraServerAdminCredential();
+          try {
+            return await fetchFinoraServerPendingRecharges(
+              adminApiKey,
+              limit,
+              offset,
+            );
+          } catch (error) {
+            if (
+              error instanceof Error &&
+              error.message === "RECHARGE_ADMIN_UNAUTHORIZED"
+            ) {
+              await clearFinoraServerAdminCredential();
+            }
+            throw error;
+          }
+        },
+      );
+    },
+  );
+  // FINORA_P1_591C_APPROVAL_IPC
+  // Trusted Control Center only. The credential stays in Electron main.
+  // The server owns wallet identity, amount and financial transaction.
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .DECIDE_SERVER_WALLET_RECHARGE,
+    async (event, input: unknown) => {
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA recharge decisions require the trusted Control Center.",
+        );
+      }
+
+      if (
+        typeof input !== "object" ||
+        input === null ||
+        Array.isArray(input)
+      ) {
+        return failure(
+          "Invalid FINORA recharge decision.",
+        );
+      }
+
+      // Strict payload validation is performed inside the decision client
+      // BEFORE transport. Amount, wallet and admin identity are forbidden.
+      return executePrivileged(
+        async () => {
+          const adminApiKey =
+            await readFinoraServerAdminCredential();
+
+          const client =
+            createFinoraRechargeDecisionClient(fetch);
+
+          try {
+            return await client(
+              adminApiKey,
+              input as FinoraRechargeDecisionInput,
+            );
+          } catch (error) {
+            if (
+              error instanceof Error &&
+              error.message === "RECHARGE_ADMIN_UNAUTHORIZED"
+            ) {
+              await clearFinoraServerAdminCredential();
+            }
+
+            throw error;
+          }
+        },
+      );
+    },
+  );
   registerFinoraDeveloperSecurityControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS
       .GET_DEVELOPER_SECURITY_STATE,
@@ -1801,7 +2032,79 @@ registerFinoraDeveloperSecurityControlCenterHandler(
     }
   );
 
+    // FINORA_P1_594G2_DASHBOARD
   registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_SERVER_DASHBOARD,
+    async (event, input: unknown) => {
+      if (!isTrustedFinoraControlCenterRenderer(event.senderFrame)) {
+        return failure("DASHBOARD_RENDERER_NOT_TRUSTED");
+      }
+
+      if (
+        input !== undefined &&
+        (
+          input === null ||
+          typeof input !== "object" ||
+          Array.isArray(input) ||
+          Object.getPrototypeOf(input) !== Object.prototype ||
+          Object.keys(input).some(
+            key => !["page", "size"].includes(key)
+          )
+        )
+      ) {
+        return failure("DASHBOARD_QUERY_INVALID");
+      }
+
+      const query = input as
+        | { page?: unknown; size?: unknown }
+        | undefined;
+
+      if (
+        (query?.page !== undefined &&
+          (typeof query.page !== "number" ||
+           !Number.isSafeInteger(query.page) ||
+           query.page < 1 || query.page > 100000)) ||
+        (query?.size !== undefined &&
+          (typeof query.size !== "number" ||
+           !Number.isSafeInteger(query.size) ||
+           query.size < 1 || query.size > 100))
+      ) {
+        return failure("DASHBOARD_QUERY_INVALID");
+      }
+
+      return executePrivileged(async () => {
+                  // FINORA_P1_631E_PRODUCTION_DASHBOARD_VAULT
+          // Production Admin Key stays in Electron Main's encrypted vault.
+          // Local development may use its separate test credential.
+          const useLocalDashboard =
+            process.env.NODE_ENV !== "production" &&
+            process.env.FINORA_LOCAL_CONTROL_CENTER_DIRECTORY === "1";
+
+          const adminApiKey = useLocalDashboard
+            ? process.env.FINORA_LOCAL_DASHBOARD_ADMIN_KEY
+            : await readFinoraServerAdminCredential();
+
+          if (
+            typeof adminApiKey !== "string" ||
+            adminApiKey.trim().length < 32 ||
+            adminApiKey.length > 4096
+          ) {
+            throw new Error("DASHBOARD_ADMIN_AUTH_UNAVAILABLE");
+          }
+
+        try {
+          return await loadFinoraServerDashboard(
+            adminApiKey,
+            query?.page as number | undefined,
+            query?.size as number | undefined,
+          );
+        } catch (error) {
+          throw error;
+        }
+      });
+    },
+  );
+registerFinoraDeveloperProtectedControlCenterHandler(
     FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_SERVER_BRANCH_DIRECTORY,
     async (event, query: unknown) => {
       if (!isTrustedFinoraControlCenterRenderer(event.senderFrame)) {
@@ -5177,7 +5480,3 @@ registerFinoraDeveloperSecurityControlCenterHandler(
 // ============================================================
 // END
 // ============================================================
-
-
-
-

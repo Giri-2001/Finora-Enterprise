@@ -1,6 +1,6 @@
 const FINORA_WALLET_API_BASE =
   process.env.FINORA_LOCAL_WALLET_TEST === "1"
-    ? "http://127.0.0.1:3000"
+    ? "http://127.0.0.1:3001"
     : "https://api.finoraenterprise.com";
 // Main-process transport only. Caller owns session scope and retry identity.
 // Submission success is a request receipt, never proof of a new wallet credit.
