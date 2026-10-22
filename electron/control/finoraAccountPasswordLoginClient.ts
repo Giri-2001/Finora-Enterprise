@@ -8,7 +8,16 @@
 const ACCOUNT_LOGIN_URL =
   "https://api.finoraenterprise.com/owner/account/session";
 
+export type FinoraVerifiedAccountPrincipal = {
+  userId: string;
+  ownerId: string;
+  businessId: string;
+  branchId: string;
+};
+
+// FINORA_P1_697N_PRINCIPAL
 export interface FinoraAccountPasswordLoginResult {
+  principal?: FinoraVerifiedAccountPrincipal;
   success: boolean;
   errorCode?: string;
   accessToken?: string;
@@ -87,10 +96,46 @@ export async function authenticateFinoraAccountPassword(
       };
     }
 
+    // Accept identity exclusively from authenticated server response.
+    const candidate = data.principal;
+
+    if (
+      !candidate ||
+      typeof candidate !== "object" ||
+      Array.isArray(candidate)
+    ) {
+      return {
+        success: false,
+        errorCode: "ACCOUNT_PRINCIPAL_REQUIRED",
+      };
+    }
+
+    const identity = candidate as Record<string, unknown>;
+
+    for (const field of [
+      "userId", "ownerId", "businessId", "branchId"
+    ]) {
+      if (
+        typeof identity[field] !== "string" ||
+        !(identity[field] as string).trim()
+      ) {
+        return {
+          success: false,
+          errorCode: "INVALID_ACCOUNT_PRINCIPAL",
+        };
+      }
+    }
+
     return {
       success: true,
       accessToken: data.accessToken,
       expiresAt: data.expiresAt,
+      principal: {
+        userId: identity.userId as string,
+        ownerId: identity.ownerId as string,
+        businessId: identity.businessId as string,
+        branchId: identity.branchId as string,
+      },
     };
   }
   catch {

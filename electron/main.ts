@@ -1,4 +1,10 @@
 import { getFinoraAccountWalletAuthorization } from "./control/finoraAccountWalletSession.js";
+import {
+  establishFinoraSenderWallet,
+  getFinoraSenderWalletAuthorization,
+  clearFinoraSenderWallet,
+  getFinoraSenderWalletPrincipal,
+} from "./control/finoraSenderWalletSession.js";
 import { establishFinoraAccountWalletSession } from "./control/finoraAccountWalletSession.js";
 import { clearFinoraAccountWalletSession } from "./control/finoraAccountWalletSession.js";
 import { createFinoraAuthenticatedRechargeIntentCoordinator } from "./control/finoraAuthenticatedRechargeIntentCoordinator.js";
@@ -4551,7 +4557,7 @@ app.whenReady().then(async () => {
         }
 
         const authorization =
-          getFinoraAccountWalletAuthorization();
+          getFinoraSenderWalletAuthorization(event.sender);
 
         if (!authorization) {
           return {
@@ -4634,7 +4640,7 @@ app.whenReady().then(async () => {
         }
 
         const authorization =
-          getFinoraAccountWalletAuthorization();
+          getFinoraSenderWalletAuthorization(event.sender);
 
         if (!authorization) {
           return {
@@ -4702,12 +4708,33 @@ app.whenReady().then(async () => {
         }
       },
     );
+    const finoraBusinessSessionsBySender =
+      new WeakMap<object, {
+        sessionId: string;
+        expiresAt: string;
+      }>();    // FINORA_P1_696W_LOGIN_GENERATION
+    // Isolate concurrent Account/Business login attempts per sender.
+    const finoraAccountBusinessLoginGeneration =
+      new WeakMap<object, number>();
+
     // FINORA_P1_678N_ACCOUNT_LOGIN_IPC
     // Password-only Account/Wallet session.
     // Never grants Reception or USB business-data access.
     ipcMain.handle(
       "finora:account:password-login",
       async (event, input: unknown) => {
+        // FINORA_P1_696V_SESSION_ISOLATION
+        // FINORA_P1_696W: invalidate in-flight Business Login too.
+        const accountGeneration =
+          (finoraAccountBusinessLoginGeneration.get(event.sender) ?? 0) + 1;
+        finoraAccountBusinessLoginGeneration.set(
+          event.sender, accountGeneration
+        );
+        finoraBusinessSessionsBySender.delete(event.sender);
+        // FINORA_P1_697L_ACCOUNT_WALLET_RESET
+        // Clear this sender's prior Wallet immediately.
+        // Invalid credentials must not retain earlier access.
+        clearFinoraSenderWallet(event.sender);
         if (
           !event.senderFrame ||
           !isTrustedRenderer(event.senderFrame)
@@ -4744,7 +4771,8 @@ app.whenReady().then(async () => {
         }
 
         const result =
-          await establishFinoraAccountWalletSession(
+          await establishFinoraSenderWallet(
+            event.sender,
             candidate.username,
             candidate.password,
           );
@@ -4763,11 +4791,7 @@ app.whenReady().then(async () => {
     );
     // FINORA_P1_687X_SERVER_BUSINESS_LOGIN
     // Main process only. Never expose the Business bearer to renderer.
-    const finoraBusinessSessionsBySender =
-      new WeakMap<object, {
-        sessionId: string;
-        expiresAt: string;
-      }>();
+
 
     ipcMain.handle(
       "finora:business:password-login",
@@ -4783,6 +4807,12 @@ app.whenReady().then(async () => {
         }
 
         finoraBusinessSessionsBySender.delete(event.sender);
+        // Each Business Login invalidates previous in-flight attempts.
+        const businessGeneration =
+          (finoraAccountBusinessLoginGeneration.get(event.sender) ?? 0) + 1;
+        finoraAccountBusinessLoginGeneration.set(
+          event.sender, businessGeneration
+        );
 
         if (
           !input ||
@@ -4826,6 +4856,20 @@ app.whenReady().then(async () => {
             };
           }
 
+          // P1-696W: reject Business Login if any newer login
+          // began while the network request was in flight.
+          if (
+            event.sender.isDestroyed() ||
+            finoraAccountBusinessLoginGeneration.get(event.sender) !==
+              businessGeneration
+          ) {
+            return {
+              success: false,
+              businessDataAccess: false,
+              errorCode: "LOGIN_SUPERSEDED",
+            };
+          }
+
           finoraBusinessSessionsBySender.set(event.sender, {
             sessionId: result.session.sessionId,
             expiresAt: result.session.expiresAt,
@@ -4843,6 +4887,89 @@ app.whenReady().then(async () => {
             errorCode: "SERVER_UNAVAILABLE",
           };
         }
+      },
+    );
+    // FINORA_P1_697H_ACCOUNT_LOGOUT
+    // Main-process authority; do not expose any bearer to renderer.
+    ipcMain.handle(
+      "finora:account:logout",
+      async (event) => {
+        if (
+          !event.senderFrame ||
+          !isTrustedRenderer(event.senderFrame)
+        ) {
+          return {
+            success: false,
+            errorCode: "UNAUTHORIZED_RENDERER",
+          };
+        }
+
+        // Invalidate pending Account/Business login results too.
+        const nextGeneration =
+          (finoraAccountBusinessLoginGeneration.get(event.sender) ?? 0) + 1;
+
+        finoraAccountBusinessLoginGeneration.set(
+          event.sender,
+          nextGeneration,
+        );
+
+        // FINORA_P1_697K_SERVER_WALLET_REVOCATION
+        // Capture privately before clearing. Never send to renderer.
+        const walletAuthorization =
+          getFinoraSenderWalletAuthorization(event.sender);
+
+        clearFinoraSenderWallet(event.sender);
+        finoraBusinessSessionsBySender.delete(event.sender);
+
+        if (!walletAuthorization) {
+          return {
+            success: true,
+            localCleared: true,
+            serverRevoked: false,
+            errorCode: "NO_ACTIVE_SERVER_WALLET_SESSION",
+          };
+        }
+
+        let serverRevoked = false;
+
+        try {
+          const response = await fetch(
+            "https://api.finoraenterprise.com/owner/wallet/logout",
+            {
+              method: "POST",
+              headers: {
+                Authorization: walletAuthorization,
+                "Content-Type": "application/json",
+                "Cache-Control": "no-store",
+              },
+              body: "{}",
+              cache: "no-store",
+              redirect: "error",
+              signal: AbortSignal.timeout(10000),
+            },
+          );
+
+          if (response.ok) {
+            const payload: unknown = await response.json();
+
+            serverRevoked =
+              !!payload &&
+              typeof payload === "object" &&
+              !Array.isArray(payload) &&
+              (payload as Record<string, unknown>).ok === true;
+          }
+        } catch {
+          // Local logout remains effective. Server revoke unconfirmed.
+        }
+
+        return {
+          success: true,
+          localCleared: true,
+          serverRevoked,
+          ...(serverRevoked
+            ? {}
+            : { errorCode: "SERVER_REVOCATION_UNCONFIRMED" }),
+        };
       },
     );
     // FINORA_P1_688E_SERVER_BUSINESS_VALIDATION
@@ -4869,6 +4996,11 @@ app.whenReady().then(async () => {
           };
         }
 
+        // FINORA_P1_697P_ACCOUNT_GENERATION_CHECK
+        // Capture the Account generation before server verification.
+        const verificationGeneration =
+          finoraAccountBusinessLoginGeneration.get(event.sender);
+
         try {
           const { verifyFinoraServerBusinessSession } =
             await import(
@@ -4888,6 +5020,42 @@ app.whenReady().then(async () => {
             };
           }
 
+          // FINORA_P1_697O_EXACT_PRINCIPAL
+          // Both identities must independently come from server auth.
+          const accountPrincipal =
+            getFinoraSenderWalletPrincipal(event.sender);
+
+          if (
+            finoraAccountBusinessLoginGeneration.get(event.sender) !==
+              verificationGeneration
+          ) {
+            return {
+              success: false,
+              businessDataAccess: false,
+              errorCode: "LOGIN_SUPERSEDED",
+            };
+          }
+
+          const samePrincipal =
+            accountPrincipal !== null &&
+            (["userId", "ownerId", "businessId", "branchId"] as const)
+              .every(
+                (field) =>
+                  accountPrincipal[field] === result.principal[field],
+              );
+
+          if (
+            !samePrincipal ||
+            event.sender.isDestroyed() ||
+            finoraBusinessSessionsBySender.get(event.sender) !== session
+          ) {
+            finoraBusinessSessionsBySender.delete(event.sender);
+            return {
+              success: false,
+              businessDataAccess: false,
+              errorCode: "ACCOUNT_BUSINESS_SCOPE_MISMATCH",
+            };
+          }
           return {
             success: true,
             sessionType: "BUSINESS_RECEPTION",
@@ -5006,6 +5174,26 @@ app.whenReady().then(async () => {
             return deny(decision.errorCode);
           }
 
+          // FINORA_P1_697O_EXACT_PRINCIPAL
+          // Recheck after async local authorization to prevent races.
+          const accountPrincipal =
+            getFinoraSenderWalletPrincipal(event.sender);
+
+          const samePrincipal =
+            accountPrincipal !== null &&
+            (["userId", "ownerId", "businessId", "branchId"] as const)
+              .every(
+                (field) =>
+                  accountPrincipal[field] === server.principal[field],
+              );
+
+          if (
+            !samePrincipal ||
+            event.sender.isDestroyed() ||
+            finoraBusinessSessionsBySender.get(event.sender) !== serverSession
+          ) {
+            return deny("ACCOUNT_BUSINESS_SCOPE_MISMATCH");
+          }
           return {
             success: true,
             eligible: true,

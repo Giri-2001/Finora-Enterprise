@@ -17,7 +17,12 @@ type AccountWalletSession = {
 
 let current: AccountWalletSession | null = null;
 
+// FINORA_P1_696Z_WALLET_GENERATION
+// Invalidates stale network responses after a new login or logout.
+let walletGeneration = 0;
+
 export function clearFinoraAccountWalletSession(): void {
+  walletGeneration += 1;
   current = null;
 }
 
@@ -29,12 +34,21 @@ export async function establishFinoraAccountWalletSession(
   errorCode?: string;
 }> {
   clearFinoraAccountWalletSession();
+  const requestGeneration = walletGeneration;
 
   const result =
     await authenticateFinoraAccountPassword(
       username,
       password,
     );
+
+  // Never accept credentials returned for an older login attempt.
+  if (requestGeneration !== walletGeneration) {
+    return {
+      success: false,
+      errorCode: "LOGIN_SUPERSEDED",
+    };
+  }
 
   if (
     !result.success ||

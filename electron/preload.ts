@@ -3998,6 +3998,59 @@ contextBridge.exposeInMainWorld(
     },
   }),
 );
+// FINORA_P1_697H_ACCOUNT_LOGOUT
+// Fixed, narrow IPC. No token or generic invoke exposed.
+contextBridge.exposeInMainWorld(
+  "finoraAccountSession",
+  Object.freeze({
+    logout: async (): Promise<{
+      success: boolean;
+      localCleared: boolean;
+      serverRevoked: boolean;
+      errorCode?: string;
+    }> => {
+      try {
+        const result: unknown = await ipcRenderer.invoke(
+          "finora:account:logout",
+        );
+
+        if (
+          !result ||
+          typeof result !== "object" ||
+          Array.isArray(result)
+        ) {
+          return {
+            success: false,
+            localCleared: false,
+            serverRevoked: false,
+            errorCode: "INVALID_RESPONSE",
+          };
+        }
+
+        const value = result as Record<string, unknown>;
+
+        return {
+          success:
+            value.success === true &&
+            value.localCleared === true,
+          localCleared: value.localCleared === true,
+          serverRevoked: value.serverRevoked === true,
+          errorCode:
+            typeof value.errorCode === "string"
+              ? value.errorCode
+              : undefined,
+        };
+      } catch {
+        return {
+          success: false,
+          localCleared: false,
+          serverRevoked: false,
+          errorCode: "LOGOUT_BRIDGE_UNAVAILABLE",
+        };
+      }
+    },
+  }),
+);
 // FINORA_P1_693J_PRELOAD_HANDOFF
 // Eligibility check only. Cannot create Reception access.
 contextBridge.exposeInMainWorld(

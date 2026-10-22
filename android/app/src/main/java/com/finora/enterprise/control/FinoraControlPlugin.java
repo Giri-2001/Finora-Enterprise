@@ -11709,16 +11709,105 @@ private boolean isValidEntitlement(
         final String password = call.getString("password");
 
         getBridge().execute(() -> {
+            // FINORA_P1_695D_NATIVE_WALLET_SSO
+            // Never expose server bearer credentials to WebView.
             org.json.JSONObject result =
-                FinoraAccountPasswordLoginClient.login(username, password);
+                FinoraNativeWalletSession.login(username, password);
 
             try {
-                com.getcapacitor.JSObject response =
-                    com.getcapacitor.JSObject.fromJSONObject(result);
-                call.resolve(response);
+                call.resolve(
+                    com.getcapacitor.JSObject.fromJSONObject(result)
+                );
             } catch (Exception ignored) {
-                call.reject("ACCOUNT_LOGIN_RESPONSE_INVALID");
+                call.reject("NATIVE_WALLET_RESPONSE_INVALID");
             }
+        });
+    }
+
+
+    // FINORA_P1_695G_SESSION_LIFECYCLE
+    @PluginMethod
+    public void getServerWalletBalance(PluginCall call) {
+        getBridge().execute(() -> {
+            try {
+                call.resolve(
+                    com.getcapacitor.JSObject.fromJSONObject(
+                        FinoraNativeWalletSession.verifiedBalance()
+                    )
+                );
+            } catch (Exception ignored) {
+                FinoraNativeWalletSession.clear();
+                call.reject("WALLET_BALANCE_RESPONSE_INVALID");
+            }
+        });
+    }
+
+    // Local token clearing only.
+    // Server-side token revocation remains a separate requirement.
+    @PluginMethod
+    public void clearServerWalletSession(PluginCall call) {
+        // P1-695H: Run server revocation off the UI thread.
+        getBridge().execute(() -> {
+            try {
+                call.resolve(
+                    com.getcapacitor.JSObject.fromJSONObject(
+                        FinoraNativeWalletSession.logout()
+                    )
+                );
+            } catch (Exception ignored) {
+                FinoraNativeWalletSession.clear();
+                call.reject("WALLET_LOGOUT_RESPONSE_FAILED");
+            }
+        });
+    }
+    // FINORA_P1_693T_NATIVE_HEALTH
+    // Health reachability only. Never authorizes Login or Reception.
+    @PluginMethod
+    public void checkServerHealth(PluginCall call) {
+        getBridge().execute(() -> {
+            boolean live = true;
+
+            final String[] endpoints = {
+                "https://api.finoraenterprise.com/health",
+                "https://api.finoraenterprise.com/db-health"
+            };
+
+            for (String endpoint : endpoints) {
+                java.net.HttpURLConnection connection = null;
+
+                try {
+                    java.net.URL url = new java.net.URL(endpoint);
+                    connection = (java.net.HttpURLConnection)
+                        url.openConnection();
+
+                    connection.setRequestMethod("GET");
+                    connection.setConnectTimeout(6000);
+                    connection.setReadTimeout(6000);
+                    connection.setUseCaches(false);
+                    connection.setInstanceFollowRedirects(false);
+                    connection.setRequestProperty(
+                        "Accept", "application/json"
+                    );
+
+                    if (connection.getResponseCode() != 200) {
+                        live = false;
+                        break;
+                    }
+                } catch (Exception ignored) {
+                    live = false;
+                    break;
+                } finally {
+                    if (connection != null) {
+                        connection.disconnect();
+                    }
+                }
+            }
+
+            com.getcapacitor.JSObject result =
+                new com.getcapacitor.JSObject();
+
+            result.put("live", live);
+            call.resolve(result);
         });
     }
 }

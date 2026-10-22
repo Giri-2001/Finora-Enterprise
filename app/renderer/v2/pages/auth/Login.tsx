@@ -2450,7 +2450,34 @@ setError(
           setAccountWalletStatus("WALLET_BALANCE_UNAVAILABLE");
         }
       } else {
-        setAccountWalletStatus("WALLET_BRIDGE_UNAVAILABLE");
+                // FINORA_P1_695E_NATIVE_WALLET
+        // Android native already verified this balance with its
+        // private server bearer. No token reaches the renderer.
+        const nativeWallet = (
+          result as {
+            wallet?: {
+              balanceInr?: string;
+              currency?: string;
+              source?: string;
+            };
+          }
+        ).wallet;
+
+        if (
+          FinoraP1075Capacitor.isNativePlatform() &&
+          FinoraP1075Capacitor.getPlatform() === "android" &&
+          nativeWallet?.source === "POSTGRESQL_WALLETS" &&
+          nativeWallet.currency === "INR" &&
+          typeof nativeWallet.balanceInr === "string" &&
+          /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(
+            nativeWallet.balanceInr
+          )
+        ) {
+          setAccountWalletBalance(nativeWallet.balanceInr);
+          setAccountWalletStatus("WALLET_BALANCE_VERIFIED");
+        } else {
+          setAccountWalletStatus("WALLET_BRIDGE_UNAVAILABLE");
+        }
       }
 
       // FINORA_P1_679O_READ_ONLY_PRICING_FETCH
@@ -2510,8 +2537,26 @@ setError(
       } catch {
         setAccountPricingStatus("UNAVAILABLE");
       }
+      // FINORA_P1_696I_AUTO_BUSINESS_VERIFY
+      // One user action, no second credentials prompt.
+      // Business authority is independently checked by Electron Main.
+      // This DOES NOT create local operational authority or enter Reception.
+      if (
+        !FinoraP1075Capacitor.isNativePlatform()
+      ) {
+        const businessVerified =
+          await verifyServerBusinessLogin();
+
+        if (!businessVerified) {
+          setCredentialEnrollmentMessage(
+            "Account/Wallet authenticated; Reception authorization unavailable.",
+          );
+          return;
+        }
+      }
+
       setCredentialEnrollmentMessage(
-        "Account Login verified. Wallet status: check Account Dashboard.",
+        "Account Login verified. Wallet status: check Account Dashboard. Reception authorization pending.",
       );
     } catch {
       setError("Account Login service is unavailable.");
@@ -2618,11 +2663,17 @@ if (
 
       return;
     }
+    // FINORA_P1_694S_SERVER_FIRST
+    // Normal login requires server-verified Username + Password.
+    // No Security Code, device recovery, or local-only Reception grant.
+    // Wallet authentication does not imply Business/Reception access.
+    if (credentialMode === "LOGIN") {
+      void handleAccountPasswordLogin();
+      return;
+    }
 
-
-    // FINORA_P1_688M_PRESERVE_WORKING_LOGIN
-    // Keep legacy Reception authentication available until
-    // server-authorized operational handoff is fully tested.
+    // Non-login credential management remains unchanged until
+    // its separate server authorization migration is completed.
     void authenticateOwner();
 
   }
@@ -2997,7 +3048,7 @@ if (
   // FINORA_P1_685H_LIVE_STATUS
   // API and PostgreSQL reachability only, never authorization.
   const [finoraLiveStatus, setFinoraLiveStatus] =
-    useState<"CHECKING" | "LIVE" | "OFFLINE">("CHECKING");
+    useState<"CHECKING" | "LOGIN NOT READY" | "OFFLINE">("CHECKING");
 
   useEffect(() => {
     let mounted = true;
@@ -3022,24 +3073,41 @@ if (
           const result = await host.finoraLoginHealth.check();
           live = result.live === true;
         } else {
-          // Android: existing path pending native health bridge.
-          const responses = await Promise.all(
-            ["/health", "/db-health"].map((endpoint) =>
-              fetch(
-                `https://api.finoraenterprise.com${endpoint}`,
-                {
-                  method: "GET",
-                  cache: "no-store",
-                  signal: current.signal,
-                },
+                    // FINORA_P1_693T_ANDROID_HEALTH
+          // Native HTTPS avoids Android WebView CORS.
+          // LIVE requires genuine HTTP 200 from both health endpoints.
+          const { Capacitor, registerPlugin } =
+            await import("@capacitor/core");
+
+          if (
+            Capacitor.isNativePlatform() &&
+            Capacitor.getPlatform() === "android"
+          ) {
+            const healthPlugin = registerPlugin<{
+              checkServerHealth: () => Promise<{ live: boolean }>;
+            }>("FinoraControl");
+
+            const result = await healthPlugin.checkServerHealth();
+            live = result?.live === true;
+          } else {
+            const responses = await Promise.all(
+              ["/health", "/db-health"].map((endpoint) =>
+                fetch(
+                  `https://api.finoraenterprise.com${endpoint}`,
+                  {
+                    method: "GET",
+                    cache: "no-store",
+                    signal: current.signal,
+                  },
+                ),
               ),
-            ),
-          );
-          live = responses.every((response) => response.ok);
+            );
+            live = responses.every((response) => response.ok);
+          }
         }
 
         if (mounted && controller === current) {
-          setFinoraLiveStatus(live ? "LIVE" : "OFFLINE");
+          setFinoraLiveStatus(live ? "LOGIN NOT READY" : "OFFLINE");
         }
       } catch {
         if (mounted && controller === current) {
@@ -3217,13 +3285,13 @@ if (
               whiteSpace: "nowrap",
               lineHeight: 1,
               color:
-                finoraLiveStatus === "LIVE"
+                false
                   ? "#16844b"
                   : finoraLiveStatus === "OFFLINE"
                     ? "#dc3545"
                     : "#727b86",
               borderColor:
-                finoraLiveStatus === "LIVE"
+                false
                   ? "#16844b"
                   : finoraLiveStatus === "OFFLINE"
                     ? "#dc3545"

@@ -1,3 +1,4 @@
+import { clearFinoraSenderWallet } from "./finoraSenderWalletSession.js";
 /* ============================================================
    FINORA ENTERPRISE OS
 
@@ -573,6 +574,8 @@ export function registerFinoraBranchLoginSessionHandlers(
 
       try {
         // FINORA_P550C: only the authorized sender's wallet is cleared.
+        // FINORA_P1_697G_SENDER_LOGOUT
+        clearFinoraSenderWallet(event.sender);
         invalidateFinoraServerWalletForBusinessTransition(event.sender);
         return {
           success:
@@ -591,6 +594,8 @@ export function registerFinoraBranchLoginSessionHandlers(
       }
       finally {
         // Suppress wallet work started while the business transition awaited.
+        // FINORA_P1_697G_SENDER_LOGOUT
+        clearFinoraSenderWallet(event.sender);
         invalidateFinoraServerWalletForBusinessTransition(event.sender);
       }
     },

@@ -2355,6 +2355,80 @@ if (!validationResult) {
 
   async function handleLogout():
     Promise<void> {
+    // FINORA_P1_697J_WINDOWS_ACCOUNT_LOGOUT
+    // Only the Electron Main Process can clear its private Wallet token.
+    // Never pass the token to the renderer.
+    try {
+      const accountHost = window as Window & {
+        finoraAccountSession?: {
+          logout: () => Promise<{
+            success: boolean;
+            localCleared: boolean;
+            serverRevoked: boolean;
+            errorCode?: string;
+          }>;
+        };
+      };
+
+      if (accountHost.finoraAccountSession?.logout) {
+        const exit = await accountHost.finoraAccountSession.logout();
+
+        if (exit.localCleared !== true) {
+          console.warn(
+            "[FINORA LOGOUT] Account Session cleanup not confirmed"
+          );
+        }
+      }
+    } catch {
+      console.warn(
+        "[FINORA LOGOUT] Account Session bridge unavailable"
+      );
+    }
+
+    // FINORA_P1_695L_ANDROID_LOGOUT
+    // Clear the native Android Wallet bearer before any
+    // renderer/session invalidation. Never expose the bearer.
+    try {
+      const {
+        Capacitor,
+        registerPlugin,
+      } = await import("@capacitor/core");
+
+      if (
+        Capacitor.isNativePlatform() &&
+        Capacitor.getPlatform() === "android"
+      ) {
+        const nativeControl = registerPlugin<{
+          clearServerWalletSession(): Promise<{
+            success: boolean;
+            localCleared?: boolean;
+            serverRevoked?: boolean;
+            errorCode?: string;
+          }>;
+        }>("FinoraControl");
+
+        const nativeExit =
+          await nativeControl.clearServerWalletSession();
+
+        if (nativeExit?.localCleared !== true) {
+          setContextError(
+            "Unable to clear Android Wallet access. Please retry Logout.",
+          );
+          return;
+        }
+
+        if (nativeExit.serverRevoked !== true) {
+          console.warn(
+            "FINORA Android Wallet cleared locally; server revocation unconfirmed.",
+          );
+        }
+      }
+    } catch {
+      setContextError(
+        "Unable to securely end Android Wallet access. Please retry Logout.",
+      );
+      return;
+    }
     // FINORA_P551C: revoke before business invalidation clears the token.
     const walletExit = await endFinoraServerWalletAccess();
     if (
