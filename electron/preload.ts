@@ -3998,6 +3998,80 @@ contextBridge.exposeInMainWorld(
     },
   }),
 );
+// FINORA_P1_693J_PRELOAD_HANDOFF
+// Eligibility check only. Cannot create Reception access.
+contextBridge.exposeInMainWorld(
+  "finoraBusinessHandoff",
+  Object.freeze({
+    check: async (
+      input: { localSessionId: string },
+    ): Promise<{
+      success: boolean;
+      eligible: boolean;
+      operationalMode?: "ACTIVE" | "REGISTERED_EXPIRED_READ_ONLY";
+      businessDataAccess: false;
+      errorCode?: string;
+    }> => {
+      const deny = (errorCode: string) => ({
+        success: false,
+        eligible: false,
+        businessDataAccess: false as const,
+        errorCode,
+      });
+
+      if (
+        !input ||
+        typeof input.localSessionId !== "string" ||
+        !/^[a-fA-F0-9]{64}$/.test(input.localSessionId)
+      ) {
+        return deny("INVALID_LOCAL_SESSION");
+      }
+
+      try {
+        const result: unknown = await ipcRenderer.invoke(
+          "finora:business:operational-handoff-check",
+          { localSessionId: input.localSessionId },
+        );
+
+        if (
+          !result ||
+          typeof result !== "object" ||
+          Array.isArray(result)
+        ) {
+          return deny("INVALID_RESPONSE");
+        }
+
+        const value = result as Record<string, unknown>;
+
+        if (
+          value.success !== true ||
+          value.eligible !== true ||
+          value.businessDataAccess !== false ||
+          (
+            value.operationalMode !== "ACTIVE" &&
+            value.operationalMode !== "REGISTERED_EXPIRED_READ_ONLY"
+          )
+        ) {
+          return deny(
+            typeof value.errorCode === "string"
+              ? value.errorCode
+              : "HANDOFF_DENIED",
+          );
+        }
+
+        return {
+          success: true,
+          eligible: true,
+          operationalMode: value.operationalMode,
+          businessDataAccess: false,
+          errorCode: "RECEPTION_COMMIT_NOT_IMPLEMENTED",
+        };
+      } catch {
+        return deny("HANDOFF_UNAVAILABLE");
+      }
+    },
+  }),
+);
 // FINORA_P1_688G_BUSINESS_SESSION_REVALIDATION
 contextBridge.exposeInMainWorld(
   "finoraBusinessSession",

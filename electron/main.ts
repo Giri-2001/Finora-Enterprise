@@ -4902,6 +4902,122 @@ app.whenReady().then(async () => {
         }
       },
     );
+    // FINORA_P1_693H_HANDOFF
+    // Read-only eligibility check. Does NOT grant Reception.
+    ipcMain.handle(
+      "finora:business:operational-handoff-check",
+      async (event, input: unknown) => {
+        const deny = (errorCode: string) => ({
+          success: false,
+          eligible: false,
+          businessDataAccess: false,
+          errorCode,
+        });
+
+        if (
+          !event.senderFrame ||
+          !isTrustedRenderer(event.senderFrame)
+        ) {
+          return deny("UNAUTHORIZED_RENDERER");
+        }
+
+        if (
+          !input ||
+          typeof input !== "object" ||
+          Array.isArray(input)
+        ) {
+          return deny("INVALID_REQUEST");
+        }
+
+        const candidate = input as Record<string, unknown>;
+
+        if (
+          typeof candidate.localSessionId !== "string" ||
+          !/^[a-fA-F0-9]{64}$/.test(candidate.localSessionId)
+        ) {
+          return deny("INVALID_LOCAL_SESSION");
+        }
+
+        const serverSession =
+          finoraBusinessSessionsBySender.get(event.sender);
+
+        if (!serverSession) {
+          return deny("SERVER_SESSION_NOT_FOUND");
+        }
+
+        try {
+          const [
+            { verifyFinoraServerBusinessSession },
+            { validateFinoraBranchLoginSession },
+            { verifyFinoraServerLocalReceptionScope },
+          ] = await Promise.all([
+            import("./control/finoraServerBusinessSessionVerifier.js"),
+            import("./control/finoraBranchLoginSessionAuthority.js"),
+            import("./control/finoraServerLocalReceptionScopeGate.js"),
+          ]);
+
+          const server =
+            await verifyFinoraServerBusinessSession(
+              serverSession.sessionId,
+            );
+
+          if (!server.success) {
+            finoraBusinessSessionsBySender.delete(event.sender);
+            return deny(server.errorCode);
+          }
+
+          const local =
+            await validateFinoraBranchLoginSession({
+              sessionId: candidate.localSessionId,
+            });
+
+          if (!local.success) {
+            return deny("LOCAL_OPERATIONAL_AUTHORIZATION_DENIED");
+          }
+
+          if (
+            event.sender.isDestroyed() ||
+            finoraBusinessSessionsBySender.get(event.sender) !==
+              serverSession
+          ) {
+            return deny("SESSION_CHANGED_DURING_VERIFICATION");
+          }
+
+          // Validation returns the session view directly in local.data.
+          const operational = local.data;
+
+          const decision =
+            verifyFinoraServerLocalReceptionScope(
+              true,
+              server.principal,
+              {
+                userId: operational.userId,
+                ownerId: operational.ownerId,
+                businessId: operational.businessId,
+                branchId: operational.branchId,
+                role: operational.role,
+                dataContext: operational.dataContext,
+                storageMode: operational.storageMode,
+                accessMode: operational.accessMode,
+              },
+            );
+
+          if (!decision.allowed) {
+            return deny(decision.errorCode);
+          }
+
+          return {
+            success: true,
+            eligible: true,
+            operationalMode: decision.operationalMode,
+            businessDataAccess: false,
+            errorCode: "RECEPTION_COMMIT_NOT_IMPLEMENTED",
+          };
+        } catch {
+          return deny("HANDOFF_VERIFICATION_UNAVAILABLE");
+        }
+      },
+    );
     registerFinoraBranchLoginSessionHandlers(
       isTrustedRenderer,
       portableBranchAuthStore,
