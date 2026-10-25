@@ -319,6 +319,50 @@ export async function setBusinessContext(
   };
 }
 
+// FINORA_P1_717I_SERVER_RECEPTION_CONTEXT
+// This function establishes runtime context only. It does not
+// authenticate a user or grant native USB/business-data access.
+// Caller must first validate the server Reception session.
+// Native Electron Main independently authorizes operational access.
+export async function setFinoraServerReceptionBusinessContext(
+  scope: {
+    ownerId: string;
+    businessId: string;
+    branchId: string;
+  },
+): Promise<StorageResult<void>> {
+  if (
+    !scope ||
+    ![scope.ownerId, scope.businessId, scope.branchId].every(
+      value => typeof value === "string" && value.trim().length > 0
+    )
+  ) {
+    return {
+      success: false,
+      error: "Server Reception business scope is required.",
+    };
+  }
+
+  const result = await storageManager.setDataContext(
+    DataContext.REAL,
+    {
+      ownerId: scope.ownerId,
+      businessId: scope.businessId,
+      branchId: scope.branchId,
+    },
+  );
+
+  if (!result.success) return result;
+
+  activeBusinessContext = {
+    ownerId: scope.ownerId,
+    businessId: scope.businessId,
+    branchId: scope.branchId,
+    dataContext: "REAL",
+  };
+
+  return { success: true };
+}
 // ============================================================
 // GET BUSINESS CONTEXT
 // ============================================================

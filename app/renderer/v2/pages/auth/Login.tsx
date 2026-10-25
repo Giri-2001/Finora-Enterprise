@@ -2814,41 +2814,11 @@ setError(
           expectedStorage === "USB" ? issued.sessionId : undefined
         );
 
-        // FINORA_P1_707D_TRUSTED_PROFILE
-        // Load only an existing Control Plane provisioned profile.
-        const { loadFinoraBusinessProfile } = await import(
-          "../../services/activation/activationService"
-        );
-        const { validateFinoraProvisionedBusinessProfile } = await import(
-          "../../services/business/finoraBusinessProfileControlService"
-        );
-
-        finoraTrace("TRUSTED_PROFILE_LOADING");
-        const profileResult = await loadFinoraBusinessProfile(
-          serverPrincipal.ownerId,
-          serverPrincipal.businessId,
-          serverPrincipal.branchId
-        );
-
-        const trustedProfile = profileResult.data;
-        const profileValidation =
-          validateFinoraProvisionedBusinessProfile(trustedProfile);
-
-        if (
-          !profileResult.success ||
-          !trustedProfile ||
-          !profileValidation.valid ||
-          trustedProfile.ownerId !== serverPrincipal.ownerId ||
-          trustedProfile.businessId !== serverPrincipal.businessId ||
-          trustedProfile.branchId !== serverPrincipal.branchId
-        ) {
-          storageManager.setAuthenticatedSessionId(undefined);
-          setCredentialEnrollmentMessage(
-            "Trusted Business Profile unavailable. Reception blocked."
-          );
-          return;
-        }
-
+        // FINORA_P1_717J_DEVICE_INDEPENDENT_LOGIN
+        // Server Reception identity was verified by trusted Electron
+        // Main. A device-local signed profile is not a login prerequisite.
+        // Native Reception Commit still independently verifies PostgreSQL,
+        // Wallet scope, and USB business-data authorization.
         const rawProfileCheck: unknown = await receptionBridge.validate({
           sessionId: issued.sessionId,
         });
@@ -2936,18 +2906,17 @@ setError(
         // FINORA_P1_708D_SERVER_BUSINESS_CONTEXT
         // Establish the existing provisioned Control Plane profile.
         // This does not independently authorize Reception.
-        const { setBusinessContext } = await import(
+        const { setFinoraServerReceptionBusinessContext } = await import(
           "../../services/business/businessContextService"
         );
 
         finoraTrace("BUSINESS_CONTEXT_ACTIVATION");
-        const businessContextResult = await setBusinessContext({
-          ownerId: serverPrincipal.ownerId,
-          businessId: serverPrincipal.businessId,
-          branchId: serverPrincipal.branchId,
-          dataContext: "REAL",
-          businessProfile: trustedProfile,
-        });
+        const businessContextResult =
+          await setFinoraServerReceptionBusinessContext({
+            ownerId: serverPrincipal.ownerId,
+            businessId: serverPrincipal.businessId,
+            branchId: serverPrincipal.branchId,
+          });
 
         if (!businessContextResult.success) {
           storageManager.setAuthenticatedSessionId(undefined);

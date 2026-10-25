@@ -8,6 +8,8 @@ export interface FinoraServerReceptionPrincipal {
   // FINORA_P1_705P_SERVER_IDENTITY
   username: string;
   fullName: string;
+  businessName: string;
+  branchName: string;
   role: "OWNER";
   userId: string;
   ownerId: string;

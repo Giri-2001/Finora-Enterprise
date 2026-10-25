@@ -17,6 +17,8 @@ export interface FinoraVerifiedBusinessPrincipal {
   storageMode: "LOCAL" | "USB";
   username: string;
   fullName: string;
+  businessName: string;
+  branchName: string;
   role: "OWNER";
 }
 
@@ -130,6 +132,10 @@ export async function verifyFinoraServerBusinessSession(
       principal.username.length > 128 ||
       typeof principal.fullName !== "string" ||
       principal.fullName.trim().length === 0 ||
+      typeof principal.businessName !== "string" ||
+      !principal.businessName.trim() ||
+      typeof principal.branchName !== "string" ||
+      !principal.branchName.trim() ||
       principal.role !== "OWNER"
     ) {
       return {
@@ -148,6 +154,8 @@ export async function verifyFinoraServerBusinessSession(
         storageMode: principal.storageMode,
         username: principal.username as string,
         fullName: principal.fullName as string,
+        businessName: principal.businessName as string,
+        branchName: principal.branchName as string,
         role: "OWNER",
       },
     };

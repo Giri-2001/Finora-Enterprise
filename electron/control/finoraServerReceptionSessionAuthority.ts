@@ -42,6 +42,12 @@ function samePrincipal(a: Principal, b: Principal): boolean {
     typeof a.fullName === "string" &&
     a.fullName.trim().length > 0 &&
     a.fullName === b.fullName &&
+    typeof a.businessName === "string" &&
+    a.businessName.trim().length > 0 &&
+    a.businessName === b.businessName &&
+    typeof a.branchName === "string" &&
+    a.branchName.trim().length > 0 &&
+    a.branchName === b.branchName &&
     a.role === "OWNER" &&
     b.role === "OWNER" &&
     (a.storageMode === "LOCAL" || a.storageMode === "USB")

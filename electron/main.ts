@@ -5746,36 +5746,10 @@ app.whenReady().then(async () => {
                   .every(key => wallet[key] === principal[key])
               ) return false;
 
-              // FINORA_P1_708U_NATIVE_PROFILE_GATE
-              // Read only trusted Main-process Control Store state.
-              // Renderer-provided profiles are never accepted.
-              const { findFinoraPortableBusinessProfile } =
-                await import("./control/finoraControlStore.js");
-
-              const profileResult =
-                await findFinoraPortableBusinessProfile(
-                  principal.ownerId,
-                  principal.businessId,
-                  principal.branchId,
-                );
-
-              const profile =
-                profileResult.success ? profileResult.data : undefined;
-
-              if (
-                !profile ||
-                profile.ownerId !== principal.ownerId ||
-                profile.businessId !== principal.businessId ||
-                profile.branchId !== principal.branchId ||
-                typeof profile.profileId !== "string" ||
-                !profile.profileId.trim() ||
-                typeof profile.businessCode !== "string" ||
-                !profile.businessCode.trim() ||
-                typeof profile.branchCode !== "string" ||
-                !profile.branchCode.trim() ||
-                !current()
-              ) return false;
-
+              // FINORA_P1_717G_SERVER_AUTHORIZED_RECEPTION
+              // Device-local provisioned profiles are not a login
+              // prerequisite. PostgreSQL business session, Wallet scope,
+              // and the independent Server USB resolver remain mandatory.
               // FINORA_P1_709C_VERIFIED_USB_COMMIT
               // Reuse the same authoritative USB scope resolver used
               // by Electron's guarded native business-data operations.
