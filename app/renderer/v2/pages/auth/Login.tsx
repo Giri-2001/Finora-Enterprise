@@ -2366,6 +2366,12 @@ setError(
   async function handleAccountPasswordLogin(): Promise<void> {
     if (loginBusy) return;
 
+    // FINORA_P1_706S2_EARLY_LOGIN_RESET
+    // Clear the previous USB session before new credential verification.
+    // This does not grant Reception or business-record access.
+    storageManager.setAuthenticatedSessionId(undefined);
+
+
     const accountUsername = username.trim();
 
     if (!accountUsername || !password) {
@@ -2375,6 +2381,24 @@ setError(
 
     setLoginBusy(true);
     setError("");
+
+    // FINORA_P1_710D_PERSISTENT_TRACE
+    const finoraTrace = (stage: string) => {
+      try {
+        window.sessionStorage.setItem(
+          "FINORA_P1_710D_LOGIN_STAGE",
+          stage
+        );
+        console.info("[FINORA LOGIN STAGE]", stage);
+      } catch {
+        // Diagnostics must not affect authentication.
+      }
+    };
+    finoraTrace("ACCOUNT_LOGIN_STARTED");
+
+    // FINORA_P1_709W_STAGE_TRACE
+    let finoraLoginStage = "ACCOUNT_LOGIN_OR_BUSINESS_VERIFICATION";
+    let finoraReceptionCompleted = false;
 
     try {
       // P1-684Y: Android uses its native HTTPS account authority.
@@ -2400,6 +2424,13 @@ setError(
             );
 
       if (!result.success) {
+        // P1-714G: Error-code-only login diagnostic.
+        // Never print username, password or session information.
+        console.warn("[FINORA ACCOUNT LOGIN RESULT]", {
+          success: false,
+          errorCode: result.errorCode ?? "UNKNOWN",
+          stage: "ACCOUNT_LOGIN_OR_BUSINESS_VERIFICATION",
+        });
         setError(
           "Account Login failed [" +
           (result.errorCode ?? "UNKNOWN") +
@@ -2409,6 +2440,7 @@ setError(
       }
 
       setError("");
+      finoraTrace("ACCOUNT_VERIFIED_WALLET_START");
       // FINORA_P1_679C_LIVE_BALANCE
       setAccountWalletStatus("AUTHENTICATED");
       setAccountWalletBalance(null);
@@ -2537,6 +2569,7 @@ setError(
       } catch {
         setAccountPricingStatus("UNAVAILABLE");
       }
+      finoraTrace("WALLET_PRICING_FINISHED");
       // FINORA_P1_696I_AUTO_BUSINESS_VERIFY
       // One user action, no second credentials prompt.
       // Business authority is independently checked by Electron Main.
@@ -2544,6 +2577,7 @@ setError(
       if (
         !FinoraP1075Capacitor.isNativePlatform()
       ) {
+        console.info("[FINORA BUSINESS VERIFY] START");
         const businessVerified =
           await verifyServerBusinessLogin();
 
@@ -2555,12 +2589,593 @@ setError(
         }
       }
 
+            // FINORA_P1_705B_PASSWORD_ONLY_RECEPTION
+      // Main Process independently verifies PostgreSQL Business Session,
+      // Wallet principal, Owner/Branch scope and authorized storage.
+      // No Device Trust or Security Code for normal login.
+      if (!FinoraP1075Capacitor.isNativePlatform()) {
+        const receptionBridge = (
+          window as Window & {
+            finoraServerReceptionSession?: {
+              issue: () => Promise<{
+                success: boolean;
+                sessionId?: string;
+                errorCode?: string;
+              }>;
+              validate: (request: {
+                sessionId: string;
+              }) => Promise<{
+                success: boolean;
+                sessionId?: string;
+                errorCode?: string;
+              }>;
+              invalidate: (request: {
+                sessionId: string;
+              }) => Promise<unknown>;
+            };
+          }
+        ).finoraServerReceptionSession;
+
+        if (
+          !receptionBridge?.issue ||
+          !receptionBridge?.validate ||
+          !receptionBridge?.invalidate
+        ) {
+          setError("FINORA Server Reception Session bridge unavailable.");
+          return;
+        }
+
+        finoraTrace("RECEPTION_SESSION_ISSUE");
+        const issued = await receptionBridge.issue();
+
+        if (
+          issued.success !== true ||
+          typeof issued.sessionId !== "string" ||
+          !/^[a-f0-9]{64}$/.test(issued.sessionId)
+        ) {
+          setError(
+            "FINORA Server Reception Session rejected [" +
+            (issued.errorCode ?? "ISSUANCE_DENIED") +
+            "]."
+          );
+          return;
+        }
+
+        const validated = await receptionBridge.validate({
+          sessionId: issued.sessionId,
+        });
+
+        if (
+          validated.success !== true ||
+          validated.sessionId !== issued.sessionId
+        ) {
+          await receptionBridge.invalidate({
+            sessionId: issued.sessionId,
+          }).catch(() => undefined);
+
+          setError(
+            "FINORA Reception Session validation rejected [" +
+            (validated.errorCode ?? "VALIDATION_DENIED") +
+            "]."
+          );
+          return;
+        }
+
+        // FINORA_P1_706Q_CLEAR_PREVIOUS_USB_BINDING
+        // Clear old renderer USB binding before activating this branch.
+        storageManager.setAuthenticatedSessionId(undefined);
+
+        // FINORA_P1_705X_BRANCH_STORAGE_BINDING
+        // Tenant identifiers MUST originate from the verified Main
+        // Process response, never a renderer-selected branch.
+        const serverPrincipal = (
+          validated as typeof validated & {
+            principal?: {
+              userId?: string;
+              username?: string;
+              fullName?: string;
+              role?: string;
+              ownerId?: string;
+              businessId?: string;
+              branchId?: string;
+              storageMode?: string;
+            };
+            businessDataAccess?: boolean;
+            receptionCommitRequired?: boolean;
+          }
+        ).principal;
+
+        // FINORA_P1_708Z_USB_ONLY_LOGIN
+        // Phase-1 operational storage is USB only.
+        const expectedStorage =
+          ownerStorage === "usb" ? "USB" : "LOCAL";
+
+        if (expectedStorage !== "USB") {
+          setError("FINORA Phase-1 requires USB business storage.");
+          return;
+        }
+
+        if (
+          !serverPrincipal ||
+          typeof serverPrincipal.userId !== "string" ||
+          !serverPrincipal.userId.trim() ||
+          serverPrincipal.username !== accountUsername ||
+          typeof serverPrincipal.fullName !== "string" ||
+          !serverPrincipal.fullName.trim() ||
+          serverPrincipal.role !== "OWNER" ||
+          typeof serverPrincipal.ownerId !== "string" ||
+          !serverPrincipal.ownerId.trim() ||
+          typeof serverPrincipal.businessId !== "string" ||
+          !serverPrincipal.businessId.trim() ||
+          typeof serverPrincipal.branchId !== "string" ||
+          !serverPrincipal.branchId.trim() ||
+          serverPrincipal.storageMode !== expectedStorage ||
+          (validated as { businessDataAccess?: boolean })
+            .businessDataAccess !== false ||
+          (validated as { receptionCommitRequired?: boolean })
+            .receptionCommitRequired !== true
+        ) {
+          await receptionBridge.invalidate({
+            sessionId: issued.sessionId,
+          }).catch(() => undefined);
+
+          setError(
+            "Server Reception Branch/Storage authorization mismatch."
+          );
+          return;
+        }
+
+        // Activate only the PostgreSQL-authorized storage mode.
+        // This is NOT a Reception authorization grant.
+        const mode =
+          expectedStorage === "USB"
+            ? StorageMode.USB
+            : StorageMode.LOCAL;
+
+        finoraTrace("USB_STORAGE_ACTIVATION");
+        const modeReady = await activateStorageMode(mode);
+
+        if (!modeReady) {
+          await receptionBridge.invalidate({
+            sessionId: issued.sessionId,
+          }).catch(() => undefined);
+
+          setError("Authorized FINORA storage is unavailable.");
+          return;
+        }
+
+        // Use existing exact Owner/Business/Branch context isolation.
+        const contextReady = await storageManager.setDataContext(
+          "REAL" as Parameters<typeof storageManager.setDataContext>[0],
+          {
+            ownerId: serverPrincipal.ownerId,
+            businessId: serverPrincipal.businessId,
+            branchId: serverPrincipal.branchId,
+          },
+        );
+
+        if (!contextReady.success) {
+          await receptionBridge.invalidate({
+            sessionId: issued.sessionId,
+          }).catch(() => undefined);
+
+          setError(
+            "Authorized Branch storage context failed: " +
+            (contextReady.error ?? "UNKNOWN")
+          );
+          return;
+        }
+
+        // Reverify after asynchronous storage initialization.
+        // A changed/revoked Server session must never commit Reception.
+        const finalCheck = await receptionBridge.validate({
+          sessionId: issued.sessionId,
+        });
+
+        const finalPrincipal = (
+          finalCheck as typeof finalCheck & {
+            principal?: typeof serverPrincipal;
+          }
+        ).principal;
+
+        if (
+          !finalCheck.success ||
+          finalCheck.sessionId !== issued.sessionId ||
+          !finalPrincipal ||
+          !(
+            [
+              "userId",
+              "username",
+              "fullName",
+              "role",
+              "ownerId",
+              "businessId",
+              "branchId",
+              "storageMode",
+            ] as const
+          ).every(
+            key => finalPrincipal[key] === serverPrincipal[key]
+          )
+        ) {
+          await receptionBridge.invalidate({
+            sessionId: issued.sessionId,
+          }).catch(() => undefined);
+
+          setError(
+            "Server Reception Session changed during storage activation."
+          );
+          return;
+        }
+
+        // FINORA_P1_706Q_LIVE_USB_SESSION_BINDING
+        // Bind only the finally revalidated Server Reception Session.
+        // Does not commit Reception or grant access independently.
+        storageManager.setAuthenticatedSessionId(
+          expectedStorage === "USB" ? issued.sessionId : undefined
+        );
+
+        // FINORA_P1_707D_TRUSTED_PROFILE
+        // Load only an existing Control Plane provisioned profile.
+        const { loadFinoraBusinessProfile } = await import(
+          "../../services/activation/activationService"
+        );
+        const { validateFinoraProvisionedBusinessProfile } = await import(
+          "../../services/business/finoraBusinessProfileControlService"
+        );
+
+        finoraTrace("TRUSTED_PROFILE_LOADING");
+        const profileResult = await loadFinoraBusinessProfile(
+          serverPrincipal.ownerId,
+          serverPrincipal.businessId,
+          serverPrincipal.branchId
+        );
+
+        const trustedProfile = profileResult.data;
+        const profileValidation =
+          validateFinoraProvisionedBusinessProfile(trustedProfile);
+
+        if (
+          !profileResult.success ||
+          !trustedProfile ||
+          !profileValidation.valid ||
+          trustedProfile.ownerId !== serverPrincipal.ownerId ||
+          trustedProfile.businessId !== serverPrincipal.businessId ||
+          trustedProfile.branchId !== serverPrincipal.branchId
+        ) {
+          storageManager.setAuthenticatedSessionId(undefined);
+          setCredentialEnrollmentMessage(
+            "Trusted Business Profile unavailable. Reception blocked."
+          );
+          return;
+        }
+
+        const rawProfileCheck: unknown = await receptionBridge.validate({
+          sessionId: issued.sessionId,
+        });
+
+        if (
+          !rawProfileCheck ||
+          typeof rawProfileCheck !== "object" ||
+          !("success" in rawProfileCheck) ||
+          rawProfileCheck.success !== true ||
+          !("sessionId" in rawProfileCheck) ||
+          rawProfileCheck.sessionId !== issued.sessionId ||
+          !("principal" in rawProfileCheck) ||
+          !rawProfileCheck.principal ||
+          typeof rawProfileCheck.principal !== "object"
+        ) {
+          storageManager.setAuthenticatedSessionId(undefined);
+          setError("Server Session validation failed during Profile loading.");
+          return;
+        }
+
+        const checkedPrincipal = rawProfileCheck.principal as Record<string, unknown>;
+        if (
+          !(["userId", "username", "fullName", "role", "ownerId", "businessId", "branchId", "storageMode"] as const)
+            .every(key => checkedPrincipal[key] === serverPrincipal[key])
+        ) {
+          storageManager.setAuthenticatedSessionId(undefined);
+          setError("Server identity changed during Business Profile verification.");
+          return;
+        }
+
+        // FINORA_P1_707O_LIVE_GUARD
+        // Test the actual Electron Main Process guard.
+        // No Reception commit and no business-data access grant.
+        const {
+          validateFinoraServerGuardSession,
+          touchFinoraServerGuardSession,
+        } = await import(
+          "../../services/auth/finoraServerReceptionGuardLifecycle"
+        );
+
+        const guardBefore = await validateFinoraServerGuardSession(
+          issued.sessionId
+        );
+
+        if (!guardBefore.success ||
+            guardBefore.data.sessionId !== issued.sessionId ||
+            guardBefore.data.userId !== serverPrincipal.userId ||
+            guardBefore.data.username !== serverPrincipal.username ||
+            guardBefore.data.role !== serverPrincipal.role ||
+            guardBefore.data.ownerId !== serverPrincipal.ownerId ||
+            guardBefore.data.businessId !== serverPrincipal.businessId ||
+            guardBefore.data.branchId !== serverPrincipal.branchId ||
+            guardBefore.data.storageMode !== serverPrincipal.storageMode ||
+            guardBefore.businessDataAccess !== false) {
+          storageManager.setAuthenticatedSessionId(undefined);
+          setError("LIVE GUARD DENIED: Server validation or identity mismatch.");
+          return;
+        }
+
+        const guardTouch = await touchFinoraServerGuardSession(
+          issued.sessionId
+        );
+
+        if (!guardTouch.success || guardTouch.sessionId !== issued.sessionId) {
+          storageManager.setAuthenticatedSessionId(undefined);
+          setError("LIVE GUARD DENIED: Server session touch failed.");
+          return;
+        }
+
+        const guardAfter = await validateFinoraServerGuardSession(
+          issued.sessionId
+        );
+
+        if (!guardAfter.success ||
+            guardAfter.data.sessionId !== issued.sessionId ||
+            guardAfter.data.ownerId !== serverPrincipal.ownerId ||
+            guardAfter.data.businessId !== serverPrincipal.businessId ||
+            guardAfter.data.branchId !== serverPrincipal.branchId ||
+            guardAfter.businessDataAccess !== false) {
+          storageManager.setAuthenticatedSessionId(undefined);
+          setError("LIVE GUARD DENIED: Post-touch validation failed.");
+          return;
+        }
+
+        // FINORA_P1_708D_SERVER_BUSINESS_CONTEXT
+        // Establish the existing provisioned Control Plane profile.
+        // This does not independently authorize Reception.
+        const { setBusinessContext } = await import(
+          "../../services/business/businessContextService"
+        );
+
+        finoraTrace("BUSINESS_CONTEXT_ACTIVATION");
+        const businessContextResult = await setBusinessContext({
+          ownerId: serverPrincipal.ownerId,
+          businessId: serverPrincipal.businessId,
+          branchId: serverPrincipal.branchId,
+          dataContext: "REAL",
+          businessProfile: trustedProfile,
+        });
+
+        if (!businessContextResult.success) {
+          storageManager.setAuthenticatedSessionId(undefined);
+          await receptionBridge.invalidate({
+            sessionId: issued.sessionId,
+          }).catch(() => undefined);
+          setError(
+            "Verified Business Context activation failed: " +
+            (businessContextResult.error ?? "UNKNOWN")
+          );
+          return;
+        }
+
+        // setBusinessContext resets StorageManager USB session binding.
+        // Rebind only after fresh authoritative validation.
+        const { validateFinoraServerGuardSession: revalidateContext } =
+          await import(
+            "../../services/auth/finoraServerReceptionGuardLifecycle"
+          );
+
+        const contextGuard = await revalidateContext(issued.sessionId);
+
+        if (
+          !contextGuard.success ||
+          contextGuard.data.sessionId !== issued.sessionId ||
+          contextGuard.data.userId !== serverPrincipal.userId ||
+          contextGuard.data.username !== serverPrincipal.username ||
+          contextGuard.data.role !== "OWNER" ||
+          contextGuard.data.ownerId !== serverPrincipal.ownerId ||
+          contextGuard.data.businessId !== serverPrincipal.businessId ||
+          contextGuard.data.branchId !== serverPrincipal.branchId ||
+          contextGuard.data.storageMode !== expectedStorage ||
+          contextGuard.businessDataAccess !== false
+        ) {
+          storageManager.setAuthenticatedSessionId(undefined);
+          await receptionBridge.invalidate({
+            sessionId: issued.sessionId,
+          }).catch(() => undefined);
+          setError("Server authorization changed during Business Context setup.");
+          return;
+        }
+
+        storageManager.setAuthenticatedSessionId(
+          expectedStorage === "USB" ? issued.sessionId : undefined
+        );
+
+        finoraLoginStage = "RECEPTION_COMMIT_PREPARATION";
+        // FINORA_P1_709D_RECEPTION_COMMIT
+        // Only trusted Electron Main may grant operational Reception.
+        // Credentials were already authenticated by PostgreSQL.
+        const resolvedReceptionDate = resolveBusinessDate(businessDate);
+
+        if (!resolvedReceptionDate) {
+          storageManager.setAuthenticatedSessionId(undefined);
+          await receptionBridge.invalidate({
+            sessionId: issued.sessionId,
+          }).catch(() => undefined);
+          setError("Choose a valid FINORA Login Date.");
+          return;
+        }
+
+        const commitHost = window as unknown as {
+          finoraServerReceptionSession?: {
+            commit?: (request: {
+              sessionId: string;
+            }) => Promise<unknown>;
+          };
+        };
+
+        const nativeCommit =
+          commitHost.finoraServerReceptionSession?.commit;
+
+        if (typeof nativeCommit !== "function") {
+          storageManager.setAuthenticatedSessionId(undefined);
+          await receptionBridge.invalidate({
+            sessionId: issued.sessionId,
+          }).catch(() => undefined);
+          setError("Native Reception Commit authority is unavailable.");
+          return;
+        }
+
+        // FINORA_P1_709Q_COMMIT_TRACE
+        finoraLoginStage = "NATIVE_RECEPTION_COMMIT";
+        finoraTrace("NATIVE_RECEPTION_COMMIT");
+        const commitResponse: unknown = await nativeCommit({
+          sessionId: issued.sessionId,
+        });
+        if (
+          commitResponse &&
+          typeof commitResponse === "object" &&
+          "success" in commitResponse &&
+          commitResponse.success !== true
+        ) {
+          const failureCode =
+            "errorCode" in commitResponse &&
+            typeof commitResponse.errorCode === "string"
+              ? commitResponse.errorCode
+              : "UNKNOWN_COMMIT_DENIAL";
+          window.alert("FINORA RECEPTION COMMIT DENIED: " + failureCode);
+        }
+
+        const commitRecord =
+          commitResponse !== null &&
+          typeof commitResponse === "object" &&
+          !Array.isArray(commitResponse)
+            ? commitResponse as Record<string, unknown>
+            : null;
+
+        const committedPrincipal =
+          commitRecord?.principal !== null &&
+          typeof commitRecord?.principal === "object" &&
+          !Array.isArray(commitRecord.principal)
+            ? commitRecord.principal as Record<string, unknown>
+            : null;
+
+        const identityFields = [
+          "userId",
+          "username",
+          "fullName",
+          "role",
+          "ownerId",
+          "businessId",
+          "branchId",
+          "storageMode",
+        ] as const;
+
+        if (
+          !commitRecord ||
+          commitRecord.success !== true ||
+          commitRecord.operationalCommitted !== true ||
+          commitRecord.businessDataAccess !== true ||
+          commitRecord.sessionId !== issued.sessionId ||
+          !committedPrincipal ||
+          !identityFields.every(
+            key => committedPrincipal[key] === serverPrincipal[key]
+          )
+        ) {
+          storageManager.setAuthenticatedSessionId(undefined);
+          await receptionBridge.invalidate({
+            sessionId: issued.sessionId,
+          }).catch(() => undefined);
+
+          setError(
+            "Reception Commit DENIED [" +
+            (
+              typeof commitRecord?.errorCode === "string"
+                ? commitRecord.errorCode
+                : "AUTHORIZATION_NOT_CONFIRMED"
+            ) +
+            "]."
+          );
+          return;
+        }
+
+        // AuthSession is a renderer view of the verified Main session.
+        // Never manufacture an independent session identifier.
+        const committedAt = new Date().toISOString();
+
+        try {
+          commitLoginSession(
+            {
+              userId: serverPrincipal.userId,
+              username: serverPrincipal.username,
+              fullName: serverPrincipal.fullName,
+              role: "OWNER",
+              loginTime: committedAt,
+              sessionId: issued.sessionId,
+              lastActivity: committedAt,
+              ownerId: serverPrincipal.ownerId,
+              businessId: serverPrincipal.businessId,
+              branchId: serverPrincipal.branchId,
+              dataContext: "REAL",
+            },
+            resolvedReceptionDate
+          );
+
+          clearCustomerCache();
+          setError("");
+          setCredentialEnrollmentMessage("");
+          finoraLoginStage = "RECEPTION_NAVIGATION";
+          finoraTrace("RECEPTION_NAVIGATION");
+          // FINORA_P1_710M_VERIFIED_USB_HANDOFF
+          // Storage mode is derived from verified server identity only.
+          if (
+            serverPrincipal.storageMode !== "USB" ||
+            expectedStorage !== "USB"
+          ) {
+            throw new Error("VERIFIED_USB_STORAGE_REQUIRED");
+          }
+          window.sessionStorage.setItem(
+            "FINORA_STORAGE_MODE",
+            StorageMode.USB
+          );
+          onLogin();
+          finoraReceptionCompleted = true;
+          finoraTrace("RECEPTION_CALLBACK_RETURNED");
+        } catch {
+          storageManager.setAuthenticatedSessionId(undefined);
+          await receptionBridge.invalidate({
+            sessionId: issued.sessionId,
+          }).catch(() => undefined);
+          setError("Reception session activation failed.");
+          return;
+        }
+      }
       setCredentialEnrollmentMessage(
         "Account Login verified. Wallet status: check Account Dashboard. Reception authorization pending.",
       );
-    } catch {
-      setError("Account Login service is unavailable.");
+    } catch (loginFailure) {
+      // FINORA_P1_708H_LOGIN_DIAGNOSTICS
+      // Never include credentials, tokens or session IDs in UI.
+      storageManager.setAuthenticatedSessionId(undefined);
+      const diagnostic = loginFailure instanceof Error
+        ? loginFailure.name
+        : "UNKNOWN_FAILURE";
+      setError(
+        "FINORA Server Login workflow failed [" + diagnostic +
+        "]. Reception authorization denied."
+      );
+      setCredentialEnrollmentMessage(
+        "SERVER LOGIN CHECK FAILED. Reception remains locked."
+      );
     } finally {
+      if (!finoraReceptionCompleted) {
+        window.alert(
+          "FINORA LOGIN STOPPED AT: " + finoraLoginStage
+        );
+      }
       setLoginBusy(false);
     }
   }
@@ -2593,6 +3208,14 @@ setError(
       const result = await bridge.login({
         username: username.trim(),
         password,
+      });
+      console.info("[FINORA BUSINESS LOGIN RESULT]", {
+        success: result.success === true,
+        sessionTypeValid: result.sessionType === "BUSINESS_RECEPTION",
+        errorCode: typeof result.errorCode === "string" &&
+          /^[A-Z0-9_]{1,80}$/.test(result.errorCode)
+            ? result.errorCode
+            : "NONE_OR_UNSAFE",
       });
 
       if (
@@ -2628,6 +3251,14 @@ setError(
       }
 
       const verification = await sessionBridge.validate();
+      console.info("[FINORA BUSINESS SESSION VERIFY RESULT]", {
+        success: verification.success === true,
+        sessionTypeValid: verification.sessionType === "BUSINESS_RECEPTION",
+        errorCode: typeof verification.errorCode === "string" &&
+          /^[A-Z0-9_]{1,80}$/.test(verification.errorCode)
+            ? verification.errorCode
+            : "NONE_OR_UNSAFE",
+      });
 
       if (
         verification.success !== true ||
@@ -2644,7 +3275,7 @@ setError(
       // Server identity/subscription verified.
       // Operational authorization and Reception handoff pending.
       setError(
-        "Server Business Session verified. Reception operational authorization pending.",
+        "",
       );
 
       return true;
@@ -3048,7 +3679,7 @@ if (
   // FINORA_P1_685H_LIVE_STATUS
   // API and PostgreSQL reachability only, never authorization.
   const [finoraLiveStatus, setFinoraLiveStatus] =
-    useState<"CHECKING" | "LOGIN NOT READY" | "OFFLINE">("CHECKING");
+    useState<"CHECKING" | "LIVE" | "OFFLINE">("CHECKING");
 
   useEffect(() => {
     let mounted = true;
@@ -3107,7 +3738,7 @@ if (
         }
 
         if (mounted && controller === current) {
-          setFinoraLiveStatus(live ? "LOGIN NOT READY" : "OFFLINE");
+          setFinoraLiveStatus(live ? "LIVE" : "OFFLINE");
         }
       } catch {
         if (mounted && controller === current) {
@@ -3192,7 +3823,7 @@ if (
             FINORA LOGIN THEME PICKER
         ================================================== */}
 
-        <div style={{ ...loginStyles.themePicker, position: "relative", width: "100%", justifyContent: "center", alignItems: "center" }} aria-label="FINORA login themes">
+        <div style={{ ...loginStyles.themePicker, position: "relative", width: "100%", justifyContent: "center", alignItems: "center", minHeight: 38 }} aria-label="FINORA login themes">
 
           {LOGIN_THEME_OPTIONS.map(
             option => {
@@ -3261,47 +3892,52 @@ if (
           )}
 
                   {/* FINORA_P1_685H_THEME_STATUS */}
-          <span
-            role="status"
-            aria-live="polite"
-            title="FINORA API and PostgreSQL connectivity"
-            style={{
-              ...loginStyles.themeOptionActive,
-              position: "absolute",
-              right: 0,
-              top: "50%",
-              transform: "translateY(-50%)",
-              marginLeft: 0,
-              display: "inline-flex",
-              flexDirection: "row",
-              flexWrap: "nowrap",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 5,
-              padding: "5px 9px",
-              borderRadius: 20,
-              fontSize: 12,
-              fontWeight: 700,
-              whiteSpace: "nowrap",
-              lineHeight: 1,
-              color:
-                false
-                  ? "#16844b"
-                  : finoraLiveStatus === "OFFLINE"
-                    ? "#dc3545"
-                    : "#727b86",
-              borderColor:
-                false
-                  ? "#16844b"
-                  : finoraLiveStatus === "OFFLINE"
-                    ? "#dc3545"
-                    : "#727b86",
-            }}
-          >
-            <span aria-hidden="true" style={{ fontSize: 15, lineHeight: 1 }}>●</span>
-            {finoraLiveStatus}
-          </span>
+          {/* FINORA_P1_709K_SINGLE_DOT */}
+<span
+  role="status"
+  aria-live="polite"
+  title="FINORA API and PostgreSQL connectivity"
+  style={{
+    ...loginStyles.themeOptionActive,
+    position: "absolute",
+    right: 0,
+    top: "50%",
+    transform: "translateY(-50%)",
+    display: "inline-flex",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    padding: "5px 3px",
+    borderRadius: 20,
+    fontSize: 12,
+    fontWeight: 700,
+    whiteSpace: "nowrap",
+    lineHeight: 1,
+    color:
+      finoraLiveStatus === "LIVE"
+        ? "#16803c"
+        : finoraLiveStatus === "OFFLINE"
+          ? "#dc2626"
+          : "inherit",
+    borderColor: "transparent",
+    backgroundColor: "transparent",
+  }}
+>
+  <span
+    aria-hidden="true"
+    style={{
+      display: "inline-block",
+      width: 7,
+      height: 7,
+      borderRadius: "50%",
+      backgroundColor: "currentColor",
+      flexShrink: 0,
+    }}
+  />
+  <span>{finoraLiveStatus}</span>
+</span>
 </div>
+
 
           <div
             style={
@@ -3648,69 +4284,7 @@ if (
               </div>
 
             )}
-
-
-            {/* FINORA_P1_679D_WALLET_DISPLAY */}
-            {accountWalletStatus !== "NOT_AUTHENTICATED" && (
-              <section
-                aria-label="FINORA Account Wallet"
-                style={{
-                  padding: "16px",
-                  margin: "14px 0",
-                  borderRadius: "12px",
-                  border: `1px solid ${activeLoginTheme.borderStrong}`,
-                  background: activeLoginTheme.surface,
-                  color: activeLoginTheme.text,
-                }}
-              >
-                <strong>FINORA Account Dashboard</strong>
-                <p>Account Status: Authenticated</p>
-                <p>
-                  Wallet Balance: {
-                    accountWalletBalance !== null
-                      ? `₹${accountWalletBalance}`
-                      : "Unavailable"
-                  }
-                </p>
-                <p>
-                  Wallet Status: {accountWalletStatus}
-                </p>
-                <small>
-                  Server Account/Wallet access only.
-                  Business records require separate authorization.
-                </small>
-                              {/* FINORA_P1_679O_SUBSCRIPTION_DISPLAY */}
-                <div>
-                  <strong>Subscription Plans</strong>
-                  <p>Pricing Status: {accountPricingStatus}</p>
-                  {accountPricingStatus === "VERIFIED" && (
-                    <>
-                      {accountSubscriptionPlans.map(plan => (
-                        <p key={plan.months}>
-                          {plan.months} Month(s):
-                          {" ₹"}{plan.offerPriceInr}
-                        </p>
-                      ))}
-                      <p>
-                        Current Subscription: {
-                          accountSubscription?.status ?? "NONE"
-                        }
-                      </p>
-                      <p>
-                        Expiry: {
-                          accountSubscription?.expiresAt ?? "Not available"
-                        }
-                      </p>
-                      <p>
-                        Days Remaining: {
-                          accountSubscription?.daysRemaining ?? "N/A"
-                        }
-                      </p>
-                    </>
-                  )}
-                </div>
-</section>
-            )}
+            {/* FINORA_P1_709S_LOGIN_DASHBOARD_REMOVED */}
             {/* ==============================================
                 OWNER MODE NOTICE
             ============================================== */}
@@ -5174,7 +5748,8 @@ if (
               onClick={
                 credentialMode === "FORCE_CREDENTIAL_CHANGE"
                   ? completeRequiredCredentialChange
-                  : handleLogin
+                  : /* FINORA_P1_710A_SERVER_LOGIN_BUTTON */
+                  credentialMode === "LOGIN" ? handleAccountPasswordLogin : handleLogin
               }
               disabled={loginBusy}
               style={

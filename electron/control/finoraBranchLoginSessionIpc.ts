@@ -182,6 +182,20 @@ export function registerFinoraBranchLoginSessionHandlers(
         securityCode: string;
       };
     }) => Promise<void>,
+  // FINORA_P1_702O_SERVER_GUARD_CALLBACK
+  // Trusted Main-process dependency, never renderer input.
+  verifyServerBoundSession?:
+    (
+      sender: object,
+      session: {
+        sessionId: string;
+        userId: string;
+        ownerId: string;
+        businessId: string;
+        branchId: string;
+        storageMode: "LOCAL" | "USB";
+      },
+    ) => Promise<boolean>,
 ): void {
   if (
     loginSessionHandlersRegistered
@@ -230,7 +244,10 @@ export function registerFinoraBranchLoginSessionHandlers(
         | null = null;
 
       try {
-        // FINORA_P550C: only the authorized sender's wallet is cleared.
+        // FINORA_P1_700S_ISOLATED_HANDOFF_BOUNDARY
+        // Ordinary Local Login intentionally invalidates earlier Wallet access.
+        // Server-first handoff must use a separately authorized main-process path.
+        // Do not relax this behavior for renderer-supplied requests.
         invalidateFinoraServerWalletForBusinessTransition(event.sender);
         const requestScopedPortableV2Store =
           resolvePortableV2Store
@@ -511,9 +528,66 @@ export function registerFinoraBranchLoginSessionHandlers(
       }
 
       try {
-        return await validateFinoraBranchLoginSession(
+                // FINORA_P1_702P_SERVER_BOUND_VALIDATE
+        const local = await validateFinoraBranchLoginSession(
           request,
         );
+
+        if (!local.success) {
+          return local;
+        }
+
+        // Server verification is mandatory whenever this
+        // trusted Main-process callback is installed.
+        // FINORA_P1_702S_MANDATORY_SERVER_GUARD
+        // Missing server verifier must never authorize a local session.
+        if (!verifyServerBoundSession) {
+          // FINORA_P1_702Y_MISSING_VERIFIER_CLEANUP
+          // Reject access and discard the local session.
+          invalidateFinoraBranchLoginSession({
+            sessionId: local.data.sessionId,
+          });
+
+return {
+            success: false,
+            errorCode: "SERVER_SESSION_AUTHORIZATION_DENIED",
+            error: "Mandatory server session verifier unavailable.",
+          };
+        }
+
+        if (verifyServerBoundSession) {
+          let serverAuthorized = false;
+
+          try {
+            serverAuthorized = await verifyServerBoundSession(
+              event.sender,
+              {
+                sessionId: local.data.sessionId,
+                userId: local.data.userId,
+                ownerId: local.data.ownerId,
+                businessId: local.data.businessId,
+                branchId: local.data.branchId,
+                storageMode: local.data.storageMode,
+              },
+            );
+          } catch {
+            serverAuthorized = false;
+          }
+
+          if (!serverAuthorized) {
+            invalidateFinoraBranchLoginSession({
+              sessionId: local.data.sessionId,
+            });
+
+            return {
+              success: false,
+              errorCode: "SERVER_SESSION_AUTHORIZATION_DENIED",
+              error: "Server-bound session verification failed.",
+            };
+          }
+        }
+
+        return local;
       }
       catch {
         return serviceFailure();
@@ -542,6 +616,64 @@ export function registerFinoraBranchLoginSessionHandlers(
       }
 
       try {
+                // FINORA_P1_702R_SERVER_BOUND_TOUCH
+        // Validate local identity before refreshing activity.
+        const local = await validateFinoraBranchLoginSession(
+          request,
+        );
+
+        if (!local.success) {
+          return local;
+        }
+
+        // FINORA_P1_702S_MANDATORY_SERVER_GUARD
+        // Missing server verifier must never authorize a local session.
+        if (!verifyServerBoundSession) {
+          // FINORA_P1_702Y_MISSING_VERIFIER_CLEANUP
+          // Reject access and discard the local session.
+          invalidateFinoraBranchLoginSession({
+            sessionId: local.data.sessionId,
+          });
+
+return {
+            success: false,
+            errorCode: "SERVER_SESSION_AUTHORIZATION_DENIED",
+            error: "Mandatory server session verifier unavailable.",
+          };
+        }
+
+        if (verifyServerBoundSession) {
+          let serverAuthorized = false;
+
+          try {
+            serverAuthorized = await verifyServerBoundSession(
+              event.sender,
+              {
+                sessionId: local.data.sessionId,
+                userId: local.data.userId,
+                ownerId: local.data.ownerId,
+                businessId: local.data.businessId,
+                branchId: local.data.branchId,
+                storageMode: local.data.storageMode,
+              },
+            );
+          } catch {
+            serverAuthorized = false;
+          }
+
+          if (!serverAuthorized) {
+            invalidateFinoraBranchLoginSession({
+              sessionId: local.data.sessionId,
+            });
+
+            return {
+              success: false,
+              errorCode: "SERVER_SESSION_AUTHORIZATION_DENIED",
+              error: "Server-bound session verification failed.",
+            };
+          }
+        }
+
         return touchFinoraBranchLoginSession(
           request,
         );

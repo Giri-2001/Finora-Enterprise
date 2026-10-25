@@ -1,3 +1,6 @@
+import { storageManager } from "../storage/storageManager";
+import { invalidateFinoraServerGuardSession } from "../services/auth/finoraServerReceptionGuardLifecycle";
+
 import { endFinoraServerWalletAccess } from "../services/wallet/finoraServerWalletExit";
 // ============================================================
 // FINORA ENTERPRISE OSâ„¢
@@ -482,8 +485,25 @@ export function updateSessionActivity():
 // authorization, entitlement, or session-integrity check fails.
 // ============================================================
 
+// FINORA_P1_707M_SECURE_LOGOUT
+// Renderer cleanup is immediate; server invalidation is best effort.
+function clearFinoraServerSessionOnExit(): void {
+  const exitingSession = getSession();
+  storageManager.setAuthenticatedSessionId(undefined);
+
+  if (
+    exitingSession &&
+    /^[a-f0-9]{64}$/.test(exitingSession.sessionId)
+  ) {
+    void invalidateFinoraServerGuardSession(
+      exitingSession.sessionId
+    ).catch(() => undefined);
+  }
+}
+
 export function invalidateSession():
   void {
+  clearFinoraServerSessionOnExit();
   // FINORA_P551C: also covers exits without a business session ID.
   void endFinoraServerWalletAccess();
 
@@ -498,6 +518,7 @@ export function invalidateSession():
 
 export function logout():
   void {
+  clearFinoraServerSessionOnExit();
   // FINORA_P551C: also covers exits without a business session ID.
   void endFinoraServerWalletAccess();
 

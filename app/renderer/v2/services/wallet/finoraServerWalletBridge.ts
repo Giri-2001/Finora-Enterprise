@@ -187,6 +187,109 @@ export function resolveFinoraServerWalletBridge(
 ): ServerWalletBridge | null {
   try {
     if (!record(host) || !record(host.finora)) return null;
+    // P1-712F: Account Wallet reads use server-authenticated sender IPC.
+    // Other operations preserve their existing independent security gates.
+    const accountWallet = record(host.finoraAccountWallet)
+      ? host.finoraAccountWallet : null;
+    const accountPricing = record(host.finoraAccountPricing)
+      ? host.finoraAccountPricing : null;
+
+    const readAccountBalance = async (): Promise<ServerWalletResult<ServerWalletBalance>> => {
+      if (!accountWallet || typeof accountWallet.balance !== "function") {
+        return { success: false, errorCode: "ACCOUNT_SESSION_REQUIRED" };
+      }
+      try {
+        const response: unknown = await accountWallet.balance();
+        if (!record(response)) {
+          return { success: false, errorCode: "INVALID_SERVER_RESPONSE" };
+        }
+        if (response.success !== true) {
+          return {
+            success: false,
+            errorCode: typeof response.errorCode === "string"
+              ? response.errorCode : "UNAUTHORIZED",
+          };
+        }
+        const w = response.wallet;
+        if (
+          !record(w) || w.ok !== true ||
+          w.source !== "POSTGRESQL_WALLETS" ||
+          w.currency !== "INR" ||
+          typeof w.walletId !== "string" ||
+          !/^[0-9]{8,12}$/.test(w.walletId) ||
+          typeof w.balanceInr !== "string" ||
+          !/^(0|[1-9][0-9]{0,9})\.[0-9]{2}$/.test(w.balanceInr) ||
+          typeof w.updatedAt !== "string" ||
+          !Number.isFinite(Date.parse(w.updatedAt))
+        ) {
+          return { success: false, errorCode: "INVALID_SERVER_RESPONSE" };
+        }
+        return {
+          success: true,
+          data: {
+            source: "POSTGRESQL_WALLETS",
+            currency: "INR",
+            walletId: w.walletId,
+            balanceInr: w.balanceInr,
+            updatedAt: w.updatedAt,
+          },
+        };
+      } catch {
+        return { success: false, errorCode: "SERVER_UNAVAILABLE" };
+      }
+    };
+
+    const readAccountPricing = async (): Promise<ServerWalletResult<ServerWalletLivePricing>> => {
+      if (!accountPricing || typeof accountPricing.get !== "function") {
+        return { success: false, errorCode: "ACCOUNT_SESSION_REQUIRED" };
+      }
+      try {
+        const response: unknown = await accountPricing.get();
+        if (!record(response)) {
+          return { success: false, errorCode: "INVALID_SERVER_RESPONSE" };
+        }
+        if (response.success !== true) {
+          return {
+            success: false,
+            errorCode: typeof response.errorCode === "string"
+              ? response.errorCode : "UNAUTHORIZED",
+          };
+        }
+        const p = response.pricing;
+        if (
+          !record(p) ||
+          p.ok !== true ||
+          p.source !== "FINORA_POSTGRESQL_PRICING" ||
+          typeof p.branchId !== "string" ||
+          p.branchId.length === 0 ||
+          !Array.isArray(p.plans) ||
+          p.plans.length !== 4 ||
+          !p.plans.every((plan: unknown) =>
+            record(plan) &&
+            [1, 3, 6, 12].includes(plan.months as number) &&
+            typeof plan.regularPriceInr === "string" &&
+            /^(0|[1-9][0-9]{0,9})\.[0-9]{2}$/.test(plan.regularPriceInr) &&
+            typeof plan.offerPriceInr === "string" &&
+            /^(0|[1-9][0-9]{0,9})\.[0-9]{2}$/.test(plan.offerPriceInr) &&
+            record(plan.fees)
+          ) ||
+          !Object.prototype.hasOwnProperty.call(p, "currentSubscription")
+        ) {
+          return { success: false, errorCode: "INVALID_SERVER_RESPONSE" };
+        }
+        return {
+          success: true,
+          data: {
+            source: "FINORA_POSTGRESQL_PRICING",
+            branchId: p.branchId,
+            plans: p.plans as ServerWalletLivePlan[],
+            currentSubscription: p.currentSubscription as ServerWalletLiveSubscription | null,
+          },
+        };
+      } catch {
+        return { success: false, errorCode: "SERVER_UNAVAILABLE" };
+      }
+    };
     const candidate = host.finora.serverWallet;
     if (!record(candidate)) return null;
 
@@ -205,7 +308,7 @@ export function resolveFinoraServerWalletBridge(
         enroll.call(candidate, input),
       signIn: (input: ServerWalletCredentials) =>
         signIn.call(candidate, input),
-      balance: () => balance.call(candidate),
+      balance: () => readAccountBalance(),
       recovery: (operationId: string): Promise<ServerWalletResult<ServerWalletUsageRecovery>> => {
         if (
           typeof operationId !== "string" ||
@@ -223,13 +326,7 @@ export function resolveFinoraServerWalletBridge(
               errorCode: "UNAUTHORIZED",
             });
       },
-      pricing: (): Promise<ServerWalletResult<ServerWalletLivePricing>> =>
-        typeof pricing === "function"
-          ? pricing.call(candidate)
-          : Promise.resolve({
-              success: false as const,
-              errorCode: "UNAUTHORIZED",
-            }),
+      pricing: () => readAccountPricing(),
       transactions: (): Promise<ServerWalletResult<ServerWalletHistoryPage<ServerWalletTransactionRow>>> =>
         typeof transactions === "function"
           ? transactions.call(candidate)

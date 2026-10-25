@@ -1,3 +1,11 @@
+import {
+  touchFinoraServerGuardSession,
+  validateFinoraServerGuardSession,
+} from "../../services/auth/finoraServerReceptionGuardLifecycle";
+
+import { storageManager } from "../../storage/storageManager";
+import { invalidateFinoraServerGuardSession } from "../../services/auth/finoraServerReceptionGuardLifecycle";
+
 import { getFinoraLoginSessionBridge } from "../../services/auth/loginSessionBridge";
 // ============================================================
 // LAYER   : Renderer / V2 Authentication
@@ -107,8 +115,22 @@ export default function SessionGuard({
       forcedExit =
         true;
 
-      invalidateSession();
+      // FINORA_P1_707I_SECURE_SESSION_EXIT
+      // Clear the renderer USB authority before removing the session.
+      storageManager.setAuthenticatedSessionId(undefined);
 
+      // Best-effort Main Process invalidation of the opaque Reception
+      // session. Never rely on this asynchronous call for USB denial.
+      const exitingSession = getSession();
+      if (exitingSession && /^[a-f0-9]{64}$/.test(exitingSession.sessionId)) {
+        void invalidateFinoraServerGuardSession(
+          exitingSession.sessionId
+        ).catch(() => undefined);
+      }
+
+      // FINORA_P1_709Q_GUARD_TRACE
+      window.alert("FINORA SESSION GUARD REJECTED THE RECEPTION SESSION.");
+      invalidateSession();
       window.location.reload();
     }
 
@@ -151,6 +173,25 @@ export default function SessionGuard({
       ) {
         forceSessionExit();
 
+        return;
+      }
+
+      // FINORA_P1_707L_SERVER_GUARD_ROUTING
+      // A server-format session must NEVER fall back to legacy auth.
+      if (/^[a-f0-9]{64}$/.test(session.sessionId)) {
+        touchInFlight = true;
+        lastMainTouchAt = now;
+        try {
+          const result = await touchFinoraServerGuardSession(session.sessionId);
+          if (!result.success || result.sessionId !== session.sessionId ||
+              getSession()?.sessionId !== session.sessionId) {
+            forceSessionExit();
+          }
+        } catch {
+          forceSessionExit();
+        } finally {
+          touchInFlight = false;
+        }
         return;
       }
 
@@ -229,6 +270,57 @@ export default function SessionGuard({
       ) {
         forceSessionExit();
 
+        return;
+      }
+
+      // FINORA_P1_707L_SERVER_VALIDATION
+      // Identity is independently checked in Electron Main.
+      if (/^[a-f0-9]{64}$/.test(session.sessionId)) {
+        validationInFlight = true;
+        try {
+          const result = await validateFinoraServerGuardSession(session.sessionId);
+          if (!result.success) {
+            forceSessionExit();
+            return;
+          }
+
+          const verified = result.data;
+          const current = getSession();
+          if (!current || current.sessionId !== session.sessionId ||
+              verified.sessionId !== session.sessionId ||
+              verified.userId !== session.userId ||
+              verified.username !== session.username ||
+              verified.role !== session.role ||
+              verified.ownerId !== session.ownerId ||
+              verified.businessId !== session.businessId ||
+              verified.branchId !== session.branchId ||
+              verified.dataContext !== "REAL") {
+            forceSessionExit();
+            return;
+          }
+
+          const persisted = persistRevalidatedSessionSnapshot({
+            ...session,
+            userId: verified.userId,
+            username: verified.username,
+            fullName: verified.fullName,
+            role: verified.role,
+            sessionId: verified.sessionId,
+            loginTime: verified.loginTime,
+            lastActivity: verified.lastActivity,
+            ownerId: verified.ownerId,
+            businessId: verified.businessId,
+            branchId: verified.branchId,
+            dataContext: "REAL",
+            businessDate: session.businessDate,
+          });
+
+          if (!persisted) forceSessionExit();
+        } catch {
+          forceSessionExit();
+        } finally {
+          validationInFlight = false;
+        }
         return;
       }
 

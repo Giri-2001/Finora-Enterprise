@@ -118,6 +118,14 @@ export function createFinoraServerWalletHistoryClient(
         },
       );
 
+      // P1-713G: Status-only diagnostic; never log session credentials.
+      if (process.env.FINORA_WALLET_DIAGNOSTICS === "1") {
+        console.warn("[FINORA HISTORY HTTP]", {
+          kind,
+          status: response.status,
+        });
+      }
+
       if (response.status === 401) {
         return { success: false, errorCode: "UNAUTHORIZED" };
       }

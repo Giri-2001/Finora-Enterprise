@@ -60,6 +60,12 @@ contextBridge.exposeInMainWorld(
               ? safe.source
               : undefined,
           // FINORA_P1_679N_PRICING_CONTRACT
+          branchId:
+            typeof safe.branchId === "string" &&
+            safe.branchId.length > 0 &&
+            safe.branchId.length <= 128
+              ? safe.branchId
+              : undefined,
           plans: Array.isArray(safe.plans)
             ? safe.plans
                 .filter((item: unknown) => {
@@ -84,6 +90,24 @@ contextBridge.exposeInMainWorld(
                     months: p.months,
                     regularPriceInr: p.regularPriceInr,
                     offerPriceInr: p.offerPriceInr,
+                    fees:
+                      p.fees && typeof p.fees === "object" &&
+                      !Array.isArray(p.fees)
+                        ? Object.fromEntries(
+                            Object.entries(p.fees).filter(
+                              ([key, value]) =>
+                                [
+                                  "CUSTOMER_CREATE",
+                                  "LOAN_DISBURSEMENT",
+                                  "COLLECTION_BELOW_25000",
+                                  "COLLECTION_25000_TO_50000",
+                                  "COLLECTION_ABOVE_50000",
+                                ].includes(key) &&
+                                typeof value === "string" &&
+                                /^(?:0|[1-9]\d{0,9})\.\d{2}$/.test(value)
+                            )
+                          )
+                        : {},
                   };
                 })
             : [],
@@ -93,20 +117,25 @@ contextBridge.exposeInMainWorld(
               : safe.currentSubscription &&
                   typeof safe.currentSubscription === "object" &&
                   !Array.isArray(safe.currentSubscription)
-                ? {
-                    status:
-                      typeof (safe.currentSubscription as Record<string, unknown>).status === "string"
-                        ? (safe.currentSubscription as Record<string, unknown>).status
-                        : "UNKNOWN",
-                    expiresAt:
-                      typeof (safe.currentSubscription as Record<string, unknown>).expiresAt === "string"
-                        ? (safe.currentSubscription as Record<string, unknown>).expiresAt
-                        : null,
-                    daysRemaining:
-                      typeof (safe.currentSubscription as Record<string, unknown>).daysRemaining === "number"
-                        ? (safe.currentSubscription as Record<string, unknown>).daysRemaining
-                        : null,
-                  }
+                ? (() => {
+                    const s = safe.currentSubscription as Record<string, unknown>;
+                    return {
+                      planCode: typeof s.planCode === "string" ? s.planCode : "",
+                      amountInr: typeof s.amountInr === "string" ? s.amountInr : "",
+                      status: typeof s.status === "string" ? s.status : "UNKNOWN",
+                      databaseStatus: typeof s.databaseStatus === "string" ? s.databaseStatus : "",
+                      startsAt: typeof s.startsAt === "string" ? s.startsAt : "",
+                      expiresAt: typeof s.expiresAt === "string" ? s.expiresAt : "",
+                      serverNow: typeof s.serverNow === "string" ? s.serverNow : "",
+                      daysRemaining: typeof s.daysRemaining === "number" ? s.daysRemaining : -1,
+                      expiredDaysAgo: typeof s.expiredDaysAgo === "number" ? s.expiredDaysAgo : -1,
+                      autoRenew: s.autoRenew === true,
+                      selectedPlanMonths:
+                        [1, 3, 6, 12].includes(s.selectedPlanMonths as number)
+                          ? s.selectedPlanMonths
+                          : null,
+                    };
+                  })()
                 : null,
         },
       };
@@ -1927,6 +1956,7 @@ interface FinoraCredentialEnrollmentView {
     string;
 
   role:
+    | "OWNER"
     | "ADMIN"
     | "MANAGER"
     | "COLLECTOR"
@@ -2167,6 +2197,7 @@ interface FinoraLoginSessionView {
     string;
 
   role:
+    | "OWNER"
     | "ADMIN"
     | "MANAGER"
     | "COLLECTOR"
@@ -3032,6 +3063,42 @@ const credentialBridge:
 // BRANCH LOGIN SESSION BRIDGE
 // ============================================================
 
+// FINORA_P1_705A_RECEPTION_PRELOAD
+// Renderer receives a limited session bridge, never server credentials.
+// Main Process independently verifies sender, Wallet and PostgreSQL scope.
+contextBridge.exposeInMainWorld(
+  "finoraServerReceptionSession",
+  Object.freeze({
+    issue: () =>
+      ipcRenderer.invoke("finora:reception:server-issue"),
+
+    validate: (request: { sessionId: string }) =>
+      ipcRenderer.invoke(
+        "finora:reception:server-validate",
+        { sessionId: request?.sessionId },
+      ),
+
+    touch: (request: { sessionId: string }) =>
+      ipcRenderer.invoke(
+        "finora:reception:server-touch",
+        { sessionId: request?.sessionId },
+      ),
+
+    // FINORA_P1_708S_RECEPTION_COMMIT_BRIDGE
+    // Main process alone decides operational authorization.
+    commit: (request: { sessionId: string }) =>
+      ipcRenderer.invoke(
+        "finora:reception:server-commit",
+        { sessionId: request?.sessionId },
+      ),
+
+    invalidate: (request: { sessionId: string }) =>
+      ipcRenderer.invoke(
+        "finora:reception:server-invalidate",
+        { sessionId: request?.sessionId },
+      ),
+  }),
+);
 const loginSessionBridge:
   FinoraLoginSessionBridge = {
   login:
@@ -3638,14 +3705,14 @@ const serverWalletBridge = Object.freeze({
   // Fixed read-only channels. No renderer-supplied scope or token.
   transactions: async () => {
     try {
-      return await ipcRenderer.invoke("finora:server-wallet:transactions");
+      return await ipcRenderer.invoke("finora:account:wallet-transactions");
     } catch {
       return { success: false, errorCode: "SERVER_UNAVAILABLE" };
     }
   },
   recharges: async () => {
     try {
-      return await ipcRenderer.invoke("finora:server-wallet:recharges");
+      return await ipcRenderer.invoke("finora:account:wallet-recharges");
     } catch {
       return { success: false, errorCode: "SERVER_UNAVAILABLE" };
     }
@@ -4050,6 +4117,97 @@ contextBridge.exposeInMainWorld(
       }
     },
   }),
+);
+// FINORA_P1_700Z_SERVER_FIRST_LOCAL_AUTH_BRIDGE
+// Credentials are passed to trusted Electron Main only.
+// No renderer-selected Owner/Branch identity is accepted.
+// Success is eligibility only, NOT Reception authorization.
+contextBridge.exposeInMainWorld(
+  "finoraServerFirstLocalAuth",
+  Object.freeze({
+    authorize: async (input: {
+      username: string;
+      password: string;
+      storageMode: "LOCAL" | "USB";
+    }): Promise<{
+      success: boolean;
+      eligible?: boolean;
+      localSessionId?: string;
+      operationalMode?: "ACTIVE" | "REGISTERED_EXPIRED_READ_ONLY";
+      businessDataAccess: false;
+      errorCode?: string;
+    }> => {
+      const deny = (errorCode: string) => ({
+        success: false,
+        businessDataAccess: false as const,
+        errorCode,
+      });
+
+      if (
+        !input ||
+        typeof input.username !== "string" ||
+        typeof input.password !== "string" ||
+        !input.username.trim() ||
+        !input.password ||
+        (
+          input.storageMode !== "LOCAL" &&
+          input.storageMode !== "USB"
+        )
+      ) {
+        return deny("INVALID_REQUEST");
+      }
+
+      try {
+        const response: unknown = await ipcRenderer.invoke(
+          "finora:business:local-authorize",
+          {
+            username: input.username,
+            password: input.password,
+            storageMode: input.storageMode,
+          }
+        );
+
+        if (
+          !response ||
+          typeof response !== "object" ||
+          Array.isArray(response)
+        ) {
+          return deny("INVALID_RESPONSE");
+        }
+
+        const result = response as Record<string, unknown>;
+
+        if (
+          result.success !== true ||
+          result.eligible !== true ||
+          typeof result.localSessionId !== "string" ||
+          !/^[a-fA-F0-9]{64}$/.test(result.localSessionId) ||
+          result.businessDataAccess !== false ||
+          (
+            result.operationalMode !== "ACTIVE" &&
+            result.operationalMode !== "REGISTERED_EXPIRED_READ_ONLY"
+          )
+        ) {
+          return deny(
+            typeof result.errorCode === "string"
+              ? result.errorCode
+              : "LOCAL_AUTHORIZATION_DENIED"
+          );
+        }
+
+        return {
+          success: true,
+          eligible: true,
+          localSessionId: result.localSessionId,
+          operationalMode: result.operationalMode,
+          businessDataAccess: false,
+          errorCode: "RECEPTION_COMMIT_NOT_IMPLEMENTED",
+        };
+      } catch {
+        return deny("LOCAL_AUTHORIZATION_UNAVAILABLE");
+      }
+    },
+  })
 );
 // FINORA_P1_693J_PRELOAD_HANDOFF
 // Eligibility check only. Cannot create Reception access.

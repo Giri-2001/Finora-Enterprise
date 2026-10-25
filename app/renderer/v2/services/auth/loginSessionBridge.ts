@@ -25,6 +25,7 @@ export interface FinoraLoginSessionView {
   username: string;
   fullName: string;
   role:
+    | "OWNER"
     | "ADMIN"
     | "MANAGER"
     | "COLLECTOR"

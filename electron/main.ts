@@ -1,3 +1,4 @@
+import { createFinoraServerWalletHistoryClient } from "./control/finoraServerWalletHistoryClient.js";
 import { getFinoraAccountWalletAuthorization } from "./control/finoraAccountWalletSession.js";
 import {
   establishFinoraSenderWallet,
@@ -125,6 +126,7 @@ import { randomUUID } from "node:crypto";
 
 import {
   registerFinoraControlHandlers,
+  registerFinoraServerProfileScopeResolver,
 } from "./control/finoraControlIpc.js";
 
 import {
@@ -1479,9 +1481,7 @@ function readTrimmedStorageAuthorityString(
     : "";
 }
 
-async function handleUsbMigrateLegacyTenantScope(
-  input: unknown,
-) {
+async function handleUsbMigrateLegacyTenantScope(input: unknown, sender?: object) {
   if (
     !input ||
     typeof input !== "object" ||
@@ -1507,10 +1507,61 @@ async function handleUsbMigrateLegacyTenantScope(
     );
   }
 
-  const resolutionUnknown: unknown =
-    await resolveFinoraBranchOperationalSessionContext({
-      sessionId,
-    });
+      // FINORA_P1_711K_SERVER_MIGRATION
+    // Resolve the server session independently in Electron Main.
+    // No renderer-provided tenant IDs and no legacy fallback.
+    const resolutionUnknown: unknown =
+      /^[a-f0-9]{64}$/.test(sessionId)
+        ? await (async () => {
+            if (!sender || !finoraServerUsbScopeResolver) {
+              return failure("SERVER_MIGRATION_AUTHORITY_UNAVAILABLE");
+            }
+
+            const verified =
+              await finoraServerUsbScopeResolver(sender, sessionId);
+
+            if (!verified.success) {
+              return failure(verified.error);
+            }
+
+            const scope = verified.scope;
+
+            if (
+              scope.sessionId !== sessionId ||
+              scope.dataContext !== "REAL" ||
+              !scope.ownerId ||
+              !scope.businessId ||
+              !scope.branchId
+            ) {
+              return failure("SERVER_MIGRATION_SCOPE_DENIED");
+            }
+
+            // The existing migration routine independently compares
+            // session and principal scopes before touching records.
+            const authoritativeContext = {
+              ownerId: scope.ownerId,
+              businessId: scope.businessId,
+              branchId: scope.branchId,
+              dataContext: "REAL" as const,
+              storageMode: "USB" as const,
+            };
+
+            return {
+              success: true as const,
+              data: {
+                session: {
+                  ...authoritativeContext,
+                  sessionId,
+                },
+                principal: {
+                  ...authoritativeContext,
+                },
+              },
+            };
+          })()
+        : await resolveFinoraBranchOperationalSessionContext({
+            sessionId,
+          });
 
   if (
     !resolutionUnknown ||
@@ -2734,6 +2785,27 @@ function normalizeFinoraUsbAuthorityValue(
 }
 
 
+// FINORA_P1_706M_SERVER_USB_DEPENDENCY_BRIDGE
+// Only the Main Login scope can register this resolver.
+// No global exposure or renderer-controlled scope.
+type FinoraServerUsbScopeResolver = (
+  sender: object,
+  sessionId: string,
+) => Promise<FinoraAuthenticatedUsbStorageScopeResult>;
+
+let finoraServerUsbScopeResolver:
+  | FinoraServerUsbScopeResolver
+  | undefined;
+
+function registerFinoraServerUsbScopeResolver(
+  resolver: FinoraServerUsbScopeResolver,
+): void {
+  if (finoraServerUsbScopeResolver) {
+    throw new Error("SERVER_USB_SCOPE_RESOLVER_ALREADY_REGISTERED");
+  }
+  finoraServerUsbScopeResolver = resolver;
+}
+
 async function resolveFinoraAuthenticatedUsbStorageScope(
   sessionIdValue:
     unknown,
@@ -3212,16 +3284,43 @@ function bindFinoraUsbWriteToAuthenticatedScope(
 }
 
 
+// FINORA_P1_706N_USB_HANDLER_CONNECTION
+// Both paths must independently authenticate the supplied session.
+// A renderer-supplied tenant scope is never trusted.
+async function resolveFinoraUsbScopeForSender(
+  sender: object,
+  sessionIdValue: unknown,
+): Promise<FinoraAuthenticatedUsbStorageScopeResult> {
+  const sessionId = normalizeFinoraUsbAuthorityValue(sessionIdValue);
+  if (!sessionId) {
+    return { success: false, error: "USB_SESSION_REQUIRED" };
+  }
+
+  if (finoraServerUsbScopeResolver && /^[a-f0-9]{64}$/.test(sessionId)) {
+    try {
+      const serverResult = await finoraServerUsbScopeResolver(
+        sender, sessionId,
+      );
+      if (serverResult.success) return serverResult;
+    } catch {
+      // Never grant access because server validation threw.
+    }
+  }
+
+  // Preserve legacy only when its own independent operational
+  // session resolver positively authenticates this exact ID.
+  return resolveFinoraAuthenticatedUsbStorageScope(sessionId);
+}
+
 async function authorizeFinoraUsbQuery(
   query:
     StorageQuery,
+sender: object,
 ): Promise<
   FinoraAuthenticatedUsbQueryResult
 > {
   const scopeResult =
-    await resolveFinoraAuthenticatedUsbStorageScope(
-      query?.sessionId,
-    );
+    await resolveFinoraUsbScopeForSender(sender, query?.sessionId);
 
   if (!scopeResult.success) {
     return scopeResult;
@@ -3237,13 +3336,12 @@ async function authorizeFinoraUsbQuery(
 async function authorizeFinoraUsbWrite(
   options:
     StorageWriteOptions | undefined,
+sender: object,
 ): Promise<
   FinoraAuthenticatedUsbWriteResult
 > {
   const scopeResult =
-    await resolveFinoraAuthenticatedUsbStorageScope(
-      options?.sessionId,
-    );
+    await resolveFinoraUsbScopeForSender(sender, options?.sessionId);
 
   if (!scopeResult.success) {
     return scopeResult;
@@ -3303,9 +3401,7 @@ function registerUsbStorageHandlers(): void {
     }
 
     const authorization =
-      await authorizeFinoraUsbQuery(
-        query,
-      );
+      await authorizeFinoraUsbQuery(query, event.sender);
 
     if (!authorization.success) {
       return failure(
@@ -3328,9 +3424,7 @@ function registerUsbStorageHandlers(): void {
     }
 
     const authorization =
-      await authorizeFinoraUsbQuery(
-        query,
-      );
+      await authorizeFinoraUsbQuery(query, event.sender);
 
     if (!authorization.success) {
       return failure(
@@ -3355,9 +3449,7 @@ function registerUsbStorageHandlers(): void {
       }
 
       const authorization =
-        await authorizeFinoraUsbWrite(
-          options,
-        );
+        await authorizeFinoraUsbWrite(options, event.sender);
 
       if (!authorization.success) {
         return failure(
@@ -3384,9 +3476,7 @@ function registerUsbStorageHandlers(): void {
       }
 
       const authorization =
-        await authorizeFinoraUsbWrite(
-          options,
-        );
+        await authorizeFinoraUsbWrite(options, event.sender);
 
       if (!authorization.success) {
         return failure(
@@ -3411,9 +3501,7 @@ function registerUsbStorageHandlers(): void {
     }
 
     const authorization =
-      await authorizeFinoraUsbQuery(
-        query,
-      );
+      await authorizeFinoraUsbQuery(query, event.sender);
 
     if (!authorization.success) {
       return failure(
@@ -3438,9 +3526,7 @@ function registerUsbStorageHandlers(): void {
       }
 
       const authorization =
-        await authorizeFinoraUsbWrite(
-          options,
-        );
+        await authorizeFinoraUsbWrite(options, event.sender);
 
       if (!authorization.success) {
         return failure(
@@ -3465,9 +3551,7 @@ function registerUsbStorageHandlers(): void {
     }
 
     const authorization =
-      await authorizeFinoraUsbQuery(
-        query,
-      );
+      await authorizeFinoraUsbQuery(query, event.sender);
 
     if (!authorization.success) {
       return failure(
@@ -3497,9 +3581,7 @@ function registerUsbStorageHandlers(): void {
         return failure("Untrusted renderer.");
       }
 
-      return handleUsbMigrateLegacyTenantScope(
-        request,
-      );
+      return handleUsbMigrateLegacyTenantScope(request, event.sender);
     },
   );
 
@@ -4541,6 +4623,66 @@ app.whenReady().then(async () => {
         }
       },
     );
+    // FINORA_P1_712O_ACCOUNT_HISTORY_SSO
+    // Sender-bound server authentication. Read-only.
+    // No renderer-selected wallet, scope, token, or URL.
+    const accountWalletHistoryClient =
+      createFinoraServerWalletHistoryClient();
+
+    for (const kind of ["transactions", "recharges"] as const) {
+      const channel =
+        kind === "transactions"
+          ? "finora:account:wallet-transactions"
+          : "finora:account:wallet-recharges";
+
+      ipcMain.handle(channel, async (event) => {
+        if (
+          !event.senderFrame ||
+          !isTrustedRenderer(event.senderFrame)
+        ) {
+          return {
+            success: false as const,
+            errorCode: "UNAUTHORIZED_RENDERER",
+          };
+        }
+
+        const authorization =
+          getFinoraSenderWalletAuthorization(event.sender);
+
+        const principal =
+          getFinoraSenderWalletPrincipal(event.sender);
+
+        if (!authorization || !principal) {
+          return {
+            success: false as const,
+            errorCode: "ACCOUNT_SESSION_REQUIRED",
+          };
+        }
+
+        // Authorization is never supplied by the renderer.
+        // The existing history client independently validates the token.
+        const matched =
+          /^Bearer ([a-f0-9]{64})$/.exec(authorization);
+
+        if (!matched) {
+          return {
+            success: false as const,
+            errorCode: "INVALID_ACCOUNT_WALLET_AUTHORITY",
+          };
+        }
+
+        try {
+          return kind === "transactions"
+            ? await accountWalletHistoryClient.transactions(matched[1])
+            : await accountWalletHistoryClient.recharges(matched[1]);
+        } catch {
+          return {
+            success: false as const,
+            errorCode: "SERVER_UNAVAILABLE",
+          };
+        }
+      });
+    }
     // FINORA_P1_679I_ACCOUNT_PRICING
     // Read-only pricing from PostgreSQL-backed server authority.
     ipcMain.handle(
@@ -4716,6 +4858,160 @@ app.whenReady().then(async () => {
     // Isolate concurrent Account/Business login attempts per sender.
     const finoraAccountBusinessLoginGeneration =
       new WeakMap<object, number>();
+
+    // FINORA_P1_706M_SERVER_USB_DEPENDENCY_BRIDGE
+    // Scope-local session maps remain private.
+    // FINORA_P1_711A_SERVER_PROFILE_WIRING
+    registerFinoraServerProfileScopeResolver(
+      async (sender, sessionId) => {
+        // This resolver independently validates the Server Reception
+        // Session, live Business Session, Wallet and branch scope.
+        const checked =
+          await resolveFinoraUsbScopeForSender(sender, sessionId);
+
+        if (!checked.success) {
+          return { success: false, error: checked.error };
+        }
+
+        // FINORA_P1_711E_VERIFIED_SERVER_PRINCIPAL
+        const currentBusiness =
+          finoraBusinessSessionsBySender.get(sender);
+        const currentGeneration =
+          finoraAccountBusinessLoginGeneration.get(sender);
+
+        const stillCurrent = () =>
+          finoraBusinessSessionsBySender.get(sender) === currentBusiness &&
+          finoraAccountBusinessLoginGeneration.get(sender) === currentGeneration;
+
+        if (!currentBusiness || !stillCurrent()) {
+          return { success: false, error: "SERVER_BUSINESS_SESSION_REQUIRED" };
+        }
+
+        const [
+          { verifyFinoraServerBusinessSession },
+          { validateFinoraServerReceptionSession },
+        ] = await Promise.all([
+          import("./control/finoraServerBusinessSessionVerifier.js"),
+          import("./control/finoraServerReceptionSessionAuthority.js"),
+        ]);
+
+        const verifiedReception =
+          await validateFinoraServerReceptionSession(
+            sender,
+            sessionId,
+            verifyFinoraServerBusinessSession,
+            currentBusiness.sessionId,
+          );
+
+        if (!verifiedReception.success || !stillCurrent()) {
+          return { success: false, error: "SERVER_PROFILE_SESSION_DENIED" };
+        }
+
+        const scope = checked.scope;
+        const wallet = getFinoraSenderWalletPrincipal(sender);
+        const principal = verifiedReception.principal;
+
+        if (
+          !wallet ||
+          !principal.username.trim() ||
+          principal.storageMode !== "USB" ||
+          scope.sessionId !== sessionId ||
+          scope.dataContext !== "REAL" ||
+          scope.ownerId !== principal.ownerId ||
+          scope.businessId !== principal.businessId ||
+          scope.branchId !== principal.branchId ||
+          wallet.userId !== principal.userId ||
+          wallet.ownerId !== principal.ownerId ||
+          wallet.businessId !== principal.businessId ||
+          wallet.branchId !== principal.branchId ||
+          !stillCurrent()
+        ) {
+          return {
+            success: false,
+            error: "SERVER_PROFILE_SCOPE_MISMATCH",
+          };
+        }
+
+        return {
+          success: true,
+          principal: {
+            username: principal.username,
+            ownerId: principal.ownerId,
+            businessId: principal.businessId,
+            branchId: principal.branchId,
+          },
+        };
+      }
+    );
+    registerFinoraServerUsbScopeResolver(
+      async (sender, sessionId) => {
+        const currentBusiness =
+          finoraBusinessSessionsBySender.get(sender);
+        const currentGeneration =
+          finoraAccountBusinessLoginGeneration.get(sender);
+
+        const stillCurrent = () =>
+          finoraBusinessSessionsBySender.get(sender) === currentBusiness &&
+          finoraAccountBusinessLoginGeneration.get(sender) === currentGeneration;
+
+        if (!currentBusiness || !stillCurrent()) {
+          return { success: false, error: "SERVER_BUSINESS_SESSION_REQUIRED" };
+        }
+
+        try {
+          const [{ verifyFinoraServerBusinessSession },
+            { validateFinoraServerReceptionSession }] = await Promise.all([
+              import("./control/finoraServerBusinessSessionVerifier.js"),
+              import("./control/finoraServerReceptionSessionAuthority.js"),
+            ]);
+
+          const result = await validateFinoraServerReceptionSession(
+            sender,
+            sessionId,
+            verifyFinoraServerBusinessSession,
+            currentBusiness.sessionId,
+          );
+
+          if (!result.success || !stillCurrent()) {
+            return { success: false, error: "SERVER_RECEPTION_SESSION_DENIED" };
+          }
+
+          const wallet = getFinoraSenderWalletPrincipal(sender);
+          const principal = result.principal;
+
+          if (!wallet || principal.storageMode !== "USB" ||
+            principal.role !== "OWNER" ||
+            !(["userId", "ownerId", "businessId", "branchId"] as const)
+              .every(key => wallet[key] === principal[key])) {
+            return { success: false, error: "SERVER_USB_SCOPE_MISMATCH" };
+          }
+
+          const verified = await verifyFinoraServerBusinessSession(
+            currentBusiness.sessionId,
+          );
+
+          if (!verified.success || !stillCurrent() ||
+            !(["userId", "ownerId", "businessId", "branchId"] as const)
+              .every(key => verified.principal[key] === principal[key]) ||
+            verified.principal.storageMode !== "USB") {
+            return { success: false, error: "SERVER_USB_REVALIDATION_FAILED" };
+          }
+
+          return {
+            success: true,
+            scope: {
+              sessionId,
+              ownerId: principal.ownerId,
+              businessId: principal.businessId,
+              branchId: principal.branchId,
+              dataContext: "REAL",
+            },
+          };
+        } catch {
+          return { success: false, error: "SERVER_USB_AUTHORITY_UNAVAILABLE" };
+        }
+      },
+    );
 
     // FINORA_P1_678N_ACCOUNT_LOGIN_IPC
     // Password-only Account/Wallet session.
@@ -5070,6 +5366,629 @@ app.whenReady().then(async () => {
         }
       },
     );
+    // FINORA_P1_704W_RECEPTION_SESSION_IPC
+    // Device-independent admission. No local credential or device trust.
+    const finoraReceptionIssueGeneration = new WeakMap<object, number>();
+
+    ipcMain.handle(
+      "finora:reception:server-issue",
+      async (event) => {
+        const deny = (errorCode: string) => ({
+          success: false as const,
+          errorCode,
+        });
+
+        if (
+          !event.senderFrame ||
+          event.senderFrame !== event.sender.mainFrame ||
+          !isTrustedRenderer(event.senderFrame) ||
+          event.sender.isDestroyed()
+        ) {
+          return deny("UNAUTHORIZED_RENDERER");
+        }
+
+        const sender = event.sender;
+        const previous =
+          finoraReceptionIssueGeneration.get(sender) ?? 0;
+        const attempt = previous + 1;
+        finoraReceptionIssueGeneration.set(sender, attempt);
+
+        const businessSession =
+          finoraBusinessSessionsBySender.get(sender);
+        const loginGeneration =
+          finoraAccountBusinessLoginGeneration.get(sender);
+
+        if (!businessSession) {
+          return deny("BUSINESS_SESSION_REQUIRED");
+        }
+
+        const current = () =>
+          !sender.isDestroyed() &&
+          finoraReceptionIssueGeneration.get(sender) === attempt &&
+          finoraBusinessSessionsBySender.get(sender) === businessSession &&
+          finoraAccountBusinessLoginGeneration.get(sender) === loginGeneration;
+
+        try {
+          const [
+            { verifyFinoraServerBusinessSession },
+            {
+              issueFinoraServerReceptionSession,
+              invalidateFinoraServerReceptionSession,
+            },
+          ] = await Promise.all([
+            import("./control/finoraServerBusinessSessionVerifier.js"),
+            import("./control/finoraServerReceptionSessionAuthority.js"),
+          ]);
+
+          if (!current()) {
+            return deny("LOGIN_CHANGED");
+          }
+
+          const verified =
+            await verifyFinoraServerBusinessSession(
+              businessSession.sessionId,
+            );
+
+          if (!verified.success || !current()) {
+            return deny("SERVER_AUTHORIZATION_DENIED");
+          }
+
+          const walletPrincipal =
+            getFinoraSenderWalletPrincipal(sender);
+
+          if (
+            !walletPrincipal ||
+            !(["userId", "ownerId", "businessId", "branchId"] as const)
+              .every(
+                key =>
+                  walletPrincipal[key] === verified.principal[key],
+              )
+          ) {
+            return deny("ACCOUNT_BUSINESS_SCOPE_MISMATCH");
+          }
+
+          const issued =
+            await issueFinoraServerReceptionSession(
+              sender,
+              businessSession.sessionId,
+              verified.principal,
+              verifyFinoraServerBusinessSession,
+            );
+
+          if (!issued.success) {
+            return deny(issued.errorCode);
+          }
+
+          if (!current()) {
+            invalidateFinoraServerReceptionSession(
+              sender,
+              issued.sessionId,
+            );
+            return deny("LOGIN_CHANGED");
+          }
+
+          const currentWallet =
+            getFinoraSenderWalletPrincipal(sender);
+
+          if (
+            !currentWallet ||
+            !(["userId", "ownerId", "businessId", "branchId"] as const)
+              .every(key => currentWallet[key] === issued.principal[key])
+          ) {
+            invalidateFinoraServerReceptionSession(
+              sender,
+              issued.sessionId,
+            );
+            return deny("ACCOUNT_SCOPE_CHANGED");
+          }
+
+          return {
+            success: true as const,
+            sessionId: issued.sessionId,
+            principal: issued.principal,
+            businessDataAccess: false as const,
+            receptionCommitRequired: true as const,
+          };
+        } catch {
+          return deny("SERVER_RECEPTION_UNAVAILABLE");
+        }
+      },
+    );
+    // FINORA_P1_704Z_RECEPTION_LIFECYCLE
+    for (const operation of ["validate", "touch"] as const) {
+      ipcMain.handle(
+        `finora:reception:server-${operation}`,
+        async (event, request: unknown) => {
+          const deny = (errorCode: string) => ({
+            success: false as const,
+            errorCode,
+          });
+
+          if (
+            !event.senderFrame ||
+            event.senderFrame !== event.sender.mainFrame ||
+            !isTrustedRenderer(event.senderFrame) ||
+            event.sender.isDestroyed()
+          ) return deny("UNAUTHORIZED_RENDERER");
+
+          if (
+            !request ||
+            typeof request !== "object" ||
+            Array.isArray(request) ||
+            typeof (request as { sessionId?: unknown }).sessionId !== "string"
+          ) return deny("INVALID_REQUEST");
+
+          const sessionId =
+            (request as { sessionId: string }).sessionId;
+
+          if (!/^[a-f0-9]{64}$/.test(sessionId)) {
+            return deny("INVALID_SESSION");
+          }
+
+          const sender = event.sender;
+          const businessSession =
+            finoraBusinessSessionsBySender.get(sender);
+          const loginGeneration =
+            finoraAccountBusinessLoginGeneration.get(sender);
+
+          if (!businessSession) {
+            return deny("SERVER_SESSION_REQUIRED");
+          }
+
+          try {
+            const [
+              { verifyFinoraServerBusinessSession },
+              {
+                validateFinoraServerReceptionSession,
+                touchFinoraServerReceptionSession,
+                invalidateFinoraServerReceptionSession,
+              },
+            ] = await Promise.all([
+              import("./control/finoraServerBusinessSessionVerifier.js"),
+              import("./control/finoraServerReceptionSessionAuthority.js"),
+            ]);
+
+            const current = () =>
+              !sender.isDestroyed() &&
+              finoraBusinessSessionsBySender.get(sender) === businessSession &&
+              finoraAccountBusinessLoginGeneration.get(sender) === loginGeneration;
+
+            if (!current()) return deny("LOGIN_CHANGED");
+
+            const result =
+              operation === "validate"
+                ? await validateFinoraServerReceptionSession(
+                    sender,
+                    sessionId,
+                    verifyFinoraServerBusinessSession,
+                    businessSession.sessionId,
+                  )
+                : await touchFinoraServerReceptionSession(
+                    sender,
+                    sessionId,
+                    verifyFinoraServerBusinessSession,
+                    businessSession.sessionId,
+                  );
+
+            if (!result.success || !current()) {
+              invalidateFinoraServerReceptionSession(sender, sessionId);
+              return deny("SESSION_REVALIDATION_DENIED");
+            }
+
+            const account =
+              getFinoraSenderWalletPrincipal(sender);
+
+            const verified =
+              await verifyFinoraServerBusinessSession(
+                businessSession.sessionId,
+              );
+
+            if (
+              !verified.success ||
+              !account ||
+              !current() ||
+              !(["userId", "ownerId", "businessId", "branchId"] as const)
+                .every(key =>
+                  account[key] === verified.principal[key] &&
+                  result.principal[key] === verified.principal[key]
+                ) ||
+              result.principal.storageMode !== verified.principal.storageMode
+            ) {
+              invalidateFinoraServerReceptionSession(sender, sessionId);
+              return deny("SESSION_SCOPE_CHANGED");
+            }
+
+            return {
+              success: true as const,
+              sessionId,
+              principal: verified.principal,
+              createdAt: result.createdAt,
+              lastActivity: result.lastActivity,
+              // FINORA_P1_705S_SERVER_RECEPTION_VIEW
+              // Server-authorized identity only; operational access remains closed.
+              sessionView: {
+                sessionId,
+                userId: verified.principal.userId,
+                username: verified.principal.username,
+                fullName: verified.principal.fullName,
+                role: verified.principal.role,
+                ownerId: verified.principal.ownerId,
+                businessId: verified.principal.businessId,
+                branchId: verified.principal.branchId,
+                storageMode: verified.principal.storageMode,
+                dataContext: "REAL" as const,
+                loginTime: new Date(result.createdAt).toISOString(),
+                lastActivity: new Date(result.lastActivity).toISOString(),
+                validatedAt: new Date().toISOString(),
+              },
+              businessDataAccess: false as const,
+              receptionCommitRequired: true as const,
+            };
+          } catch {
+            return deny("SERVER_RECEPTION_UNAVAILABLE");
+          }
+        },
+      );
+    }
+
+    ipcMain.handle(
+      "finora:reception:server-invalidate",
+      async (event, request: unknown) => {
+        if (
+          !event.senderFrame ||
+          event.senderFrame !== event.sender.mainFrame ||
+          !isTrustedRenderer(event.senderFrame) ||
+          !request ||
+          typeof request !== "object" ||
+          Array.isArray(request) ||
+          typeof (request as { sessionId?: unknown }).sessionId !== "string"
+        ) {
+          return {
+            success: false as const,
+            errorCode: "INVALID_REQUEST",
+          };
+        }
+
+        const { invalidateFinoraServerReceptionSession } =
+          await import("./control/finoraServerReceptionSessionAuthority.js");
+
+        return {
+          success: true as const,
+          invalidated: invalidateFinoraServerReceptionSession(
+            event.sender,
+            (request as { sessionId: string }).sessionId,
+          ),
+        };
+      },
+    );
+    // FINORA_P1_708R_RECEPTION_COMMIT_IPC
+    // No second username/password challenge.
+    // Operational approval remains fail-closed until profile and
+    // storage authorization are implemented in trusted Main code.
+    ipcMain.handle(
+      "finora:reception:server-commit",
+      async (event, input: unknown) => {
+        const deny = (errorCode: string) => ({
+          success: false as const,
+          businessDataAccess: false as const,
+          errorCode,
+        });
+
+        if (
+          !event.senderFrame ||
+          event.senderFrame !== event.sender.mainFrame ||
+          !isTrustedRenderer(event.senderFrame) ||
+          event.sender.isDestroyed()
+        ) return deny("UNAUTHORIZED_RENDERER");
+
+        if (
+          !input ||
+          typeof input !== "object" ||
+          Array.isArray(input) ||
+          Object.keys(input).length !== 1 ||
+          typeof (input as { sessionId?: unknown }).sessionId !== "string"
+        ) return deny("INVALID_REQUEST");
+
+        const sessionId =
+          (input as { sessionId: string }).sessionId;
+
+        if (!/^[a-f0-9]{64}$/.test(sessionId)) {
+          return deny("INVALID_SESSION");
+        }
+
+        const sender = event.sender;
+        const businessSession =
+          finoraBusinessSessionsBySender.get(sender);
+        const generation =
+          finoraAccountBusinessLoginGeneration.get(sender);
+
+        if (!businessSession) {
+          return deny("SERVER_SESSION_REQUIRED");
+        }
+
+        const current = () =>
+          !sender.isDestroyed() &&
+          finoraBusinessSessionsBySender.get(sender) === businessSession &&
+          finoraAccountBusinessLoginGeneration.get(sender) === generation;
+
+        try {
+          const [
+            { verifyFinoraServerBusinessSession },
+            {
+              commitFinoraServerReceptionSession,
+              invalidateFinoraServerReceptionSession,
+            },
+          ] = await Promise.all([
+            import("./control/finoraServerBusinessSessionVerifier.js"),
+            import("./control/finoraServerReceptionSessionAuthority.js"),
+          ]);
+
+          if (!current()) return deny("LOGIN_CHANGED");
+
+          const result = await commitFinoraServerReceptionSession(
+            sender,
+            sessionId,
+            verifyFinoraServerBusinessSession,
+            businessSession.sessionId,
+            async principal => {
+              // FINORA_P1_708Z_USB_ONLY_COMMIT
+              // Never authorize LOCAL or CLOUD for Phase-1 Reception.
+              if (!current() || principal.storageMode !== "USB") {
+                return false;
+              }
+
+              const wallet =
+                getFinoraSenderWalletPrincipal(sender);
+
+              if (
+                !wallet ||
+                !(["userId", "ownerId", "businessId", "branchId"] as const)
+                  .every(key => wallet[key] === principal[key])
+              ) return false;
+
+              // FINORA_P1_708U_NATIVE_PROFILE_GATE
+              // Read only trusted Main-process Control Store state.
+              // Renderer-provided profiles are never accepted.
+              const { findFinoraPortableBusinessProfile } =
+                await import("./control/finoraControlStore.js");
+
+              const profileResult =
+                await findFinoraPortableBusinessProfile(
+                  principal.ownerId,
+                  principal.businessId,
+                  principal.branchId,
+                );
+
+              const profile =
+                profileResult.success ? profileResult.data : undefined;
+
+              if (
+                !profile ||
+                profile.ownerId !== principal.ownerId ||
+                profile.businessId !== principal.businessId ||
+                profile.branchId !== principal.branchId ||
+                typeof profile.profileId !== "string" ||
+                !profile.profileId.trim() ||
+                typeof profile.businessCode !== "string" ||
+                !profile.businessCode.trim() ||
+                typeof profile.branchCode !== "string" ||
+                !profile.branchCode.trim() ||
+                !current()
+              ) return false;
+
+              // FINORA_P1_709C_VERIFIED_USB_COMMIT
+              // Reuse the same authoritative USB scope resolver used
+              // by Electron's guarded native business-data operations.
+              // Never accept renderer-supplied scope.
+              if (!finoraServerUsbScopeResolver) return false;
+
+              const usbScope = await finoraServerUsbScopeResolver(
+                sender,
+                sessionId,
+              );
+
+              if (
+                !usbScope.success ||
+                !usbScope.scope ||
+                usbScope.scope.sessionId !== sessionId ||
+                usbScope.scope.ownerId !== principal.ownerId ||
+                usbScope.scope.businessId !== principal.businessId ||
+                usbScope.scope.branchId !== principal.branchId ||
+                usbScope.scope.dataContext !== "REAL" ||
+                !current()
+              ) return false;
+
+              // Profile exists in native Control Store and matches
+              // the independently verified PostgreSQL principal.
+              // Signature provenance remains a separate audit gate.
+              return true;
+            }
+          );
+
+          if (!result.success || !current()) {
+            invalidateFinoraServerReceptionSession(sender, sessionId);
+            return deny(
+              !result.success
+                ? result.errorCode
+                : "LOGIN_CHANGED"
+            );
+          }
+
+          return {
+            success: true as const,
+            sessionId: result.sessionId,
+            principal: result.principal,
+            businessDataAccess: true as const,
+            operationalCommitted: true as const,
+          };
+        } catch {
+          return deny("RECEPTION_COMMIT_UNAVAILABLE");
+        }
+      },
+    );
+    // FINORA_P1_700Y_SERVER_FIRST_LOCAL_AUTH
+    // Server identity is revalidated before and after local authorization.
+    // Existing Wallet Login/Logout handlers remain untouched.
+    ipcMain.handle(
+      "finora:business:local-authorize",
+      async (event, input: unknown) => {
+        const deny = (errorCode: string) => ({
+          success: false,
+          businessDataAccess: false,
+          errorCode,
+        });
+
+        if (
+          !event.senderFrame ||
+          event.senderFrame !== event.sender.mainFrame ||
+          !isTrustedRenderer(event.senderFrame)
+        ) return deny("UNAUTHORIZED_RENDERER");
+
+        if (
+          !input ||
+          typeof input !== "object" ||
+          Array.isArray(input)
+        ) return deny("INVALID_REQUEST");
+
+        const candidate = input as Record<string, unknown>;
+
+        if (
+          Object.keys(candidate).length !== 3 ||
+          !["username", "password", "storageMode"].every(
+            key => Object.prototype.hasOwnProperty.call(candidate, key)
+          ) ||
+          typeof candidate.username !== "string" ||
+          !candidate.username.trim() ||
+          candidate.username.length > 128 ||
+          typeof candidate.password !== "string" ||
+          !candidate.password ||
+          candidate.password.length > 128 ||
+          (
+            candidate.storageMode !== "LOCAL" &&
+            candidate.storageMode !== "USB"
+          )
+        ) return deny("INVALID_REQUEST");
+
+        const serverSession =
+          finoraBusinessSessionsBySender.get(event.sender);
+
+        if (!serverSession) return deny("SERVER_SESSION_NOT_FOUND");
+
+        const generation =
+          finoraAccountBusinessLoginGeneration.get(event.sender);
+
+        let issuedLocalSessionId: string | undefined;
+
+        try {
+          const [
+            { verifyFinoraServerBusinessSession },
+            {
+              createFinoraBranchLoginSession,
+              invalidateFinoraBranchLoginSession,
+            },
+            { authorizeFinoraServerFirstLocalSession },
+          ] = await Promise.all([
+            import("./control/finoraServerBusinessSessionVerifier.js"),
+            import("./control/finoraBranchLoginSessionAuthority.js"),
+            import("./control/finoraServerLocalReceptionHandoff.js"),
+          ]);
+
+          const current = () =>
+            !event.sender.isDestroyed() &&
+            finoraBusinessSessionsBySender.get(event.sender) === serverSession &&
+            finoraAccountBusinessLoginGeneration.get(event.sender) === generation;
+
+          const server = await verifyFinoraServerBusinessSession(
+            serverSession.sessionId
+          );
+
+          if (!server.success || !current()) {
+            return deny("SERVER_SESSION_REJECTED");
+          }
+
+          const account =
+            getFinoraSenderWalletPrincipal(event.sender);
+
+          const matches = account !== null &&
+            (["userId", "ownerId", "businessId", "branchId"] as const)
+              .every(key => account[key] === server.principal[key]);
+
+          if (!matches) return deny("ACCOUNT_BUSINESS_SCOPE_MISMATCH");
+
+          // FINORA_P1_704H_STORAGE_BINDING
+          if (candidate.storageMode !== server.principal.storageMode) {
+            return deny("SERVER_STORAGE_SCOPE_MISMATCH");
+          }
+
+          const result = await authorizeFinoraServerFirstLocalSession(
+            {
+              username: candidate.username,
+              password: candidate.password,
+              storageMode: candidate.storageMode,
+            },
+            server.principal,
+            {
+              createLocalSession: request =>
+                createFinoraBranchLoginSession(request),
+              invalidateLocalSession: sessionId => {
+                invalidateFinoraBranchLoginSession({ sessionId });
+              },
+            }
+          );
+
+          if (!result.success) return deny(result.errorCode);
+
+          issuedLocalSessionId = result.localSessionId;
+
+          const freshServer = await verifyFinoraServerBusinessSession(
+            serverSession.sessionId
+          );
+          const freshAccount =
+            getFinoraSenderWalletPrincipal(event.sender);
+
+          const freshMatches =
+            freshServer.success &&
+            freshAccount !== null &&
+            (["userId", "ownerId", "businessId", "branchId"] as const)
+              .every(key =>
+                freshAccount[key] === server.principal[key] &&
+                freshServer.principal[key] === server.principal[key]
+              );
+
+          if (
+            !current() ||
+            !freshMatches ||
+            !freshServer.success ||
+            freshServer.principal.storageMode !== server.principal.storageMode ||
+            candidate.storageMode !== freshServer.principal.storageMode
+          ) {
+            invalidateFinoraBranchLoginSession({
+              sessionId: issuedLocalSessionId,
+            });
+            issuedLocalSessionId = undefined;
+            return deny("REVALIDATION_DENIED");
+          }
+
+          return {
+            success: true,
+            eligible: true,
+            localSessionId: issuedLocalSessionId,
+            operationalMode: result.operationalMode,
+            businessDataAccess: false,
+            errorCode: "RECEPTION_COMMIT_NOT_IMPLEMENTED",
+          };
+        } catch {
+          if (issuedLocalSessionId) {
+            const { invalidateFinoraBranchLoginSession } =
+              await import("./control/finoraBranchLoginSessionAuthority.js");
+            invalidateFinoraBranchLoginSession({
+              sessionId: issuedLocalSessionId,
+            });
+          }
+          return deny("LOCAL_AUTHORIZATION_UNAVAILABLE");
+        }
+      },
+    );
     // FINORA_P1_693H_HANDOFF
     // Read-only eligibility check. Does NOT grant Reception.
     ipcMain.handle(
@@ -5117,11 +6036,11 @@ app.whenReady().then(async () => {
           const [
             { verifyFinoraServerBusinessSession },
             { validateFinoraBranchLoginSession },
-            { verifyFinoraServerLocalReceptionScope },
+            { evaluateFinoraReceptionHandoff },
           ] = await Promise.all([
             import("./control/finoraServerBusinessSessionVerifier.js"),
             import("./control/finoraBranchLoginSessionAuthority.js"),
-            import("./control/finoraServerLocalReceptionScopeGate.js"),
+            import("./control/finoraServerLocalReceptionHandoff.js"),
           ]);
 
           const server =
@@ -5154,10 +6073,13 @@ app.whenReady().then(async () => {
           // Validation returns the session view directly in local.data.
           const operational = local.data;
 
+          if (operational.storageMode !== server.principal.storageMode) {
+            return deny("SERVER_STORAGE_SCOPE_MISMATCH");
+          }
+
           const decision =
-            verifyFinoraServerLocalReceptionScope(
-              true,
-              server.principal,
+            evaluateFinoraReceptionHandoff(
+               server.principal,
               {
                 userId: operational.userId,
                 ownerId: operational.ownerId,
@@ -5170,7 +6092,7 @@ app.whenReady().then(async () => {
               },
             );
 
-          if (!decision.allowed) {
+          if (!decision.success) {
             return deny(decision.errorCode);
           }
 
@@ -6001,6 +6923,73 @@ app.whenReady().then(async () => {
               );
             }
           }
+        }
+      },
+      // FINORA_P1_702Q_MAIN_SERVER_BOUND_GUARD
+      // Server authorization is verified for the exact IPC sender.
+      // No identity or scope is accepted from renderer input.
+      async (sender, session) => {
+        try {
+          const serverSession =
+            finoraBusinessSessionsBySender.get(sender);
+
+          if (!serverSession) return false;
+
+          const generation =
+            finoraAccountBusinessLoginGeneration.get(sender);
+
+          const { verifyFinoraServerBusinessSession } =
+            await import(
+              "./control/finoraServerBusinessSessionVerifier.js"
+            );
+
+          const { verifyFinoraServerBoundIdentity } =
+            await import(
+              "./control/finoraServerBoundSessionGuard.js"
+            );
+
+          const verified =
+            await verifyFinoraServerBusinessSession(
+              serverSession.sessionId
+            );
+
+          if (!verified.success) return false;
+
+          // FINORA_P1_704T_SESSION_STORAGE
+          if (session.storageMode !== verified.principal.storageMode) {
+            return false;
+          }
+
+          const account =
+            getFinoraSenderWalletPrincipal(
+              sender as Parameters<
+                typeof getFinoraSenderWalletPrincipal
+              >[0]
+            );
+
+          if (!account) return false;
+
+          if (
+            !verifyFinoraServerBoundIdentity(
+              verified.principal,
+              session
+            ) ||
+            !verifyFinoraServerBoundIdentity(
+              verified.principal,
+              account
+            )
+          ) {
+            return false;
+          }
+
+          return (
+            finoraBusinessSessionsBySender.get(sender) ===
+              serverSession &&
+            finoraAccountBusinessLoginGeneration.get(sender) ===
+              generation
+          );
+        } catch {
+          return false;
         }
       },
     );

@@ -1462,10 +1462,12 @@ function AuthenticatedApplication() {
     let active = true;
 
     async function establishContext(): Promise<void> {
-      storageManager.setAuthenticatedSessionId(
-        undefined,
-      );
+      // FINORA_P1_710I_USB_SESSION_PRESERVE
+      // Never clear a newly verified USB session during post-login
+      // context initialization. Main-process authorization remains required.
+      // The existing rejection/logout paths revoke invalid sessions.
       if (!session) {
+        storageManager.setAuthenticatedSessionId(undefined);
         if (active) {
           await clearContext();
 
@@ -1566,9 +1568,54 @@ function AuthenticatedApplication() {
         return;
       }
 
-      const validateLoginSession =
-        getFinoraLoginSessionBridge()
-          ?.validate;
+      const legacyValidateLoginSession =
+        getFinoraLoginSessionBridge()?.validate;
+
+      // FINORA_P1_710Q_SERVER_AUTHORITY
+      // A 64-hex Reception Session belongs to Electron Main's
+      // server authority, never the legacy login-session store.
+      const validateLoginSession: typeof legacyValidateLoginSession =
+        /^[a-f0-9]{64}$/.test(session.sessionId)
+          ? async (request) => {
+              const {
+                validateFinoraServerGuardSession,
+              } = await import(
+                "../services/auth/finoraServerReceptionGuardLifecycle"
+              );
+
+              const checked =
+                await validateFinoraServerGuardSession(
+                  request.sessionId
+                );
+
+              type LegacyResponse = Awaited<
+                ReturnType<
+                  NonNullable<typeof legacyValidateLoginSession>
+                >
+              >;
+
+              if (
+                !checked.success ||
+                checked.data.sessionId !== request.sessionId ||
+                checked.data.dataContext !== "REAL" ||
+                checked.data.storageMode !== "USB"
+              ) {
+                return {
+                  success: false,
+                  errorCode: checked.success
+                    ? "SERVER_SESSION_SCOPE_MISMATCH"
+                    : checked.errorCode,
+                } as LegacyResponse;
+              }
+
+              // Map an independently validated Main principal
+              // into the existing App context initialization.
+              return {
+                success: true,
+                data: checked.data,
+              } as unknown as LegacyResponse;
+            }
+          : legacyValidateLoginSession;
 
       if (
         typeof validateLoginSession !==
@@ -1637,7 +1684,13 @@ if (!validationResult) {
       // only the stale renderer snapshot and show a clean Login.
       if (
         !validationResult.success &&
-        validationResult.errorCode === "SESSION_NOT_FOUND"
+        (
+          validationResult.errorCode === "SESSION_NOT_FOUND" ||
+          (
+            /^[a-f0-9]{64}$/.test(session.sessionId) &&
+            validationResult.errorCode === "SERVER_SESSION_REQUIRED"
+          )
+        )
       ) {
         invalidateSession();
 
@@ -2020,12 +2073,8 @@ if (!validationResult) {
 
         return;
       }
-
-      if (registeredExpiredReadOnly) {
-        console.warn(
-          "FINORA ANNUAL REGISTRATION EXPIRED: read-only access remains available until renewal. Revenue writes must remain blocked.",
-        );
-      }
+      // Legacy registration state is handled by access authority.
+      // Server subscription eligibility remains enforced separately.
 
       // ======================================================
       // RESTORE AUTHENTICATED STORAGE MODE
@@ -2327,7 +2376,52 @@ if (!validationResult) {
         return;
       }
 
-      setContextReady(true);
+            // FINORA_P1_711Q_POST_CONTEXT_BIND
+      // setContext clears the USB session binding.
+      // Rebind only after independent Electron Main validation.
+      if (
+        authoritativeSession.storageMode === "USB" &&
+        authoritativeSession.dataContext === "REAL"
+      ) {
+        const { validateFinoraServerGuardSession } =
+          await import(
+            "../services/auth/finoraServerReceptionGuardLifecycle"
+          );
+
+        const verified =
+          await validateFinoraServerGuardSession(
+            authoritativeSession.sessionId
+          );
+
+        if (!active) return;
+
+        if (
+          !verified.success ||
+          verified.data.sessionId !== authoritativeSession.sessionId ||
+          verified.data.userId !== authoritativeSession.userId ||
+          verified.data.username !== authoritativeSession.username ||
+          verified.data.ownerId !== authoritativeSession.ownerId ||
+          verified.data.businessId !== authoritativeSession.businessId ||
+          verified.data.branchId !== authoritativeSession.branchId ||
+          verified.data.storageMode !== "USB" ||
+          verified.data.dataContext !== "REAL"
+        ) {
+          storageManager.setAuthenticatedSessionId(undefined);
+          setContextReady(false);
+          setContextError(
+            "FINORA server-verified USB session handoff failed."
+          );
+          return;
+        }
+
+        storageManager.setAuthenticatedSessionId(
+          authoritativeSession.sessionId
+        );
+      }
+
+      if (!active) return;
+
+setContextReady(true);
 
       setContextError(null);
     }

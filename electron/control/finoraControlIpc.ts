@@ -516,6 +516,37 @@ let controlHandlersRegistered =
 // REGISTER CONTROL IPC HANDLERS
 // ============================================================
 
+/* FINORA_P1_711A_SERVER_PROFILE_AUTHORITY */
+type FinoraServerProfileScopeResult =
+  | {
+      success: true;
+      principal: {
+        username: string;
+        ownerId: string;
+        businessId: string;
+        branchId: string;
+      };
+    }
+  | { success: false; error: string };
+
+let finoraServerProfileScopeResolver:
+  | ((
+      sender: object,
+      sessionId: string
+    ) => Promise<FinoraServerProfileScopeResult>)
+  | undefined;
+
+export function registerFinoraServerProfileScopeResolver(
+  resolver: (
+    sender: object,
+    sessionId: string
+  ) => Promise<FinoraServerProfileScopeResult>
+): void {
+  if (finoraServerProfileScopeResolver) {
+    throw new Error("SERVER_PROFILE_RESOLVER_ALREADY_REGISTERED");
+  }
+  finoraServerProfileScopeResolver = resolver;
+}
 export function registerFinoraControlHandlers(
   isTrustedRenderer:
     FinoraControlRendererValidator,
@@ -966,58 +997,70 @@ export function registerFinoraControlHandlers(
         );
       }
 
-      const sessionContextResult =
-        await resolveFinoraBranchOperationalSessionContext({
-          sessionId:
-            record.sessionId.trim(),
-        });
+      // FINORA_P1_711A_SERVER_PROFILE_AUTHORITY
+      const requestedSessionId = record.sessionId.trim();
+      const isServerSession =
+        /^[a-f0-9]{64}$/.test(requestedSessionId);
 
-      if (
-        !sessionContextResult.success
-      ) {
-        return failure(
-          sessionContextResult.error,
-        );
+      let principal: {
+        username: string;
+        ownerId: string;
+        businessId: string;
+        branchId: string;
+      };
+
+      if (isServerSession) {
+        // Do not fall back to Legacy for a Server Session.
+        if (!finoraServerProfileScopeResolver) {
+          return failure("SERVER_PROFILE_AUTHORITY_UNAVAILABLE");
+        }
+
+        const verified =
+          await finoraServerProfileScopeResolver(
+            event.sender,
+            requestedSessionId
+          );
+
+        if (!verified.success) {
+          return failure(verified.error);
+        }
+
+        principal = verified.principal;
+      } else {
+        // Legacy path retains its existing device trust requirements.
+        const sessionContextResult =
+          await resolveFinoraBranchOperationalSessionContext({
+            sessionId: requestedSessionId,
+          });
+
+        if (!sessionContextResult.success) {
+          return failure(sessionContextResult.error);
+        }
+
+        principal = sessionContextResult.data.principal;
+
+        const requestScopedPortableV2Store =
+          resolvePortableV2Store
+            ? await resolvePortableV2Store(principal.username)
+            : undefined;
+
+        const deviceTrustResult =
+          await checkFinoraCurrentBranchDeviceTrust({
+            principal: sessionContextResult.data.principal,
+            portableStore: portableBranchAuthStore,
+            portableV2Store: requestScopedPortableV2Store,
+          });
+
+        if (!deviceTrustResult.success) {
+          return failure(deviceTrustResult.error);
+        }
+
+        if (deviceTrustResult.status !== "TRUSTED") {
+          return failure(
+            "The current FINORA device must be authorized before reading the portable Business Profile."
+          );
+        }
       }
-
-      const principal =
-        sessionContextResult.data.principal;
-
-      const requestScopedPortableV2Store =
-        resolvePortableV2Store
-          ? await resolvePortableV2Store(
-              principal.username,
-            )
-          : undefined;
-
-      const deviceTrustResult =
-        await checkFinoraCurrentBranchDeviceTrust({
-          principal,
-
-          portableStore:
-            portableBranchAuthStore,
-
-          portableV2Store:
-            requestScopedPortableV2Store,
-        });
-
-      if (
-        !deviceTrustResult.success
-      ) {
-        return failure(
-          deviceTrustResult.error,
-        );
-      }
-
-      if (
-        deviceTrustResult.status !==
-          "TRUSTED"
-      ) {
-        return failure(
-          "The current FINORA device must be authorized before reading the portable Business Profile.",
-        );
-      }
-
       const result =
         await findFinoraPortableBusinessProfile(
           principal.ownerId,

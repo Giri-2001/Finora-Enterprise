@@ -14,6 +14,10 @@ export interface FinoraVerifiedBusinessPrincipal {
   ownerId: string;
   businessId: string;
   branchId: string;
+  storageMode: "LOCAL" | "USB";
+  username: string;
+  fullName: string;
+  role: "OWNER";
 }
 
 export type FinoraServerBusinessVerification =
@@ -105,6 +109,35 @@ export async function verifyFinoraServerBusinessSession(
       }
     }
 
+    // FINORA_P1_704D_STORAGE_ENFORCEMENT
+    // Storage authority must come from server-verified PostgreSQL.
+    // Missing or unsupported storage modes fail closed.
+    if (
+      principal.storageMode !== "LOCAL" &&
+      principal.storageMode !== "USB"
+    ) {
+      return {
+        success: false,
+        errorCode: "SERVER_STORAGE_NOT_AUTHORIZED",
+      };
+    }
+
+    // FINORA_P1_705G_RECEPTION_IDENTITY
+    // These fields must originate from the verified PostgreSQL response.
+    if (
+      typeof principal.username !== "string" ||
+      principal.username.trim().length === 0 ||
+      principal.username.length > 128 ||
+      typeof principal.fullName !== "string" ||
+      principal.fullName.trim().length === 0 ||
+      principal.role !== "OWNER"
+    ) {
+      return {
+        success: false,
+        errorCode: "SERVER_RECEPTION_IDENTITY_INVALID",
+      };
+    }
+
     return {
       success: true,
       principal: {
@@ -112,6 +145,10 @@ export async function verifyFinoraServerBusinessSession(
         ownerId: principal.ownerId as string,
         businessId: principal.businessId as string,
         branchId: principal.branchId as string,
+        storageMode: principal.storageMode,
+        username: principal.username as string,
+        fullName: principal.fullName as string,
+        role: "OWNER",
       },
     };
   } catch {

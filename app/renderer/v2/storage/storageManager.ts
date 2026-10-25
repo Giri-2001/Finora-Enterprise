@@ -335,6 +335,9 @@ export class StorageManager {
       storageId?: string;
     },
   ): Promise<StorageResult<void>> {
+        // FINORA_P1_706R_USB_SESSION_RESET
+    // Changing branch/data context invalidates the previous USB binding.
+    this.setAuthenticatedSessionId(undefined);
     // FINORA_P1_589V_CONTEXT_REVISION
     // Invalidate pending operations before tenant transition starts.
     this.lifecycleRevision++;
@@ -466,6 +469,9 @@ export class StorageManager {
   // ==========================================================
 
   async resetDataContext(): Promise<StorageResult<void>> {
+        // FINORA_P1_706R_USB_SESSION_RESET
+    // Block stale USB requests during logout/context reset.
+    this.setAuthenticatedSessionId(undefined);
     this.lifecycleRevision++;
 
     const nextConfiguration: StorageConfiguration = {
