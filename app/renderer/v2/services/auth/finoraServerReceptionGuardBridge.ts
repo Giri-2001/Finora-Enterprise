@@ -87,6 +87,18 @@ export function mapFinoraServerReceptionGuardCandidate(
   ) {
     return { success: false, errorCode: "SERVER_SESSION_REQUIRED" };
   }
+  // FINORA_P1_726U_NETWORK_ERROR
+  // Preserve only the explicit trusted native network-error code.
+  // All other failed responses continue through security validation.
+  // This does not grant Reception or business-record access.
+  if (
+    response?.success === false &&
+    response.errorCode === "SERVER_UNAVAILABLE" &&
+    /^[a-f0-9]{64}$/.test(expectedSessionId)
+  ) {
+    return { success: false, errorCode: "SERVER_UNAVAILABLE" };
+  }
+
   if (
     !response ||
     response.success !== true ||

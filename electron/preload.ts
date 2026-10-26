@@ -2,6 +2,34 @@ import {
   contextBridge,
   ipcRenderer,
 } from "electron";
+// FINORA_P1_730J_NUMBERING_RESERVATION
+// No authorization credentials are exposed to renderer.
+contextBridge.exposeInMainWorld(
+  "finoraAccountNumberingReservation",
+  Object.freeze({
+    reserve: async (requestKey: string) =>
+      ipcRenderer.invoke("finora:account:numbering-reserve", requestKey),
+  }),
+);
+// FINORA_P1_729W_NUMBERING_READ
+// Read only; authentication stays in Electron Main.
+contextBridge.exposeInMainWorld(
+  "finoraAccountNumbering",
+  Object.freeze({
+    get: async () =>
+      ipcRenderer.invoke("finora:account:numbering-read"),
+  }),
+);
+// FINORA_P1_727M_PRELOAD_ORDER
+// Initialize Electron imports before exposing the identity bridge.
+contextBridge.exposeInMainWorld(
+  "finoraAccountBusinessIdentity",
+  Object.freeze({
+    get: async () =>
+      ipcRenderer.invoke("finora:account:business-identity"),
+  }),
+);
+
 // FINORA_P1_679J_PRICING_BRIDGE
 // Read-only pricing. Authorization remains in Electron Main.
 contextBridge.exposeInMainWorld(

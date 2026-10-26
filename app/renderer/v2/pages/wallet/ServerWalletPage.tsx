@@ -1,4 +1,9 @@
 import ServerWalletLiveHistory from "../../components/wallet/ServerWalletLiveHistory";
+import { getFinoraAndroidPricing } from "../../services/wallet/finoraAndroidWalletReads";
+import {
+  isFinoraAndroidWallet,
+  getFinoraAndroidWalletBalance,
+} from "../../services/wallet/finoraAndroidWalletBridge";
 import { formatFinoraDateTime } from "../../../shared/finoraDateTimeDisplay";
 import { useEffect, useRef, useState } from "react";
 import { useTheme } from "../../themes/provider";
@@ -298,6 +303,8 @@ export default function ServerWalletPage({
   const [rechargeFailed, setRechargeFailed] = useState(false);
   const [receipt, setReceipt] = useState<ServerWalletRechargeReceipt | null>(null);
   const [hasIntent, setHasIntent] = useState(false);
+  // FINORA_P1_722L_ANDROID_SAFETY
+  const androidBalanceOnly = isFinoraAndroidWallet();
   const rechargeIntent = useRef<{
     walletId: string;
     input: ServerWalletRechargeInput;
@@ -316,6 +323,94 @@ export default function ServerWalletPage({
     const ticket = ++operation.current;
 
     void (async () => {
+      // FINORA_P1_722J_ANDROID_BALANCE_UI
+      // Read-only native balance. No purchase or recharge authority.
+      if (isFinoraAndroidWallet()) {
+        setAvailable(true);
+        setBusy(true);
+        setMessage("Verifying Android Wallet with FINORA server...");
+
+        try {
+          const result = await getFinoraAndroidWalletBalance();
+
+          if (!mounted.current || operation.current !== ticket) return;
+
+          setSubscription(null);
+          setLivePricing(null);
+          setPricingUnavailable(true);
+          setPendingPurchase({
+            state: "UNAVAILABLE",
+            planMonths: null,
+          });
+
+          if (result.success && validBalance(result.data)) {
+            setBalance(result.data);
+            setFailed(false);
+            // FINORA_P1_723K_PRICING
+            // Server-authenticated branch subscription only.
+            setMessage("Verified PostgreSQL Wallet balance loaded.");
+
+            const pricing = await getFinoraAndroidPricing();
+
+            if (!mounted.current || operation.current !== ticket) return;
+
+            if (pricing.success) {
+              setLivePricing({ plans: pricing.data.plans });
+
+              const current = pricing.data.currentSubscription;
+              const planMatch = current?.planCode.match(
+                /^SUBSCRIPTION_(1|3|6|12)_MONTHS?$/
+              );
+
+              const months = current?.selectedPlanMonths ??
+                (planMatch ? Number(planMatch[1]) : null);
+
+              const validCurrent = !!current &&
+                current.status === "ACTIVE" &&
+                [1, 3, 6, 12].includes(months ?? 0) &&
+                pricing.data.plans.some(p => p.months === months) &&
+                Number.isFinite(Date.parse(current.startsAt)) &&
+                Number.isFinite(Date.parse(current.expiresAt)) &&
+                Number.isFinite(Date.parse(current.serverNow)) &&
+                Date.parse(current.startsAt) <= Date.parse(current.serverNow) &&
+                Date.parse(current.expiresAt) > Date.parse(current.serverNow);
+
+              setSubscription(validCurrent ? {
+                planMonths: months as number,
+                status: current!.status,
+                startsAt: current!.startsAt,
+                expiresAt: current!.expiresAt,
+              } : null);
+
+              setPricingUnavailable(false);
+              setMessage("Wallet and subscription verified by FINORA server.");
+            } else {
+              setSubscription(null);
+              setLivePricing(null);
+              setPricingUnavailable(true);
+              setMessage(
+                "Wallet verified. Subscription verification unavailable."
+              );
+            }
+          } else {
+            setBalance(null);
+            setFailed(true);
+            setMessage("Android Wallet verification unavailable.");
+          }
+        } catch {
+          if (mounted.current && operation.current === ticket) {
+            setBalance(null);
+            setFailed(true);
+            setMessage("Android Wallet server unavailable.");
+          }
+        } finally {
+          if (mounted.current && operation.current === ticket) {
+            setBusy(false);
+          }
+        }
+        return;
+      }
+
       const bridge = getFinoraServerWalletBridge();
 
       if (!bridge) {
@@ -496,6 +591,42 @@ export default function ServerWalletPage({
     }
 
     try {
+      // FINORA_P1_722N_ANDROID_REFRESH
+      if (androidBalanceOnly) {
+        if (kind !== "balance") {
+          if (current()) {
+            setFailed(true);
+            setMessage("Android Wallet action unavailable.");
+          }
+          return;
+        }
+
+        const result = await getFinoraAndroidWalletBalance();
+
+        if (!current()) return;
+
+        setSubscription(null);
+        setLivePricing(null);
+        setPricingUnavailable(true);
+        setPendingPurchase({
+          state: "UNAVAILABLE",
+          planMonths: null,
+        });
+
+        if (!result.success || !validBalance(result.data)) {
+          setBalance(null);
+          setFailed(true);
+          setMessage("Android Wallet verification failed.");
+          return;
+        }
+
+        setAvailable(true);
+        setBalance(result.data);
+        setFailed(false);
+        setMessage("Verified PostgreSQL Wallet balance refreshed.");
+        return;
+      }
+
       const bridge = getFinoraServerWalletBridge();
       if (!bridge) {
         setAvailable(false);
@@ -618,6 +749,7 @@ export default function ServerWalletPage({
   // FINORA_P1_648H_RESUME_UI
   // Explicit confirmation only. Original UUID stays in Main Process.
   async function resumePendingSubscriptionPurchase() {
+    if (androidBalanceOnly) return;
     if (!purchaseUiEnabled ||
         pendingPurchase.state !== "PENDING" ||
         !purchaseReviewOpen || purchaseSettled.current ||
@@ -741,6 +873,7 @@ export default function ServerWalletPage({
   }
   // FINORA_P1_647C_PURCHASE_HANDLER
   async function confirmSubscriptionPurchase() {
+    if (androidBalanceOnly) return;
     if (!purchaseUiEnabled || pendingPurchase.state !== "CLEAR" || purchaseSettled.current || running.current || purchaseBusy ||
         !available || busy || !purchaseReviewOpen ||
         pricingUnavailable || !balance || !validBalance(balance)) return;
@@ -858,6 +991,7 @@ export default function ServerWalletPage({
     }
   }
   async function submitRecharge(event: FormEvent<HTMLFormElement>) {
+    if (androidBalanceOnly) return;
     event.preventDefault();
     if (running.current || !available || !balance || receipt) return;
 
@@ -1295,7 +1429,7 @@ export default function ServerWalletPage({
         <h2 style={{ marginTop: 0 }}>Request a recharge</h2>
 
         <form onSubmit={submitRecharge}>
-          <fieldset disabled={!available || busy || !balance || hasIntent}
+          <fieldset disabled={androidBalanceOnly || !available || busy || !balance || hasIntent}
             style={{ border: 0, padding: 0, margin: 0,
               display: "grid", gap: 16,
               gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))" }}>
@@ -1455,7 +1589,7 @@ export default function ServerWalletPage({
 
               <button
                 type="button"
-                disabled={!available}
+                disabled={androidBalanceOnly || !available}
                 onClick={() => setPurchaseReviewOpen(true)}
                 style={{
                   padding: "11px 16px",

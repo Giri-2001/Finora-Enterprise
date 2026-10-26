@@ -2440,6 +2440,205 @@ setError(
       }
 
       setError("");
+      // FINORA_P1_720Y_NATIVE_REVALIDATION
+      // Android must independently revalidate its native
+      // PostgreSQL-backed Business Session. Never infer
+      // Reception authorization from Account Login alone.
+      if (
+        FinoraP1075Capacitor.isNativePlatform() &&
+        FinoraP1075Capacitor.getPlatform() === "android"
+      ) {
+        finoraLoginStage = "ANDROID_NATIVE_BUSINESS_REVALIDATION";
+
+        const nativeAuthority = await (
+          finoraControlShared as {
+            verifyAndroidBusinessAuthority: () => Promise<{
+              success: boolean;
+              sessionType?: string;
+              businessDataAccess?: boolean;
+              principal?: {
+                userId?: string;
+                ownerId?: string;
+                businessId?: string;
+                branchId?: string;
+                role?: string;
+                storageMode?: string;
+              };
+              errorCode?: string;
+            }>;
+          }
+        ).verifyAndroidBusinessAuthority();
+
+        const principal = nativeAuthority.principal;
+
+        if (
+          nativeAuthority.success !== true ||
+          nativeAuthority.sessionType !== "BUSINESS_RECEPTION" ||
+          nativeAuthority.businessDataAccess !== true ||
+          !principal?.userId ||
+          !principal.ownerId ||
+          !principal.businessId ||
+          !principal.branchId ||
+          principal.role !== "OWNER" ||
+          principal.storageMode !== "USB"
+        ) {
+          setError(
+            "Android Server Business revalidation denied [" +
+            (nativeAuthority.errorCode ?? "SCOPE_NOT_AUTHORIZED") +
+            "]."
+          );
+          return;
+        }
+
+        finoraTrace("ANDROID_NATIVE_BUSINESS_REVALIDATED");
+        // FINORA_P1_721A_RECEPTION_AUTH
+        // Issue and validate a native session only after
+        // PostgreSQL has verified the exact Owner/Branch.
+        finoraLoginStage = "ANDROID_RECEPTION_ISSUANCE";
+
+        const receptionPlugin = finoraControlShared as {
+          issueAndroidReception: () => Promise<{
+            success: boolean;
+            sessionId?: string;
+            errorCode?: string;
+          }>;
+          validateAndroidReception: (request: {
+            sessionId: string;
+          }) => Promise<{
+            success: boolean;
+            sessionId?: string;
+            businessDataAccess?: boolean;
+            principal?: {
+              userId?: string;
+              username?: string;
+              role?: string;
+              ownerId?: string;
+              businessId?: string;
+              branchId?: string;
+              storageMode?: string;
+            };
+            errorCode?: string;
+          }>;
+        };
+
+        const issued = await receptionPlugin.issueAndroidReception();
+
+        if (
+          issued.success !== true ||
+          typeof issued.sessionId !== "string" ||
+          !/^[a-f0-9]{64}$/.test(issued.sessionId)
+        ) {
+          setError(
+            "Android Reception issuance denied [" +
+            (issued.errorCode ?? "INVALID_SESSION") + "]."
+          );
+          return;
+        }
+
+        finoraLoginStage = "ANDROID_RECEPTION_VALIDATION";
+
+        const checked = await receptionPlugin.validateAndroidReception({
+          sessionId: issued.sessionId
+        });
+
+        const verifiedPrincipal = checked.principal;
+
+        if (
+          checked.success !== true ||
+          checked.sessionId !== issued.sessionId ||
+          checked.businessDataAccess !== true ||
+          !verifiedPrincipal ||
+          verifiedPrincipal.username !== accountUsername ||
+          verifiedPrincipal.role !== "OWNER" ||
+          verifiedPrincipal.storageMode !== "USB" ||
+          verifiedPrincipal.userId !== principal.userId ||
+          verifiedPrincipal.ownerId !== principal.ownerId ||
+          verifiedPrincipal.businessId !== principal.businessId ||
+          verifiedPrincipal.branchId !== principal.branchId
+        ) {
+          setError(
+            "Android Reception identity validation denied [" +
+            (checked.errorCode ?? "SCOPE_MISMATCH") + "]."
+          );
+          return;
+        }
+
+        finoraTrace("ANDROID_RECEPTION_SERVER_AUTHORIZED");
+        // FINORA_P1_721L_ANDROID_COMMIT
+        finoraLoginStage = "ANDROID_RECEPTION_FINAL_VERIFICATION";
+
+        const finalAndroidCheck =
+          await receptionPlugin.validateAndroidReception({
+            sessionId: issued.sessionId,
+          });
+
+        const finalAndroidPrincipal = finalAndroidCheck.principal;
+
+        if (
+          finalAndroidCheck.success !== true ||
+          finalAndroidCheck.sessionId !== issued.sessionId ||
+          finalAndroidCheck.businessDataAccess !== true ||
+          !finalAndroidPrincipal ||
+          finalAndroidPrincipal.userId !== verifiedPrincipal.userId ||
+          finalAndroidPrincipal.username !== accountUsername ||
+          finalAndroidPrincipal.ownerId !== verifiedPrincipal.ownerId ||
+          finalAndroidPrincipal.businessId !== verifiedPrincipal.businessId ||
+          finalAndroidPrincipal.branchId !== verifiedPrincipal.branchId ||
+          finalAndroidPrincipal.role !== "OWNER" ||
+          finalAndroidPrincipal.storageMode !== "USB"
+        ) {
+          setError("Android final Reception authorization denied.");
+          return;
+        }
+
+        const androidReceptionDate = resolveBusinessDate(businessDate);
+        if (!androidReceptionDate) {
+          setError("Choose a valid FINORA Login Date.");
+          return;
+        }
+
+        finoraLoginStage = "ANDROID_RECEPTION_COMMIT";
+
+        try {
+          const committedAt = new Date().toISOString();
+
+          window.sessionStorage.setItem(
+            "FINORA_STORAGE_MODE",
+            StorageMode.USB
+          );
+
+          storageManager.setAuthenticatedSessionId(issued.sessionId);
+
+          commitLoginSession(
+            {
+              userId: verifiedPrincipal.userId!,
+              username: verifiedPrincipal.username!,
+              fullName: accountUsername,
+              role: "OWNER",
+              loginTime: committedAt,
+              sessionId: issued.sessionId,
+              lastActivity: committedAt,
+              ownerId: verifiedPrincipal.ownerId!,
+              businessId: verifiedPrincipal.businessId!,
+              branchId: verifiedPrincipal.branchId!,
+              dataContext: "REAL",
+            },
+            androidReceptionDate
+          );
+
+          clearCustomerCache();
+          setError("");
+          setCredentialEnrollmentMessage("");
+          finoraReceptionCompleted = true;
+          finoraLoginStage = "ANDROID_RECEPTION_NAVIGATION";
+          onLogin();
+          return;
+        } catch {
+          storageManager.setAuthenticatedSessionId(undefined);
+          setError("Android Reception commit failed.");
+          return;
+        }
+      }
       finoraTrace("ACCOUNT_VERIFIED_WALLET_START");
       // FINORA_P1_679C_LIVE_BALANCE
       setAccountWalletStatus("AUTHENTICATED");
@@ -3123,7 +3322,19 @@ setError(
         }
       }
       setCredentialEnrollmentMessage(
-        "Account Login verified. Wallet status: check Account Dashboard. Reception authorization pending.",
+        "Account verified. Android Business Session: " +
+          (
+            FinoraP1075Capacitor.isNativePlatform() &&
+            FinoraP1075Capacitor.getPlatform() === "android"
+              ? (
+                  (result as { businessSessionVerified?: boolean })
+                    .businessSessionVerified === true
+                    ? "SERVER_VERIFIED"
+                    : "NOT_VERIFIED"
+                )
+              : "NOT_APPLICABLE"
+          ) +
+          ". Reception remains locked until authorized.",
       );
     } catch (loginFailure) {
       // FINORA_P1_708H_LOGIN_DIAGNOSTICS
@@ -5731,7 +5942,30 @@ if (
                   loginStyles.primaryButtonContent
                 }
               >
-                <KeyRound />
+                <style>
+                  {`@keyframes finoraP719HAuthSpin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                  }`}
+                </style>
+                {loginBusy ? (
+                  <span
+                    aria-label="Authenticating securely"
+                    role="status"
+                    style={{
+                      display: "inline-block",
+                      width: 19,
+                      height: 19,
+                      flexShrink: 0,
+                      border: "2px solid currentColor",
+                      borderRightColor: "transparent",
+                      borderRadius: "50%",
+                      animation: "finoraP719HAuthSpin 0.75s linear infinite",
+                    }}
+                  />
+                ) : (
+                  <KeyRound />
+                )}
                 <span>
                   {loginBusy
                     ? credentialMode === "FORCE_CREDENTIAL_CHANGE"

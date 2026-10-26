@@ -112,9 +112,32 @@ export async function loginFinoraBusinessWithPassword(
     );
 
     if (!verification.ok) {
+      let serverCode = "UNKNOWN";
+      try {
+        const failure: unknown = await verification.json();
+        if (failure && typeof failure === "object" &&
+            !Array.isArray(failure)) {
+          const code = (failure as Record<string, unknown>).error;
+          if (typeof code === "string" &&
+              /^[A-Z][A-Z0-9_]{2,80}$/.test(code)) {
+            serverCode = code;
+          }
+        }
+      } catch {
+        // No response body or invalid JSON.
+      }
+
+      const diagnostic =
+        "HTTP_" + verification.status + "_" + serverCode;
+
+      console.warn(
+        "[FINORA BUSINESS VERIFY]",
+        diagnostic,
+      );
+
       return {
         success: false,
-        errorCode: "BUSINESS_SESSION_VERIFICATION_FAILED",
+        errorCode: diagnostic,
       };
     }
 

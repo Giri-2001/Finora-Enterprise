@@ -1,4 +1,4 @@
-﻿/* ===========================================================
+/* ===========================================================
    FINORA ENTERPRISE OS
    CUSTOMER DEPARTMENT PAGE
 
@@ -74,54 +74,57 @@ export default function CustomerDepartmentPage({
         const context =
           requireBusinessContext();
 
-        const profile =
-          context.businessProfile;
+        // FINORA_P1_719M_CROSS_DEVICE_CUSTOMER
+        // A local signed profile is optional for the modern
+        // server-authorized path. If present, it must match.
+        // The commercial and live Wallet gates below remain
+        // mandatory and fail closed for unauthorized sessions.
+        const profile = context.businessProfile;
 
-        if (!profile) {
+        if (
+          context.businessId?.trim() !== normalizedBusinessId ||
+          !context.ownerId?.trim() ||
+          !context.branchId?.trim()
+        ) {
           console.error(
-            "[FINORA CUSTOMER DEPARTMENT] Signed Business Profile is unavailable.",
+            "[FINORA CUSTOMER] Authenticated business scope mismatch.",
           );
-
           return;
         }
 
         if (
-          context.businessId?.trim() !==
-            normalizedBusinessId ||
-          profile.businessId !==
-            normalizedBusinessId ||
-          profile.ownerId !==
-            context.ownerId ||
-          profile.branchId !==
-            context.branchId
+          profile &&
+          (
+            profile.businessId !== normalizedBusinessId ||
+            profile.ownerId !== context.ownerId ||
+            profile.branchId !== context.branchId
+          )
         ) {
           console.error(
-            "[FINORA CUSTOMER DEPARTMENT] Signed Business Profile does not match the active FINORA scope.",
+            "[FINORA CUSTOMER] Signed profile scope mismatch.",
           );
-
           return;
         }
 
-        const resolvedBusinessName =
-          profile.businessName.trim();
+        if (active && profile) {
+          const resolvedBusinessName =
+            profile.businessName.trim();
 
-        const resolvedBranchName =
-          profile.branchName.trim();
+          const resolvedBranchName =
+            profile.branchName.trim();
 
-        if (active) {
           setCompanyName(
-            resolvedBusinessName.length > 0
-              ? resolvedBusinessName
-              : undefined,
+            resolvedBusinessName || undefined,
           );
 
           setBranchName(
-            resolvedBranchName.length > 0
-              ? resolvedBranchName
-              : undefined,
+            resolvedBranchName || undefined,
           );
         }
 
+        // No client-side authorization bypass:
+        // verify commercial access, server pricing and
+        // PostgreSQL Wallet balance before enabling entry.
         const gateResult =
           await resolveCustomerCreateWalletEntryGate({
             ownerId:

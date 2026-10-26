@@ -1,4 +1,11 @@
 import {
+  isFinoraAndroidWallet,
+  getFinoraAndroidWalletBalance,
+} from "./finoraAndroidWalletBridge";
+import {
+  getFinoraAndroidPricing,
+} from "./finoraAndroidWalletReads";
+import {
   getFinoraServerWalletBridge,
 } from "./finoraServerWalletBridge";
 import type {
@@ -100,8 +107,12 @@ async function checkFinoraLiveWalletEntry(
     return blocked();
   }
 
-  const bridge = getFinoraServerWalletBridge();
-  if (!bridge) return blocked();
+  // FINORA_P1_723S_ANDROID_ENTRY
+  // UI entry check only; no charge or database write.
+  const android = isFinoraAndroidWallet();
+  const bridge = android ? null : getFinoraServerWalletBridge();
+
+  if (!android && !bridge) return blocked();
 
   const money = (value: unknown): number | null => {
     if (
@@ -115,8 +126,12 @@ async function checkFinoraLiveWalletEntry(
 
   try {
     const [balance, pricing] = await Promise.all([
-      bridge.balance(),
-      bridge.pricing(),
+      android
+        ? getFinoraAndroidWalletBalance()
+        : bridge!.balance(),
+      android
+        ? getFinoraAndroidPricing()
+        : bridge!.pricing(),
     ]);
 
     if (

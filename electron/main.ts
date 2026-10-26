@@ -2300,7 +2300,7 @@ async function handleUsbGetAll(query: StorageQuery) {
 // IPC: SAVE
 // ============================================================
 
-async function handleUsbSave(
+async function handleUsbSaveUnlocked(
   record: unknown,
 
   options?: StorageWriteOptions,
@@ -2387,7 +2387,7 @@ async function handleUsbSave(
 // IPC: UPDATE
 // ============================================================
 
-async function handleUsbUpdate(
+async function handleUsbUpdateUnlocked(
   record: unknown,
 
   options?: StorageWriteOptions,
@@ -2467,7 +2467,7 @@ async function handleUsbUpdate(
 // IPC: DELETE
 // ============================================================
 
-async function handleUsbDelete(query: StorageQuery) {
+async function handleUsbDeleteUnlocked(query: StorageQuery) {
   const queryError = validateQuery(query);
 
   if (queryError) {
@@ -2513,7 +2513,7 @@ async function handleUsbDelete(query: StorageQuery) {
 // IPC: REPLACE ALL
 // ============================================================
 
-async function handleUsbReplaceAll(
+async function handleUsbReplaceAllUnlocked(
   records: unknown[],
 
   options?: StorageWriteOptions,
@@ -2602,7 +2602,7 @@ async function handleUsbReplaceAll(
 // IPC: CLEAR
 // ============================================================
 
-async function handleUsbClear(query: StorageQuery) {
+async function handleUsbClearUnlocked(query: StorageQuery) {
   const queryError = validateQuery(query);
 
   if (queryError) {
@@ -3355,6 +3355,103 @@ sender: object,
 
 // REGISTER USB IPC HANDLERS
 // ============================================================
+
+// FINORA_P1_731U_USB_EXCLUSIVE_LOCK
+// Windows Electron process coordination only.
+// Lock file is intentionally never auto-reclaimed after a crash.
+// An abandoned lock requires a separate verified recovery procedure.
+async function withFinoraUsbExclusiveMutationLock<T>(
+  operation: () => Promise<T>,
+): Promise<T> {
+  const usbRoot = await findFinoraUsbRoot();
+  if (!usbRoot) {
+    throw new Error("FINORA_USB_NOT_CONNECTED");
+  }
+
+  const directory = getFinoraStorageDirectory(usbRoot);
+  const lockPath = path.join(directory, ".finora-usb-mutation.lock");
+
+  // Never create an empty storage package just to acquire a lock.
+  const handle = await fs.open(lockPath, "wx").catch(() => {
+    throw new Error("FINORA_USB_MUTATION_LOCK_UNAVAILABLE");
+  });
+
+  try {
+    return await operation();
+  } finally {
+    try {
+      await handle.close();
+    } finally {
+      await fs.unlink(lockPath);
+    }
+  }
+}
+
+// FINORA_P1_731C_USB_MUTATION_QUEUE
+// Serialize USB CRUD mutations within this Electron process.
+// Does not claim a cross-process or cross-device filesystem lock.
+let finoraUsbMutationTail: Promise<void> = Promise.resolve();
+
+function serializeFinoraUsbMutation<T>(
+  operation: () => Promise<T>,
+): Promise<T> {
+  const result = finoraUsbMutationTail.then(operation);
+  finoraUsbMutationTail = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+}
+
+function handleUsbSave(
+  ...args: Parameters<typeof handleUsbSaveUnlocked>
+): ReturnType<typeof handleUsbSaveUnlocked> {
+  return serializeFinoraUsbMutation(() =>
+    withFinoraUsbExclusiveMutationLock(() =>
+      handleUsbSaveUnlocked(...args)
+    )
+  );
+}
+
+function handleUsbUpdate(
+  ...args: Parameters<typeof handleUsbUpdateUnlocked>
+): ReturnType<typeof handleUsbUpdateUnlocked> {
+  return serializeFinoraUsbMutation(() =>
+    withFinoraUsbExclusiveMutationLock(() =>
+      handleUsbUpdateUnlocked(...args)
+    )
+  );
+}
+
+function handleUsbDelete(
+  ...args: Parameters<typeof handleUsbDeleteUnlocked>
+): ReturnType<typeof handleUsbDeleteUnlocked> {
+  return serializeFinoraUsbMutation(() =>
+    withFinoraUsbExclusiveMutationLock(() =>
+      handleUsbDeleteUnlocked(...args)
+    )
+  );
+}
+
+function handleUsbReplaceAll(
+  ...args: Parameters<typeof handleUsbReplaceAllUnlocked>
+): ReturnType<typeof handleUsbReplaceAllUnlocked> {
+  return serializeFinoraUsbMutation(() =>
+    withFinoraUsbExclusiveMutationLock(() =>
+      handleUsbReplaceAllUnlocked(...args)
+    )
+  );
+}
+
+function handleUsbClear(
+  ...args: Parameters<typeof handleUsbClearUnlocked>
+): ReturnType<typeof handleUsbClearUnlocked> {
+  return serializeFinoraUsbMutation(() =>
+    withFinoraUsbExclusiveMutationLock(() =>
+      handleUsbClearUnlocked(...args)
+    )
+  );
+}
 
 function registerUsbStorageHandlers(): void {
   if (handlersRegistered) {
@@ -4683,6 +4780,277 @@ app.whenReady().then(async () => {
         }
       });
     }
+    // FINORA_P1_725R_IDENTITY
+    // Read-only, server-scoped identity. Never accept renderer IDs.
+        // FINORA_P1_730J_NUMBERING_RESERVATION
+    // Only authenticated Electron Main can contact the server.
+    // Renderer supplies only a UUID retry key, never scope or URL.
+    ipcMain.handle(
+      "finora:account:numbering-reserve",
+      async (event, requestKey: unknown) => {
+        if (!event.senderFrame || !isTrustedRenderer(event.senderFrame)) {
+          return { success: false, errorCode: "UNAUTHORIZED_RENDERER" };
+        }
+        if (typeof requestKey !== "string" ||
+            !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestKey)) {
+          return { success: false, errorCode: "INVALID_RESERVATION_KEY" };
+        }
+        const authorization =
+          getFinoraSenderWalletAuthorization(event.sender);
+        if (!authorization) {
+          return { success: false, errorCode: "ACCOUNT_SESSION_REQUIRED" };
+        }
+        try {
+          const response = await fetch(
+            "https://api.finoraenterprise.com/owner/numbering/v2/customer-reserve",
+            {
+              method: "POST",
+              headers: {
+                Authorization: authorization,
+                "Idempotency-Key": requestKey,
+                "Content-Type": "application/json",
+              },
+              body: "{}",
+              cache: "no-store",
+              signal: AbortSignal.timeout(15000),
+            },
+          );
+          if (!response.ok) {
+            return {
+              success: false,
+              errorCode: response.status === 401
+                ? "UNAUTHORIZED"
+                : response.status === 503
+                  ? "NUMBERING_RESERVATION_UNAVAILABLE"
+                  : "NUMBERING_RESERVATION_REJECTED",
+            };
+          }
+          const payload: unknown = await response.json();
+          if (!payload || typeof payload !== "object" ||
+              Array.isArray(payload)) {
+            return { success: false, errorCode: "INVALID_RESERVATION_RESPONSE" };
+          }
+          const data = payload as Record<string, unknown>;
+          const reservation = data.reservation;
+          if (data.ok !== true ||
+              data.source !== "FINORA_POSTGRESQL_NUMBERING" ||
+              typeof data.replay !== "boolean" ||
+              !reservation || typeof reservation !== "object" ||
+              Array.isArray(reservation)) {
+            return { success: false, errorCode: "INVALID_RESERVATION_RESPONSE" };
+          }
+          const row = reservation as Record<string, unknown>;
+          if (!Number.isSafeInteger(row.customerNumber) ||
+              (row.customerNumber as number) < 1 ||
+              (row.customerNumber as number) > 999999 ||
+              typeof row.businessCode !== "string" ||
+              !row.businessCode.trim() ||
+              typeof row.branchCode !== "string" ||
+              !row.branchCode.trim()) {
+            return { success: false, errorCode: "INVALID_RESERVATION_FIELDS" };
+          }
+          return { success: true, data };
+        } catch {
+          return { success: false, errorCode: "NUMBERING_RESERVATION_UNAVAILABLE" };
+        }
+      },
+    );
+// FINORA_P1_729W_NUMBERING_READ
+    // The authenticated Wallet session and trusted renderer are
+    // enforced in Electron Main. No caller-supplied scope or URL.
+    ipcMain.handle(
+      "finora:account:numbering-read",
+      async (event) => {
+        if (
+          !event.senderFrame ||
+          !isTrustedRenderer(event.senderFrame)
+        ) {
+          return {
+            success: false,
+            errorCode: "UNAUTHORIZED_RENDERER",
+          };
+        }
+
+        const authorization =
+          getFinoraSenderWalletAuthorization(event.sender);
+
+        if (!authorization) {
+          return {
+            success: false,
+            errorCode: "ACCOUNT_SESSION_REQUIRED",
+          };
+        }
+
+        try {
+          const response = await fetch(
+            "https://api.finoraenterprise.com/owner/numbering/v2/customer-series",
+            {
+              method: "GET",
+              headers: { Authorization: authorization },
+              cache: "no-store",
+              signal: AbortSignal.timeout(15000),
+            },
+          );
+
+          if (!response.ok) {
+            return {
+              success: false,
+              errorCode:
+                response.status === 401
+                  ? "UNAUTHORIZED"
+                  : response.status === 409
+                    ? "NUMBERING_NOT_MIGRATED"
+                    : "SERVER_NUMBERING_UNAVAILABLE",
+            };
+          }
+
+          const payload: unknown = await response.json();
+
+          if (
+            !payload ||
+            typeof payload !== "object" ||
+            Array.isArray(payload)
+          ) {
+            return {
+              success: false,
+              errorCode: "INVALID_NUMBERING_RESPONSE",
+            };
+          }
+
+          const data = payload as Record<string, unknown>;
+
+          if (
+            data.ok !== true ||
+            data.source !== "FINORA_POSTGRESQL_NUMBERING" ||
+            !data.numbering ||
+            typeof data.numbering !== "object" ||
+            Array.isArray(data.numbering)
+          ) {
+            return {
+              success: false,
+              errorCode: "INVALID_NUMBERING_RESPONSE",
+            };
+          }
+
+          return {
+            success: true,
+            data,
+          };
+        } catch {
+          return {
+            success: false,
+            errorCode: "SERVER_NUMBERING_UNAVAILABLE",
+          };
+        }
+      },
+    );
+    ipcMain.handle(
+      "finora:account:business-identity",
+      async (event) => {
+        if (
+          !event.senderFrame ||
+          !isTrustedRenderer(event.senderFrame)
+        ) {
+          return {
+            success: false,
+            errorCode: "UNAUTHORIZED_RENDERER",
+          };
+        }
+
+        const authorization =
+          getFinoraSenderWalletAuthorization(event.sender);
+
+        if (!authorization) {
+          return {
+            success: false,
+            errorCode: "ACCOUNT_SESSION_REQUIRED",
+          };
+        }
+
+        try {
+          const response = await fetch(
+            "https://api.finoraenterprise.com/owner/wallet/business-identity",
+            {
+              method: "GET",
+              headers: { Authorization: authorization },
+              cache: "no-store",
+              signal: AbortSignal.timeout(15000),
+            },
+          );
+
+          if (!response.ok) {
+            return {
+              success: false,
+              errorCode: response.status === 401
+                ? "UNAUTHORIZED"
+                : "IDENTITY_UNAVAILABLE",
+            };
+          }
+
+          const payload: unknown = await response.json();
+
+          if (
+            !payload ||
+            typeof payload !== "object" ||
+            Array.isArray(payload)
+          ) {
+            return {
+              success: false,
+              errorCode: "INVALID_IDENTITY_RESPONSE",
+            };
+          }
+
+          const data = payload as Record<string, unknown>;
+          const identity = data.identity;
+
+          if (
+            data.ok !== true ||
+            data.source !== "FINORA_POSTGRESQL_BUSINESS_IDENTITY" ||
+            !identity ||
+            typeof identity !== "object" ||
+            Array.isArray(identity)
+          ) {
+            return {
+              success: false,
+              errorCode: "INVALID_IDENTITY_RESPONSE",
+            };
+          }
+
+          const row = identity as Record<string, unknown>;
+
+          if (
+            !["ownerId", "businessId", "branchId",
+              "businessName", "branchName"].every(
+                key => typeof row[key] === "string" &&
+                  (row[key] as string).trim().length > 0
+              ) ||
+            row.storageMode !== "USB"
+          ) {
+            return {
+              success: false,
+              errorCode: "INVALID_IDENTITY_SCOPE",
+            };
+          }
+
+          return {
+            success: true,
+            identity: {
+              ownerId: row.ownerId,
+              businessId: row.businessId,
+              branchId: row.branchId,
+              businessName: row.businessName,
+              branchName: row.branchName,
+              storageMode: "USB",
+            },
+          };
+        } catch {
+          return {
+            success: false,
+            errorCode: "IDENTITY_SERVER_UNAVAILABLE",
+          };
+        }
+      },
+    );
     // FINORA_P1_679I_ACCOUNT_PRICING
     // Read-only pricing from PostgreSQL-backed server authority.
     ipcMain.handle(
@@ -5570,7 +5938,20 @@ app.whenReady().then(async () => {
                     businessSession.sessionId,
                   );
 
-            if (!result.success || !current()) {
+            // FINORA_P1_726R_NETWORK_RETRY
+            // A temporary server outage must not revoke the local
+            // session handle. This request still FAILS CLOSED.
+            if (!result.success) {
+              if (
+                current() &&
+                result.errorCode === "SERVER_UNAVAILABLE"
+              ) {
+                return deny("SERVER_UNAVAILABLE");
+              }
+              invalidateFinoraServerReceptionSession(sender, sessionId);
+              return deny("SESSION_REVALIDATION_DENIED");
+            }
+            if (!current()) {
               invalidateFinoraServerReceptionSession(sender, sessionId);
               return deny("SESSION_REVALIDATION_DENIED");
             }
@@ -5582,6 +5963,19 @@ app.whenReady().then(async () => {
               await verifyFinoraServerBusinessSession(
                 businessSession.sessionId,
               );
+
+            // FINORA_P1_726T_SECOND_VERIFY_NETWORK
+            // Do not destroy the session for a temporary network
+            // outage. This validation request remains denied.
+            // Never treat a confirmed authorization rejection as
+            // a recoverable connectivity failure.
+            if (
+              !verified.success &&
+              verified.errorCode === "SERVER_UNAVAILABLE" &&
+              current()
+            ) {
+              return deny("SERVER_UNAVAILABLE");
+            }
 
             if (
               !verified.success ||

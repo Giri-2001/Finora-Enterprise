@@ -1419,7 +1419,7 @@ const FINORA_LOGIN_KICKOUT_STAGE =
   "FINORA_LOGIN_KICKOUT_STAGE";
 
 function AuthenticatedApplication() {
-  const { context, setContext, clearContext } = useBusinessContext();
+  const { context, setContext, setServerReceptionContext, clearContext } = useBusinessContext();
 
   const { theme } = useTheme();
   /*
@@ -1462,6 +1462,8 @@ function AuthenticatedApplication() {
     let active = true;
 
     async function establishContext(): Promise<void> {
+      // FINORA_P1_721X_STARTUP_TRACE
+      console.info("FINORA_DIAG APP_CONTEXT_EFFECT_START");
       // FINORA_P1_710I_USB_SESSION_PRESERVE
       // Never clear a newly verified USB session during post-login
       // context initialization. Main-process authorization remains required.
@@ -1498,6 +1500,7 @@ function AuthenticatedApplication() {
       // time to the main authority.
       // ======================================================
 
+      console.info("FINORA_DIAG SESSION_PRESENT");
       const currentSessionId =
         session.sessionId;
 
@@ -1721,12 +1724,20 @@ if (!validationResult) {
         return;
       }
 
+      console.info(
+        validationResult.success
+          ? "FINORA_DIAG SESSION_REVALIDATION_PASS"
+          : "FINORA_DIAG SESSION_REVALIDATION_FAIL"
+      );
       if (
         !validationResult.success
       ) {
         await rejectUnverifiedSession(
-          validationResult.error ??
-            "The persisted FINORA login session is no longer valid.",
+          "SESSION_VALIDATION_FAILED [" +
+            String(validationResult.errorCode ?? "UNKNOWN") +
+            "]. " +
+            (validationResult.error ??
+              "The persisted FINORA login session is no longer valid."),
         );
 
         return;
@@ -1745,6 +1756,17 @@ if (!validationResult) {
 
         return;
       }
+
+      // FINORA_P1_718J_VERIFIED_SERVER_RECEPTION
+      // A 64-hex ID alone never grants access. The existing
+      // Main validation above must have succeeded first.
+      const serverReceptionAuthorized =
+        /^[a-f0-9]{64}$/.test(session.sessionId) &&
+        validationResult.success === true &&
+        authoritativeSession.sessionId === session.sessionId &&
+        authoritativeSession.dataContext === "REAL" &&
+        authoritativeSession.storageMode === "USB" &&
+        authoritativeSession.role === "OWNER";
 
       // FINORA AUTHORITATIVE STORAGE RESTORE
       //
@@ -1863,6 +1885,11 @@ if (!validationResult) {
         session.demoId ===
           persistedRevalidatedSession.demoId;
 
+      console.info(
+        rendererSnapshotMatchesAuthority
+          ? "FINORA_DIAG SESSION_SNAPSHOT_MATCH"
+          : "FINORA_DIAG SESSION_SNAPSHOT_RECONCILE"
+      );
       if (
         !rendererSnapshotMatchesAuthority
       ) {
@@ -1981,6 +2008,7 @@ if (!validationResult) {
         );
       }
 
+      if (!serverReceptionAuthorized) {
       const accessAuthorityResult =
         await evaluateAuthoritativeFinoraBranchAccess(
           session.userId,
@@ -2076,6 +2104,18 @@ if (!validationResult) {
       // Legacy registration state is handled by access authority.
       // Server subscription eligibility remains enforced separately.
 
+      // Legacy registration storage entitlement stays mandatory.
+      const legacyStorageMode =
+        authoritativeSession.storageMode;
+
+      if (accessGrant.storageMode !== legacyStorageMode) {
+        await denyAuthenticatedBranchAccess(
+          "FINORA signed Branch Access storage entitlement mismatch."
+        );
+        return;
+      }
+      }
+
       // ======================================================
       // RESTORE AUTHENTICATED STORAGE MODE
       //
@@ -2143,13 +2183,12 @@ if (!validationResult) {
           : "LOCAL";
 
       if (
-        accessGrant.storageMode !==
-          entitlementStorageMode
+        serverReceptionAuthorized &&
+        authoritativeSession.storageMode !== entitlementStorageMode
       ) {
         await denyAuthenticatedBranchAccess(
-          `FINORA ${accessGrant.accessType} access is licensed for ${accessGrant.storageMode} storage, but the authenticated session requested ${entitlementStorageMode}.`,
+          "Server Reception storage authority mismatch."
         );
-
         return;
       }
       /*
@@ -2169,17 +2208,24 @@ if (!validationResult) {
        * storage mode matches the authenticated selected storage mode.
        */
 
+      console.info("FINORA_DIAG STORAGE_SELECTION_START");
       const storageResult =
         await storageManager.selectStorageMode(
           storageMode,
         );
+      console.info(
+        storageResult.success
+          ? "FINORA_DIAG STORAGE_SELECTION_PASS"
+          : "FINORA_DIAG STORAGE_SELECTION_FAIL"
+      );
 
       if (!active) {
         return;
       }
 
       if (!storageResult.success) {
-        setContextReady(false);
+        // Show the actual failure; never unlock Reception.
+        setContextReady(true);
 
         setContextError(
           storageResult.error ??
@@ -2197,7 +2243,9 @@ if (!validationResult) {
       // is available for this authenticated scope.
       // ======================================================
 
-      const businessProfileResult =
+      const businessProfileResult = serverReceptionAuthorized
+        ? null
+        :
         await loadFinoraPortableBusinessProfile(
           session.sessionId,
         );
@@ -2207,13 +2255,14 @@ if (!validationResult) {
       }
 
       if (
-        !businessProfileResult.success ||
-        !businessProfileResult.data
+        !serverReceptionAuthorized &&
+        (!businessProfileResult?.success ||
+        !businessProfileResult?.data)
       ) {
         setContextReady(false);
 
         setContextError(
-          businessProfileResult.error ??
+          businessProfileResult?.error ??
             "The signed FINORA Business Profile is required for this branch.",
         );
 
@@ -2221,7 +2270,7 @@ if (!validationResult) {
       }
 
       const businessProfile =
-        businessProfileResult.data;
+        businessProfileResult?.data;
 
       // ======================================================
       // LEGACY USB TENANT-SCOPE MIGRATION
@@ -2348,7 +2397,14 @@ if (!validationResult) {
       // ESTABLISH BUSINESS / DATA CONTEXT
       // ======================================================
 
-      const result = await setContext({
+      console.info("FINORA_DIAG BUSINESS_CONTEXT_START");
+      const result = serverReceptionAuthorized
+        ? await setServerReceptionContext({
+            ownerId: authoritativeSession.ownerId,
+            businessId: authoritativeSession.businessId,
+            branchId: authoritativeSession.branchId,
+          })
+        : await setContext({
         ownerId: session.ownerId,
 
         businessId: session.businessId,
@@ -2366,8 +2422,14 @@ if (!validationResult) {
         return;
       }
 
+      console.info(
+        result.success
+          ? "FINORA_DIAG BUSINESS_CONTEXT_PASS"
+          : "FINORA_DIAG BUSINESS_CONTEXT_FAIL"
+      );
       if (!result.success) {
-        setContextReady(false);
+        // Render the error screen, not an infinite spinner.
+        setContextReady(true);
 
         setContextError(
           result.error ?? "Unable to establish FINORA business context.",
@@ -2421,17 +2483,25 @@ if (!validationResult) {
 
       if (!active) return;
 
+console.info("FINORA_DIAG RECEPTION_CONTEXT_READY");
 setContextReady(true);
 
       setContextError(null);
     }
 
-    void establishContext();
+    void establishContext().catch(() => {
+      console.error("FINORA_DIAG CONTEXT_UNHANDLED_FAILURE");
+      if (active) {
+        setContextError("Secure business context initialization failed.");
+        setContextReady(true);
+      }
+    });
 
     return () => {
       active = false;
     };
-  }, [session, setContext, clearContext]);
+  // FINORA_P1_721Z2_RECONCILIATION
+  }, [session, setContext, setServerReceptionContext, clearContext]);
 
   // ==========================================================
   // LOGIN

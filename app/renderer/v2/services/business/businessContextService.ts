@@ -343,6 +343,9 @@ export async function setFinoraServerReceptionBusinessContext(
     };
   }
 
+  // FINORA_P1_721W - No identities, credentials, tokens or USB contents logged.
+  console.info("FINORA_DIAG CONTEXT_SCOPE_VALIDATED");
+  console.info("FINORA_DIAG STORAGE_CONTEXT_START");
   const result = await storageManager.setDataContext(
     DataContext.REAL,
     {
@@ -352,6 +355,11 @@ export async function setFinoraServerReceptionBusinessContext(
     },
   );
 
+  console.info(
+    result.success
+      ? "FINORA_DIAG STORAGE_CONTEXT_PASS"
+      : "FINORA_DIAG STORAGE_CONTEXT_FAIL"
+  );
   if (!result.success) return result;
 
   activeBusinessContext = {
@@ -361,6 +369,7 @@ export async function setFinoraServerReceptionBusinessContext(
     dataContext: "REAL",
   };
 
+  console.info("FINORA_DIAG BUSINESS_CONTEXT_READY");
   return { success: true };
 }
 // ============================================================

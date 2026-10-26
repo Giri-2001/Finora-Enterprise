@@ -11726,6 +11726,50 @@ private boolean isValidEntitlement(
 
 
     // FINORA_P1_695G_SESSION_LIFECYCLE
+    // FINORA_P1_720X2_NATIVE_AUTHORITY_BRIDGE
+    @PluginMethod
+    public void verifyAndroidBusinessAuthority(PluginCall call) {
+        getBridge().execute(() -> {
+            try {
+                call.resolve(
+                    com.getcapacitor.JSObject.fromJSONObject(
+                        FinoraNativeWalletSession
+                            .verifiedBusinessAuthority()
+                    )
+                );
+            } catch (Exception ignored) {
+                call.reject("BUSINESS_AUTHORITY_UNAVAILABLE");
+            }
+        });
+    }
+    // FINORA_P1_720Z2_CAPACITOR_BRIDGE
+    @PluginMethod
+    public void issueAndroidReception(PluginCall call) {
+        getBridge().execute(() -> {
+            try {
+                call.resolve(com.getcapacitor.JSObject.fromJSONObject(
+                    FinoraNativeWalletSession.issueAndroidReception()
+                ));
+            } catch (Exception ignored) {
+                call.reject("RECEPTION_ISSUANCE_UNAVAILABLE");
+            }
+        });
+    }
+
+    @PluginMethod
+    public void validateAndroidReception(PluginCall call) {
+        final String handle = call.getString("sessionId");
+
+        getBridge().execute(() -> {
+            try {
+                call.resolve(com.getcapacitor.JSObject.fromJSONObject(
+                    FinoraNativeWalletSession.validateAndroidReception(handle)
+                ));
+            } catch (Exception ignored) {
+                call.reject("RECEPTION_VALIDATION_UNAVAILABLE");
+            }
+        });
+    }
     @PluginMethod
     public void getServerWalletBalance(PluginCall call) {
         getBridge().execute(() -> {
@@ -11744,8 +11788,89 @@ private boolean isValidEntitlement(
 
     // Local token clearing only.
     // Server-side token revocation remains a separate requirement.
+    // FINORA_P1_723H_NATIVE_PLUGIN_READS
+    // FINORA_P1_725M_PLUGIN
     @PluginMethod
-    public void clearServerWalletSession(PluginCall call) {
+    public void getServerBusinessIdentity(PluginCall call) {
+        getBridge().execute(() -> {
+            try {
+                call.resolve(com.getcapacitor.JSObject.fromJSONObject(
+                    FinoraNativeWalletSession.verifiedBusinessIdentity()
+                ));
+            } catch (Exception ignored) {
+                call.reject("BUSINESS_IDENTITY_READ_FAILED");
+            }
+        });
+    }
+    // FINORA_P1_729Z_NUMBERING_PLUGIN
+    @PluginMethod
+    public void getServerCustomerNumbering(PluginCall call) {
+        getBridge().execute(() -> {
+            try {
+                call.resolve(com.getcapacitor.JSObject.fromJSONObject(
+                    FinoraNativeWalletSession.verifiedCustomerNumbering()
+                ));
+            } catch (Exception ignored) {
+                call.reject("NUMBERING_READ_FAILED");
+            }
+        });
+    }
+
+    // FINORA_P1_730M_RESERVATION_PLUGIN
+    @PluginMethod
+    public void reserveServerCustomerNumber(PluginCall call) {
+        final String requestKey = call.getString("requestKey");
+        getBridge().execute(() -> {
+            try {
+                call.resolve(com.getcapacitor.JSObject.fromJSONObject(
+                    FinoraNativeWalletSession.reserveCustomerNumber(requestKey)
+                ));
+            } catch (Exception ignored) {
+                call.reject("NUMBERING_RESERVATION_FAILED");
+            }
+        });
+    }
+
+            @PluginMethod
+    public void getServerWalletPricing(PluginCall call) {
+        getBridge().execute(() -> {
+            try {
+                call.resolve(com.getcapacitor.JSObject.fromJSONObject(
+                    FinoraNativeWalletSession.verifiedPricing()
+                ));
+            } catch (Exception ignored) {
+                call.reject("PRICING_READ_FAILED");
+            }
+        });
+    }
+
+    @PluginMethod
+    public void getServerWalletTransactions(PluginCall call) {
+        getBridge().execute(() -> {
+            try {
+                call.resolve(com.getcapacitor.JSObject.fromJSONObject(
+                    FinoraNativeWalletSession.verifiedTransactions()
+                ));
+            } catch (Exception ignored) {
+                call.reject("TRANSACTIONS_READ_FAILED");
+            }
+        });
+    }
+
+    @PluginMethod
+    public void getServerWalletRecharges(PluginCall call) {
+        getBridge().execute(() -> {
+            try {
+                call.resolve(com.getcapacitor.JSObject.fromJSONObject(
+                    FinoraNativeWalletSession.verifiedRecharges()
+                ));
+            } catch (Exception ignored) {
+                call.reject("RECHARGES_READ_FAILED");
+            }
+        });
+    }
+
+    @PluginMethod    public void clearServerWalletSession(PluginCall call) {
         // P1-695H: Run server revocation off the UI thread.
         getBridge().execute(() -> {
             try {

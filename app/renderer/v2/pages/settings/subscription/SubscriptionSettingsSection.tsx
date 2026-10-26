@@ -1,740 +1,288 @@
-import { formatFinoraDateTime } from "../../../../shared/finoraDateTimeDisplay";
-// ============================================================
-// FINORA ENTERPRISE OS
-//
-// ENTERPRISE SETTINGS
-// SUBSCRIPTION SETTINGS SECTION
-//
-// RESPONSIBILITY:
-//
-// - Display authoritative active-branch subscription state
-// - Display signed FINORA Branch identity
-// - Display registration / demo validity
-// - Display registration payment metadata when available
-//
-// IMPORTANT:
-//
-// - READ ONLY.
-// - No persistence.
-// - No subscription mutation.
-// - No direct Control Store access.
-// - No local expiry authority.
-// - No inline styles.
-// - No theme values.
-// - No breakpoint values.
-//
-// VERSION : 1.0
-// STATUS  : Production Foundation
-// ============================================================
+/**
+ * FINORA_P1_725X_LIVE_SUBSCRIPTION_SETTINGS
+ *
+ * Authoritative source: PostgreSQL Owner Wallet subscription.
+ * Android uses native authenticated server session.
+ * Windows uses trusted Electron Main IPC.
+ *
+ * Read-only. Never changes registration, billing or access grants.
+ */
 
-import {
-  useEffect,
-  useState,
-} from "react";
-
-import {
-  evaluateAuthoritativeFinoraBranchAccess,
-  loadFinoraBranchAccessRenewalHistory,
-  loadFinoraBusinessProfile,
-} from "../../../services/activation/activationService";
-
-import type {
-  FinoraAuthoritativeBranchAccessDecision,
-  FinoraBranchAccessRenewalHistoryRecord,
-} from "../../../services/activation/activationControlBridge";
-
-import type {
-  FinoraProvisionedBusinessProfileV1,
-} from "../../../types/business/finoraBusinessProfileControl.types";
+import { useEffect, useState } from "react";
 
 import {
   getSession,
 } from "../../../store/authStore";
 
+import {
+  getBusinessContext,
+} from "../../../services/business/businessContextService";
+
+import {
+  isFinoraAndroidWallet,
+} from "../../../services/wallet/finoraAndroidWalletBridge";
+
+import {
+  getFinoraAndroidPricing,
+} from "../../../services/wallet/finoraAndroidWalletReads";
+
+import {
+  getFinoraServerWalletBridge,
+} from "../../../services/wallet/finoraServerWalletBridge";
+
+import type {
+  ServerWalletLiveSubscription,
+} from "../../../services/wallet/finoraServerWalletBridge";
+
+import {
+  loadFinoraServerSettingsIdentity,
+} from "../../../services/business/finoraServerSettingsIdentity";
+
+import {
+  formatFinoraDateTime,
+} from "../../../../shared/finoraDateTimeDisplay";
+
 import SettingsFeedback from "../components/SettingsFeedback";
 
-const REFRESH_INTERVAL_MS =
-  60_000;
+type LiveSubscription = {
+  branchName: string;
+  branchId: string;
+  plan: ServerWalletLiveSubscription | null;
+};
 
-const EXPIRING_SOON_MS =
-  7 * 24 * 60 * 60 * 1000;
-
-function pad2(value: number): string {
-  return String(value).padStart(2, "0");
-}
-
-function formatDateTime(value: string | null | undefined): string {
-  // FINORA_P566EH_FORMAT: Presentation only; stored timestamps unchanged.
-  if (!value) {
-    return "Not recorded";
-  }
-
+const displayDate = (value: string): string => {
   const formatted = formatFinoraDateTime(value);
-
-  return formatted === "\u2014"
-    ? "Unavailable"
-    : formatted;
-}
-
-function formatMoney(
-  amount: number | null | undefined,
-  currency: string | null | undefined,
-): string {
-  if (
-    typeof amount !== "number" ||
-    !Number.isFinite(amount) ||
-    typeof currency !== "string" ||
-    currency.trim().length === 0
-  ) {
-    return "Not recorded";
-  }
-
-  try {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: currency.trim(),
-      maximumFractionDigits: 2,
-    }).format(amount);
-  } catch {
-    return "Not recorded";
-  }
-}
-
-function resolveRemainingLabel(
-  decision: FinoraAuthoritativeBranchAccessDecision,
-): string {
-  const grant = decision.grant;
-
-  if (!grant) {
-    return "Unavailable";
-  }
-
-  // Presentation only. Never changes subscription authority.
-  const observedAt = new Date(decision.observedAt).getTime();
-  const validUntil = new Date(grant.validity.validUntil).getTime();
-
-  if (!Number.isFinite(observedAt) ||
-      !Number.isFinite(validUntil)) {
-    return "Unavailable";
-  }
-
-  const difference = validUntil - observedAt;
-  const expired = difference <= 0;
-
-  // Before expiry round upward so 10 seconds does not show 0m.
-  // After expiry show completed elapsed minutes.
-  const totalMinutes = expired
-    ? Math.floor(Math.abs(difference) / 60000)
-    : Math.ceil(difference / 60000);
-
-  const days = Math.floor(totalMinutes / 1440);
-  const hours = Math.floor((totalMinutes % 1440) / 60);
-  const minutes = totalMinutes % 60;
-
-  let duration: string;
-
-  if (days > 0) {
-    duration = `${days}d`;
-    if (hours > 0) duration += ` ${hours}h`;
-    if (minutes > 0) duration += ` ${minutes}m`;
-  } else if (hours > 0) {
-    duration = `${hours}h`;
-    if (minutes > 0) duration += ` ${minutes}m`;
-  } else {
-    duration = `${minutes}m`;
-  }
-
-  return expired
-    ? `+${duration} - Expired`
-    : `-${duration}`;
-}
-
-function resolveStatus(
-  decision:
-    FinoraAuthoritativeBranchAccessDecision,
-): {
-  label: string;
-  tone:
-    | "active"
-    | "warning"
-    | "danger"
-    | "info";
-} {
-  if (
-    decision.state ===
-    "ACTIVE" &&
-    decision.grant
-  ) {
-    const remaining =
-      new Date(
-        decision.grant.validity.validUntil,
-      ).getTime() -
-      new Date(
-        decision.observedAt,
-      ).getTime();
-
-    if (
-      Number.isFinite(remaining) &&
-      remaining <=
-        EXPIRING_SOON_MS
-    ) {
-      return {
-        label:
-          "Expiring Soon",
-
-        tone:
-          "warning",
-      };
-    }
-
-    return {
-      label:
-        "Active",
-
-      tone:
-        "active",
-    };
-  }
-
-  if (
-    decision.state ===
-    "EXPIRED"
-  ) {
-    return {
-      label:
-        "Expired",
-
-      tone:
-        "danger",
-    };
-  }
-
-  if (
-    decision.state ===
-      "SUSPENDED" ||
-    decision.state ===
-      "REVOKED" ||
-    decision.state ===
-      "INVALID"
-  ) {
-    return {
-      label:
-        decision.state
-          .replaceAll("_", " "),
-
-      tone:
-        "danger",
-    };
-  }
-
-  return {
-    label:
-      decision.state
-        .replaceAll("_", " "),
-
-    tone:
-      "info",
-  };
-}
+  return formatted === "\u2014" ? "Unavailable" : formatted;
+};
 
 export default function SubscriptionSettingsSection() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<LiveSubscription | null>(null);
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
+  useEffect(() => {
+    let active = true;
 
-  const [
-    error,
-    setError,
-  ] = useState<
-    string | null
-  >(null);
-
-  const [
-    decision,
-    setDecision,
-  ] = useState<
-    FinoraAuthoritativeBranchAccessDecision | null
-  >(null);
-
-  const [
-    profile,
-    setProfile,
-  ] = useState<
-    FinoraProvisionedBusinessProfileV1 | null
-  >(null);
-
-  const [
-    renewalHistory,
-    setRenewalHistory,
-  ] = useState<
-    FinoraBranchAccessRenewalHistoryRecord[]
-  >([]);
-
-  useEffect(
-    () => {
-
-      let active =
-        true;
-
-      async function load():
-        Promise<void> {
-
-        const session =
-          getSession();
-
-        if (
-          !session ||
-          !session.userId ||
-          !session.ownerId ||
-          !session.businessId ||
-          !session.branchId
-        ) {
-          if (active) {
-            setError(
-              "No complete active FINORA branch session is available.",
-            );
-
-            setLoading(false);
-          }
-
-          return;
-        }
-
-        const [
-          accessResult,
-          profileResult,
-          renewalHistoryResult,
-        ] =
-          await Promise.all([
-            evaluateAuthoritativeFinoraBranchAccess(
-              session.userId,
-              session.ownerId,
-              session.businessId,
-              session.branchId,
-            ),
-
-            loadFinoraBusinessProfile(
-              session.ownerId,
-              session.businessId,
-              session.branchId,
-            ),
-
-            loadFinoraBranchAccessRenewalHistory(
-              session.userId,
-              session.ownerId,
-              session.businessId,
-              session.branchId,
-            ),
-          ]);
-
-        if (!active) {
-          return;
-        }
-
-        if (
-          !accessResult.success ||
-          !accessResult.data
-        ) {
-          setError(
-            accessResult.error ??
-            "Unable to load the authoritative FINORA subscription state.",
-          );
-
-          setLoading(false);
-
-          return;
-        }
-
-        if (
-          !profileResult.success ||
-          !profileResult.data
-        ) {
-          setError(
-            profileResult.error ??
-            "Unable to load the signed FINORA Branch Profile.",
-          );
-
-          setLoading(false);
-
-          return;
-        }
-
-        if (
-          !renewalHistoryResult.success ||
-          !renewalHistoryResult.data
-        ) {
-          setError(
-            renewalHistoryResult.error ??
-            "Unable to load FINORA subscription renewal history.",
-          );
-
-          setLoading(false);
-
-          return;
-        }
-
-        setDecision(
-          accessResult.data,
-        );
-
-        setProfile(
-          profileResult.data,
-        );
-
-        setRenewalHistory(
-          renewalHistoryResult.data,
-        );
-
+    async function load(): Promise<void> {
+      if (active) {
+        setLoading(true);
         setError(null);
-
-        setLoading(false);
+        setData(null);
       }
 
-      void load();
+      const session = getSession();
+      const context = getBusinessContext();
 
-      return () => {
-        active =
-          false;
-      };
-    },
-    [],
-  );
+      if (
+        !session ||
+        !context ||
+        !session.ownerId ||
+        !session.businessId ||
+        !session.branchId ||
+        session.ownerId !== context.ownerId ||
+        session.businessId !== context.businessId ||
+        session.branchId !== context.branchId
+      ) {
+        if (active) {
+          setError("Verified FINORA branch session is unavailable.");
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const scope = {
+          ownerId: session.ownerId,
+          businessId: session.businessId,
+          branchId: session.branchId,
+        };
+
+        const [identity, pricing] = await Promise.all([
+          loadFinoraServerSettingsIdentity(scope),
+          isFinoraAndroidWallet()
+            ? getFinoraAndroidPricing()
+            : (async () => {
+                const bridge = getFinoraServerWalletBridge();
+                return bridge
+                  ? bridge.pricing()
+                  : {
+                      success: false as const,
+                      errorCode: "SERVER_WALLET_BRIDGE_UNAVAILABLE",
+                    };
+              })(),
+        ]);
+
+        if (!active) return;
+
+        if (!identity.success) {
+          setError("Server Business identity unavailable: " + identity.errorCode);
+          setLoading(false);
+          return;
+        }
+
+        if (
+          !pricing.success ||
+          pricing.data.source !== "FINORA_POSTGRESQL_PRICING" ||
+          pricing.data.branchId !== scope.branchId
+        ) {
+          setError(
+            "Live PostgreSQL subscription unavailable or branch mismatch."
+          );
+          setLoading(false);
+          return;
+        }
+
+        const current = pricing.data.currentSubscription;
+
+        if (
+          current &&
+          (
+            !Number.isFinite(Date.parse(current.startsAt)) ||
+            !Number.isFinite(Date.parse(current.expiresAt)) ||
+            !Number.isFinite(Date.parse(current.serverNow))
+          )
+        ) {
+          setError("Invalid subscription dates returned by server.");
+          setLoading(false);
+          return;
+        }
+
+        setData({
+          branchName: identity.data.branchName,
+          branchId: identity.data.branchId,
+          plan: current,
+        });
+        setLoading(false);
+      } catch {
+        if (active) {
+          setError("Unable to verify the live server subscription.");
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   if (loading) {
     return (
       <section className="finora-settings-section finora-settings-subscription-section">
         <SettingsFeedback
           kind="info"
-          title="Loading Subscription"
-          message="FINORA is loading the authoritative branch subscription state."
+          title="Loading Server Subscription"
+          message="Verifying the active subscription from FINORA PostgreSQL."
         />
       </section>
     );
   }
 
-  if (
-    error ||
-    !decision ||
-    !profile
-  ) {
+  if (error || !data) {
     return (
       <section className="finora-settings-section finora-settings-subscription-section">
         <SettingsFeedback
           kind="danger"
-          title="Subscription Unavailable"
-          message={
-            error ??
-            "The active branch subscription could not be loaded."
-          }
+          title="Server Subscription Unavailable"
+          message={error ?? "Subscription verification failed."}
         />
       </section>
     );
   }
 
-  const grant =
-    decision.grant;
+  const plan = data.plan;
+  const status = plan?.status ?? "NO_ACTIVE_SUBSCRIPTION";
 
-  if (!grant) {
-    return (
-      <section className="finora-settings-section finora-settings-subscription-section">
-        <SettingsFeedback
-          kind="warning"
-          title="No Subscription Grant"
-          message={decision.reason}
-        />
-      </section>
-    );
-  }
-
-  const status =
-    resolveStatus(
-      decision,
-    );
+  const tone =
+    status === "ACTIVE" ? "active" :
+    status === "EXPIRED" ? "danger" : "warning";
 
   return (
     <section className="finora-settings-section finora-settings-subscription-section">
       <div className="finora-settings-form__section">
-
         <div className="finora-settings-form__section-header">
           <div className="finora-settings-form__section-heading">
             <h2 className="finora-settings-form__section-title">
-              Current Subscription
+              Current Server Subscription
             </h2>
-
             <p className="finora-settings-form__section-subtitle">
-              Authoritative registration and validity details for the active FINORA branch.
+              Verified PostgreSQL subscription for the active FINORA branch.
             </p>
           </div>
 
-          <span className={`finora-settings-subscription__status finora-settings-subscription__status--${status.tone}`}>
-            {status.label}
+          <span className={`finora-settings-subscription__status finora-settings-subscription__status--${tone}`}>
+            {status.replaceAll("_", " ")}
           </span>
         </div>
 
         <div className="finora-settings-form__grid finora-settings-subscription__grid">
+          <div className="finora-settings-subscription__field">
+            <span className="finora-settings-subscription__label">Branch Name</span>
+            <strong className="finora-settings-subscription__value">{data.branchName}</strong>
+          </div>
 
           <div className="finora-settings-subscription__field">
-            <span className="finora-settings-subscription__label">
-              Branch Name
-            </span>
+            <span className="finora-settings-subscription__label">Branch ID</span>
+            <strong className="finora-settings-subscription__value">{data.branchId}</strong>
+          </div>
+
+          <div className="finora-settings-subscription__field">
+            <span className="finora-settings-subscription__label">Selected Plan</span>
             <strong className="finora-settings-subscription__value">
-              {profile.branchName}
+              {plan
+                ? (() => {
+                    const match = /^SUBSCRIPTION_(1|3|6|12)_MONTH$/.exec(plan.planCode);
+                    if (!match) return "Unknown Plan";
+                    const months = Number(match[1]);
+                    return `${months} ${months === 1 ? "Month" : "Months"} Plan`;
+                  })()
+                : "No subscription"}
             </strong>
           </div>
 
           <div className="finora-settings-subscription__field">
-            <span className="finora-settings-subscription__label">
-              Branch ID
-            </span>
+            <span className="finora-settings-subscription__label">Subscription Amount</span>
             <strong className="finora-settings-subscription__value">
-              {grant.branchId}
+              {plan ? `₹${plan.amountInr}` : "Not available"}
             </strong>
           </div>
 
           <div className="finora-settings-subscription__field">
-            <span className="finora-settings-subscription__label">
-              Access Type
-            </span>
+            <span className="finora-settings-subscription__label">Activated</span>
             <strong className="finora-settings-subscription__value">
-              {grant.accessType}
+              {plan ? displayDate(plan.startsAt) : "Not available"}
             </strong>
           </div>
 
           <div className="finora-settings-subscription__field">
-            <span className="finora-settings-subscription__label">
-              Storage Mode
-            </span>
+            <span className="finora-settings-subscription__label">Expires</span>
             <strong className="finora-settings-subscription__value">
-              {grant.storageMode}
+              {plan ? displayDate(plan.expiresAt) : "Not available"}
             </strong>
           </div>
 
           <div className="finora-settings-subscription__field">
-            <span className="finora-settings-subscription__label">
-              Activated
-            </span>
+            <span className="finora-settings-subscription__label">Remaining Days</span>
             <strong className="finora-settings-subscription__value">
-              {formatDateTime(
-                grant.validity.validFrom,
-              )}
+              {plan ? plan.daysRemaining : "Not available"}
             </strong>
           </div>
 
           <div className="finora-settings-subscription__field">
-            <span className="finora-settings-subscription__label">
-              Expires
-            </span>
+            <span className="finora-settings-subscription__label">Auto Renewal</span>
             <strong className="finora-settings-subscription__value">
-              {formatDateTime(
-                grant.validity.validUntil,
-              )}
+              {plan ? (plan.autoRenew ? "Enabled" : "Disabled") : "Not available"}
             </strong>
           </div>
-
-          <div className="finora-settings-subscription__field">
-            <span className="finora-settings-subscription__label">
-              Remaining
-            </span>
-            <strong className="finora-settings-subscription__value">
-              {resolveRemainingLabel(
-                decision,
-              )}
-            </strong>
-          </div>
-
-          <div className="finora-settings-subscription__field">
-            <span className="finora-settings-subscription__label">
-              Runtime State
-            </span>
-            <strong className="finora-settings-subscription__value">
-              {decision.state}
-            </strong>
-          </div>
-
-          {grant.accessType === "REGISTERED" ? (
-            <>
-              <div className="finora-settings-subscription__field">
-                <span className="finora-settings-subscription__label">
-                  Subscription Amount
-                </span>
-                <strong className="finora-settings-subscription__value">
-                  {formatMoney(
-                    grant.registrationPayment?.amount,
-                    grant.registrationPayment?.currency,
-                  )}
-                </strong>
-              </div>
-
-              <div className="finora-settings-subscription__field">
-                <span className="finora-settings-subscription__label">
-                  Payment Mode
-                </span>
-                <strong className="finora-settings-subscription__value">
-                  {grant.registrationPayment?.paymentMode.replaceAll("_", " ") ?? "Not recorded"}
-                </strong>
-              </div>
-
-              <div className="finora-settings-subscription__field">
-                <span className="finora-settings-subscription__label">
-                  Paid At
-                </span>
-                <strong className="finora-settings-subscription__value">
-                  {formatDateTime(
-                    grant.registrationPayment?.paidAt,
-                  )}
-                </strong>
-              </div>
-
-              <div className="finora-settings-subscription__field">
-                <span className="finora-settings-subscription__label">
-                  Registration Cycle
-                </span>
-                <strong className="finora-settings-subscription__value">
-                  {grant.registrationCycle ?? "Not recorded"}
-                </strong>
-              </div>
-            </>
-          ) : (
-            <div className="finora-settings-subscription__field">
-              <span className="finora-settings-subscription__label">
-                Demo ID
-              </span>
-              <strong className="finora-settings-subscription__value">
-                {grant.demoId}
-              </strong>
-            </div>
-          )}
         </div>
 
         <p className="finora-settings-subscription__authority">
-          Status observed at {formatDateTime(decision.observedAt)} using FINORA authoritative system time.
+          Source: FINORA PostgreSQL Subscription.
+          {plan ? ` Server observed at ${displayDate(plan.serverNow)}.` : ""}
         </p>
-      </div>
-
-      <div className="finora-settings-form__section finora-settings-subscription__history-section">
-        <div className="finora-settings-form__section-header">
-          <div className="finora-settings-form__section-heading">
-            <h2 className="finora-settings-form__section-title">
-              Renewal History
-            </h2>
-
-            <p className="finora-settings-form__section-subtitle">
-              Append-only verified subscription renewals accepted for this FINORA branch.
-            </p>
-          </div>
-        </div>
-
-        {renewalHistory.length === 0 ? (
-          <p className="finora-settings-subscription__empty-history">
-            No verified renewal has been applied yet.
-          </p>
-        ) : (
-          <div className="finora-settings-subscription__history-list">
-            {renewalHistory.map(
-              (record) => {
-                const historyGrant =
-                  record.accessGrant;
-
-                if (
-                  historyGrant.accessType !==
-                    "REGISTERED"
-                ) {
-                  return null;
-                }
-
-                const payment =
-                  historyGrant.registrationPayment;
-
-                return (
-                  <article
-                    className="finora-settings-subscription__history-item"
-                    key={record.packageId}
-                  >
-                    <div className="finora-settings-subscription__history-heading">
-                      <strong className="finora-settings-subscription__history-cycle">
-                        Cycle {historyGrant.registrationCycle ?? "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â"}
-                      </strong>
-
-                      <span className="finora-settings-subscription__history-applied">
-                        Applied {formatDateTime(record.appliedAt)}
-                      </span>
-                    </div>
-
-                    <div className="finora-settings-form__grid finora-settings-subscription__grid">
-                      <div className="finora-settings-subscription__field">
-                        <span className="finora-settings-subscription__label">
-                          Activated
-                        </span>
-                        <strong className="finora-settings-subscription__value">
-                          {formatDateTime(historyGrant.validity.validFrom)}
-                        </strong>
-                      </div>
-
-                      <div className="finora-settings-subscription__field">
-                        <span className="finora-settings-subscription__label">
-                          Expires
-                        </span>
-                        <strong className="finora-settings-subscription__value">
-                          {formatDateTime(historyGrant.validity.validUntil)}
-                        </strong>
-                      </div>
-
-                      {payment ? (
-                        <>
-                          <div className="finora-settings-subscription__field">
-                            <span className="finora-settings-subscription__label">
-                              Subscription Amount
-                            </span>
-                            <strong className="finora-settings-subscription__value">
-                              {formatMoney(
-                                payment.amount,
-                                payment.currency,
-                              )}
-                            </strong>
-                          </div>
-
-                          <div className="finora-settings-subscription__field">
-                            <span className="finora-settings-subscription__label">
-                              Payment Mode
-                            </span>
-                            <strong className="finora-settings-subscription__value">
-                              {payment.paymentMode.replaceAll("_", " ")}
-                            </strong>
-                          </div>
-
-                          <div className="finora-settings-subscription__field">
-                            <span className="finora-settings-subscription__label">
-                              Paid At
-                            </span>
-                            <strong className="finora-settings-subscription__value">
-                              {formatDateTime(payment.paidAt)}
-                            </strong>
-                          </div>
-                        </>
-                      ) : null}
-
-                      <div className="finora-settings-subscription__field">
-                        <span className="finora-settings-subscription__label">
-                          Sequence
-                        </span>
-                        <strong className="finora-settings-subscription__value">
-                          {record.sequence}
-                        </strong>
-                      </div>
-                    </div>
-                  </article>
-                );
-              },
-            )}
-          </div>
-        )}
       </div>
     </section>
   );
 }
-
-// ============================================================
-// END
-// ============================================================

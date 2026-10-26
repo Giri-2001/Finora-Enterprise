@@ -90,7 +90,7 @@ public final class FinoraAccountPasswordLoginClient {
                 return failure("SERVER_REJECTED_LOGIN");
             }
 
-            if (!response.optBoolean("success", false)
+            if (!response.optBoolean("ok", false)
                     || !"ACCOUNT_WALLET_ONLY".equals(
                         response.optString("sessionType", ""))
                     || response.optBoolean("businessDataAccess", true)

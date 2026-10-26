@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // ENTERPRISE SETTINGS
@@ -33,14 +33,18 @@ import {
   useState,
 } from "react";
 
+// FINORA_P1_725V2_SERVER_SETTINGS_IDENTITY
 import type {
-  FinoraProvisionedBusinessProfileV1,
-} from "../../../types/business/finoraBusinessProfileControl.types";
+  FinoraServerSettingsIdentity,
+} from "../../../services/business/finoraServerSettingsIdentity";
 
 import type {
   BusinessSettings,
 } from "../../../types/business/business.settings.types";
 
+import {
+  loadFinoraServerSettingsIdentity,
+} from "../../../services/business/finoraServerSettingsIdentity";
 import {
   getBusinessContext,
 } from "../../../services/business/businessContextService";
@@ -80,7 +84,7 @@ export default function BusinessSettingsSection() {
     identity,
     setIdentity,
   ] = useState<
-      FinoraProvisionedBusinessProfileV1 | null
+      FinoraServerSettingsIdentity | null
     >(null);
 
   const [
@@ -162,61 +166,33 @@ export default function BusinessSettingsSection() {
           return;
         }
 
-        const profile =
-          context.businessProfile;
+                // FINORA_P1_725V2
+        // Business/Branch identity is read from PostgreSQL.
+        // Never generate a fake signed profile.
+        const identityResult =
+          await loadFinoraServerSettingsIdentity({
+            ownerId: context.ownerId,
+            businessId: context.businessId,
+            branchId: context.branchId,
+          });
 
-        if (!profile) {
-
-          if (active) {
-
-            setFeedback({
-              kind:
-                "danger",
-
-              title:
-                "Signed Business Profile Unavailable",
-
-              message:
-                "The authoritative FINORA Business Profile is unavailable for this workspace.",
-            });
-
-            setLoading(
-              false,
-            );
-          }
-
+        if (!active) {
           return;
         }
 
-        if (
-          profile.ownerId !==
-            context.ownerId ||
-          profile.businessId !==
-            context.businessId ||
-          profile.branchId !==
-            context.branchId
-        ) {
-
-          if (active) {
-
-            setFeedback({
-              kind:
-                "danger",
-
-              title:
-                "Business Profile Mismatch",
-
-              message:
-                "The signed FINORA Business Profile does not match the active Business Context.",
-            });
-
-            setLoading(
-              false,
-            );
-          }
-
+        if (!identityResult.success) {
+          setFeedback({
+            kind: "danger",
+            title: "Server Business Identity Unavailable",
+            message:
+              "FINORA could not verify the active Business/Branch identity. " +
+              identityResult.errorCode,
+          });
+          setLoading(false);
           return;
         }
+
+        const profile = identityResult.data;
 
         const settingsResult =
           await businessSettingsService.load(

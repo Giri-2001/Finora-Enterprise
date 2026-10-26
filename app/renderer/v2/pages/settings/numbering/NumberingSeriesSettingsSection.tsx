@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // ENTERPRISE SETTINGS
@@ -45,6 +45,10 @@ import {
   previewNextCustomerNumber,
 } from "../../../services/numbering/customerSeriesService";
 
+// FINORA_P1_730D_SERVER_SETTINGS_READ
+import { resolveFinoraNumberingScope } from "../../../services/numbering/finoraNumberingScopeService";
+import { readFinoraServerNumbering } from "../../../services/numbering/finoraServerNumberingRead";
+import type { ServerNumberingSnapshot } from "../../../services/numbering/finoraServerNumberingRead";
 import SettingsFeedback from "../components/SettingsFeedback";
 
 import type {
@@ -63,6 +67,49 @@ import {
 // ============================================================
 
 export default function NumberingSeriesSettingsSection() {
+
+  // FINORA_P1_730D_SERVER_SETTINGS_READ
+  const [serverNumbering, setServerNumbering] = useState<ServerNumberingSnapshot | null>(null);
+  const [serverNumberingLoading, setServerNumberingLoading] = useState(true);
+  const [serverNumberingError, setServerNumberingError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    async function loadServerNumbering(): Promise<void> {
+      try {
+        const scope = await resolveFinoraNumberingScope();
+        if (!active) return;
+        if (!scope.success || !scope.data) {
+          setServerNumberingError("AUTHORIZED_NUMBERING_SCOPE_UNAVAILABLE");
+          return;
+        }
+        const result = await readFinoraServerNumbering({
+          ownerId: scope.data.ownerId,
+          businessId: scope.data.businessId,
+          branchId: scope.data.branchId,
+        });
+        if (!active) return;
+        if (!result.success) {
+          setServerNumberingError(result.errorCode);
+          return;
+        }
+        setServerNumbering(result.data);
+        setServerNumberingError(null);
+      } catch {
+        if (active) setServerNumberingError("SERVER_NUMBERING_READ_FAILED");
+      } finally {
+        if (active) setServerNumberingLoading(false);
+      }
+    }
+    void loadServerNumbering();
+    return () => { active = false; };
+  }, []);
+
+
+  // FINORA_P1_730B_MIGRATION_GATE
+  // Server migration is incomplete. Never create a second series.
+  // Do not present a USB-only next number as globally available.
+  const centralNumberingMigrationPending = true;
 
   const [
     configuration,
@@ -435,6 +482,7 @@ export default function NumberingSeriesSettingsSection() {
     Promise<void> {
 
     if (
+      centralNumberingMigrationPending ||
       saving ||
       configuration?.status ===
         "LOCKED"
@@ -623,6 +671,34 @@ export default function NumberingSeriesSettingsSection() {
   // LOADING
   // ==========================================================
 
+  // FINORA_P1_730D_SERVER_SETTINGS_READ
+  // Prevent the USB-only form from presenting a global counter.
+  // No duplicate Series Lock is possible in this view.
+  if (centralNumberingMigrationPending) {
+    return (
+      <div className="finora-settings-form">
+        {serverNumberingLoading ? (
+          <SettingsFeedback kind="info" title="Checking Central Customer Numbering" message="Reading verified PostgreSQL branch numbering." />
+        ) : serverNumbering ? (
+          <>
+            <SettingsFeedback kind="info" title="Server Customer Series — Read Only" message="Central series is visible. Customer Registration server reservation is not yet enabled." />
+            <div>Series Status: {serverNumbering.status}</div>
+            <div>Starting Customer Number: {serverNumbering.startingCustomerNumber}</div>
+            <div>Last Issued Customer Number: {serverNumbering.lastIssuedCustomerNumber === null ? "None" : serverNumbering.lastIssuedCustomerNumber}</div>
+            <div>Next Customer Number (Preview Only): {serverNumbering.nextCustomerNumber === null ? "Series Exhausted" : serverNumbering.nextCustomerNumber}</div>
+            <div>Business Code: {serverNumbering.businessCode}</div>
+            <div>Branch Code: {serverNumbering.branchCode}</div>
+          </>
+        ) : (
+          <SettingsFeedback
+            kind="warning"
+            title="Central Numbering Migration Required"
+            message={`Central numbering is not verified (${serverNumberingError ?? "SERVER_NOT_READY"}). Existing USB series remains preserved. Do not create a new series or issue a number from another device.`}
+          />
+        )}
+      </div>
+    );
+  }
   if (loading) {
 
     return (
@@ -642,6 +718,14 @@ export default function NumberingSeriesSettingsSection() {
 
   return (
     <>
+      {/* FINORA_P1_730B_MIGRATION_GATE */}
+      {centralNumberingMigrationPending && (
+        <SettingsFeedback
+          kind="warning"
+          title="Central Numbering Migration Required"
+          message="Existing branch Customer Series is preserved. Cross-device numbering is not active yet. New Series Lock and Customer Number allocation must remain disabled until PostgreSQL migration and verification are complete."
+        />
+      )}
       {feedback && (
         <SettingsFeedback
           kind={feedback.kind}
@@ -663,15 +747,11 @@ export default function NumberingSeriesSettingsSection() {
         setupPreview={
           setupPreview
         }
-        nextPreview={
-          nextPreview
-        }
+        nextPreview={centralNumberingMigrationPending ? null : nextPreview}
         startingCustomerNumber={
           startingCustomerNumber
         }
-        disabled={
-          saving
-        }
+        disabled={saving || centralNumberingMigrationPending}
         saving={
           saving
         }

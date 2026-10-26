@@ -46,6 +46,9 @@ import java.util.UUID;
  * - Never formats or clears unrelated USB content.
  */
 public final class FinoraUsbStorage {
+    // FINORA_P1_731X_USB_MUTATION_SERIALIZATION
+    // Synchronizes CRUD writes on this Java storage instance only.
+    // Does not provide a Windows/Android cross-device lock.
 
     // ========================================================
     // CONSTANTS
@@ -646,7 +649,7 @@ public final class FinoraUsbStorage {
     // CRUD: SAVE
     // ========================================================
 
-    public JSONObject save(
+    public synchronized JSONObject save(
         JSONObject record,
         JSONObject options
     ) {
@@ -850,7 +853,7 @@ public final class FinoraUsbStorage {
     // CRUD: UPDATE
     // ========================================================
 
-    public JSONObject update(
+    public synchronized JSONObject update(
         JSONObject record,
         JSONObject options
     ) {
@@ -1039,7 +1042,7 @@ public final class FinoraUsbStorage {
     // CRUD: DELETE
     // ========================================================
 
-    public JSONObject delete(
+    public synchronized JSONObject delete(
         JSONObject query
     ) {
         String queryError =
@@ -1139,7 +1142,7 @@ public final class FinoraUsbStorage {
     // CRUD: REPLACE ALL
     // ========================================================
 
-    public JSONObject replaceAll(
+    public synchronized JSONObject replaceAll(
         JSONArray sourceRecords,
         JSONObject options
     ) {
@@ -1404,7 +1407,7 @@ public final class FinoraUsbStorage {
     // CRUD: CLEAR
     // ========================================================
 
-    public JSONObject clear(
+    public synchronized JSONObject clear(
         JSONObject query
     ) {
         String queryError =

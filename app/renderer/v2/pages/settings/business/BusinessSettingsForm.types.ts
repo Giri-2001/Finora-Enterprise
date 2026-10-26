@@ -25,9 +25,10 @@
 // STATUS  : Production Foundation
 // ============================================================
 
+// FINORA_P1_725V2_SERVER_SETTINGS_IDENTITY
 import type {
-  FinoraProvisionedBusinessProfileV1,
-} from "../../../types/business/finoraBusinessProfileControl.types";
+  FinoraServerSettingsIdentity,
+} from "../../../services/business/finoraServerSettingsIdentity";
 
 import type {
   BusinessSettings,
@@ -51,7 +52,7 @@ export type BusinessSettingsEditableField =
 
 export interface BusinessSettingsFormProps {
   identity:
-    FinoraProvisionedBusinessProfileV1;
+    FinoraServerSettingsIdentity;
 
   settings:
     BusinessSettings;

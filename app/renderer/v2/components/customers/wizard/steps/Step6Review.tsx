@@ -42,6 +42,7 @@
 import {
   useEffect,
   useState,
+  useRef,
 } from "react";
 
 
@@ -120,6 +121,14 @@ import {
   reserveNextCustomerNumber,
 } from "../../../../services/numbering/customerSeriesService";
 
+
+import {
+  advanceFinoraCustomerRetryJournal,
+} from "../../../../repositories/numbering/finoraCustomerReservationJournal";
+
+import {
+  prepareCentralCustomerReservation,
+} from "../../../../services/numbering/finoraCustomerReservationCoordinator";
 
 import {
   requireBusinessContext,
@@ -901,6 +910,28 @@ export default function Step6Review({
      SAVE / UPDATE CUSTOMER
   ======================================================== */
 
+  // FINORA_P1_730P_STABLE_RETRY_KEY
+  // Retain one UUID across retries in this mounted wizard.
+  // Never generate a second UUID after an uncertain result.
+  // Durable USB journal is required before live activation.
+  const customerReservationRetryKeyRef = useRef<string | null>(null);
+  // FINORA_P1_732C_SAVED_CUSTOMER_RETRY_LOCK
+  // Session-local guard; durable recovery remains USB-backed.
+  const savedCustomerRetryLockRef = useRef<string | null>(null);
+  // FINORA_P1_732E_NUMBERING_ATTEMPT_LOCK
+  // Synchronous protection against concurrent Create clicks.
+  const customerNumberingAttemptLockRef = useRef(false);
+
+
+  const getCustomerReservationRetryKey = (): string => {
+    if (customerReservationRetryKeyRef.current !== null) {
+      return customerReservationRetryKeyRef.current;
+    }
+    const key = crypto.randomUUID();
+    customerReservationRetryKeyRef.current = key;
+    return key;
+  };
+
   const handleSave =
     async (): Promise<void> => {
 
@@ -909,6 +940,18 @@ export default function Step6Review({
         return;
 
       }
+
+      // FINORA_P1_732C_RETRY_ENTRY_GUARD
+      // Once customer persistence is confirmed, do not issue
+      // another number or create the same customer again.
+      if (savedCustomerRetryLockRef.current !== null) {
+        await finoraError(
+          `Customer ${savedCustomerRetryLockRef.current} was already saved. ` +
+          "Do NOT save again. Verify the Wallet charge and Customer record before recovery.",
+        );
+        return;
+      }
+
 
 
       if (!identityComplete) {
@@ -1727,27 +1770,64 @@ export default function Step6Review({
           return;
         }
 
-        const reservationResult =
-          await reserveNextCustomerNumber();
 
-
-        if (
-          !reservationResult.success ||
-          !reservationResult.data
-        ) {
-
-          console.error(
-            "FINORA CUSTOMER NUMBER RESERVATION FAILED:",
-            reservationResult.error,
+        // FINORA_P1_732E_CONCURRENT_CREATE_GUARD
+        // Acquire synchronously BEFORE any numbering API/USB call.
+        // Do not automatically release after an uncertain write.
+        if (customerNumberingAttemptLockRef.current) {
+          await finoraError(
+            "Customer creation has already been attempted. " +
+            "Verify its status before attempting another Save.",
           );
-
           return;
-
         }
+        customerNumberingAttemptLockRef.current = true;
 
+        // FINORA_P1_731O_CENTRAL_RESERVATION_WIRING
+        // Migration OFF until all lifecycle and USB safety gates pass.
+        const finoraCentralCustomerSaveReady = false;
+        const finoraCentralLifecycleVerified = false;
 
-        const finalCustomerId =
-          reservationResult.data.customerId;
+        let finalCustomerId: string;
+
+        if (finoraCentralCustomerSaveReady) {
+          // Must reject BEFORE calling the reservation API.
+          if (!finoraCentralLifecycleVerified) {
+            throw new Error(
+              "Central numbering is blocked pending USB atomicity and Customer/Wallet recovery.",
+            );
+          }
+
+          const centralReservation =
+            await prepareCentralCustomerReservation(
+              {
+                ownerId: notificationBusinessIdentity.ownerId,
+                businessId: notificationBusinessIdentity.businessId,
+                branchId: notificationBusinessIdentity.branchId,
+              },
+              getCustomerReservationRetryKey(),
+            );
+
+          if (!centralReservation.success) {
+            throw new Error(centralReservation.errorCode);
+          }
+
+          finalCustomerId = centralReservation.data.customerId;
+        } else {
+          // Preserve existing behavior until verified migration.
+          const reservationResult =
+            await reserveNextCustomerNumber();
+
+          if (!reservationResult.success || !reservationResult.data) {
+            console.error(
+              "FINORA CUSTOMER NUMBER RESERVATION FAILED:",
+              reservationResult.error,
+            );
+            return;
+          }
+
+          finalCustomerId = reservationResult.data.customerId;
+        }
 
 
         const documents = {
@@ -2294,6 +2374,12 @@ export default function Step6Review({
         };
 
 
+        // FINORA_P1_732D_LOCK_BEFORE_PERSISTENCE
+        // A USB write may succeed even when its response is lost.
+        // Lock this mounted wizard before the persistence attempt.
+        // An uncertain result requires reconciliation, not retry.
+        savedCustomerRetryLockRef.current = finalCustomerId;
+
         const result =
           await customerService.create(
             newCustomer,
@@ -2323,6 +2409,31 @@ export default function Step6Review({
         // Customer persistence succeeded first. Debit uses the
         // exact preflight quote and canonical Customer identity.
         // ==================================================
+
+        // FINORA_P1_732C_CUSTOMER_PERSISTED
+        // Retry lock was already established before USB write.
+        // Keep it active through Wallet and Journal reconciliation.
+        // FINORA_P1_731P_JOURNAL_TRANSITIONS
+        // A saved customer must never be blindly created again.
+        if (finoraCentralCustomerSaveReady) {
+          const journalSaved = await advanceFinoraCustomerRetryJournal(
+            {
+              ownerId: notificationBusinessIdentity.ownerId,
+              businessId: notificationBusinessIdentity.businessId,
+              branchId: notificationBusinessIdentity.branchId,
+            },
+            {
+              expectedStatus: "RESERVED",
+              nextStatus: "CUSTOMER_SAVED",
+              requestKey: getCustomerReservationRetryKey(),
+            },
+          );
+          if (!journalSaved.success) {
+            throw new Error(
+              "Customer was saved, but USB Journal confirmation failed. Reconciliation required before retry.",
+            );
+          }
+        }
 
         const customerChargeResult =
           await commitWalletPlatformCharge({
@@ -2358,10 +2469,44 @@ export default function Step6Review({
           });
 
         if (!customerChargeResult.success) {
+          // FINORA_P1_732A_SAVED_CUSTOMER_RECOVERY
+          // Customer persistence already succeeded.
+          // Wallet result may be uncertain: never create another
+          // customer or issue another debit automatically.
+          const walletFailureCode =
+            String(customerChargeResult.errorCode ?? "UNKNOWN_WALLET_RESULT");
+
+          console.error("FINORA SAVED CUSTOMER WALLET RECONCILIATION REQUIRED", {
+            customerId: finalCustomerId,
+            walletFailureCode,
+          });
 
           throw new Error(
-            customerChargeResult.error,
+            `Customer ${finalCustomerId} was saved, but Wallet charge is not confirmed. ` +
+            `Status: ${walletFailureCode}. ` +
+            "Do NOT create this customer again or repeat the Wallet charge. " +
+            "Verify the customer record and canonical Wallet ledger before recovery.",
           );
+        }
+
+        if (finoraCentralCustomerSaveReady) {
+          const journalCharged = await advanceFinoraCustomerRetryJournal(
+            {
+              ownerId: notificationBusinessIdentity.ownerId,
+              businessId: notificationBusinessIdentity.businessId,
+              branchId: notificationBusinessIdentity.branchId,
+            },
+            {
+              expectedStatus: "CUSTOMER_SAVED",
+              nextStatus: "CHARGED",
+              requestKey: getCustomerReservationRetryKey(),
+            },
+          );
+          if (!journalCharged.success) {
+            throw new Error(
+              "Wallet charge succeeded, but Journal completion is unconfirmed. Reconcile before retry; do not charge again.",
+            );
+          }
         }
 
         console.info(

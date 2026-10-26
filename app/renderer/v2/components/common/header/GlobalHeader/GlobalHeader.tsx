@@ -99,6 +99,10 @@ import type {
 
 
 import { getFinoraServerWalletBridge } from "../../../../services/wallet/finoraServerWalletBridge";
+import {
+  isFinoraAndroidWallet,
+  getFinoraAndroidWalletBalance,
+} from "../../../../services/wallet/finoraAndroidWalletBridge";
 
 import {
   subscribeWalletBalanceUpdates,
@@ -287,9 +291,12 @@ export default function GlobalHeader({
 
     async function refreshHeaderWalletBalance(): Promise<void> {
       const thisRequest = ++requestNumber;
-      const bridge = getFinoraServerWalletBridge();
+      // FINORA_P1_722T_ANDROID_HEADER
+      // Read-only authenticated PostgreSQL Wallet balance.
+      const android = isFinoraAndroidWallet();
+      const bridge = android ? null : getFinoraServerWalletBridge();
 
-      if (!bridge) {
+      if (!android && !bridge) {
         if (!cancelled && thisRequest === requestNumber) {
           setWalletBalance(null);
         }
@@ -297,7 +304,9 @@ export default function GlobalHeader({
       }
 
       try {
-        const result = await bridge.balance();
+        const result = android
+          ? await getFinoraAndroidWalletBalance()
+          : await bridge!.balance();
         if (cancelled || thisRequest !== requestNumber) return;
 
         if (!result.success) {

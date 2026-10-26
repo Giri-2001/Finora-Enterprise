@@ -1,3 +1,5 @@
+import { isFinoraAndroidWallet } from "../wallet/finoraAndroidWalletBridge";
+import { getFinoraAndroidPricing } from "../wallet/finoraAndroidWalletReads";
 /* ===========================================================
    FINORA ENTERPRISE OS™
 
@@ -63,6 +65,10 @@ import {
 } from "../../store/authStore";
 
 import {
+  validateFinoraServerGuardSession,
+} from "../auth/finoraServerReceptionGuardLifecycle";
+
+import {
   evaluateAuthoritativeFinoraBranchAccess,
   hasActiveFinoraStorageEntitlement,
   loadFinoraBusinessProfile,
@@ -108,8 +114,16 @@ export interface FinoraCommercialWriteGuardDeniedDecision {
 // DECISION
 // ============================================================
 
+export interface FinoraCommercialWriteGuardServerAllowedDecision {
+  allowed: true;
+  capability: FinoraCommercialWriteCapability;
+  authority: "SERVER";
+  storageMode: "USB";
+}
+
 export type FinoraCommercialWriteGuardDecision =
   | FinoraCommercialWriteGuardAllowedDecision
+  | FinoraCommercialWriteGuardServerAllowedDecision
   | FinoraCommercialWriteGuardDeniedDecision;
 
 // ============================================================
@@ -285,6 +299,121 @@ export async function authorizeFinoraCommercialWrite(
   // Renderer supplies identity only. Current-time evaluation and
   // persisted clock rollback defense remain in Electron main.
   // ----------------------------------------------------------
+
+  // FINORA_P1_719F_SERVER_COMMERCIAL_AUTHORITY
+  // A server-shaped session ID is never sufficient by itself.
+  // Revalidate with Electron Main for every commercial operation.
+  // Legacy and DEMO sessions retain the signed-grant checks below.
+  if (/^[a-f0-9]{64}$/.test(session.sessionId ?? "")) {
+    const verified = await validateFinoraServerGuardSession(
+      session.sessionId,
+    );
+
+    if (
+      !verified.success ||
+      verified.data.sessionId !== session.sessionId ||
+      verified.data.userId !== userId ||
+      verified.data.username !== session.username ||
+      verified.data.ownerId !== ownerId ||
+      verified.data.businessId !== businessId ||
+      verified.data.branchId !== branchId ||
+      verified.data.role !== "OWNER" ||
+      session.role !== "OWNER" ||
+      verified.data.dataContext !== "REAL" ||
+      session.dataContext !== "REAL" ||
+      verified.data.storageMode !== "USB" ||
+      session.demoId !== undefined
+    ) {
+      return denyCommercialWrite(
+        capability,
+        "FINORA server commercial session verification failed.",
+      );
+    }
+
+    if (storageManager.getStorageMode() !== StorageMode.USB) {
+      return denyCommercialWrite(
+        capability,
+        "FINORA commercial operation requires authorized USB storage.",
+      );
+    }
+
+    const storage = storageManager.getConfiguration();
+
+    if (
+      storage.dataContext !== "REAL" ||
+      storage.ownerId !== ownerId ||
+      storage.demoId !== undefined
+    ) {
+      return denyCommercialWrite(
+        capability,
+        "FINORA commercial storage Owner scope mismatch.",
+      );
+    }
+
+    // Server pricing verifies the exact branch and active subscription.
+    // Wallet Entry Gate independently checks the fee and live balance.
+    // FINORA_P1_723R_ANDROID_PRICING
+    // Use native authenticated PostgreSQL pricing on Android.
+    const android = isFinoraAndroidWallet();
+    const wallet = android ? null : getFinoraServerWalletBridge();
+    const pricing = android
+      ? await getFinoraAndroidPricing()
+      : wallet ? await wallet.pricing() : null;
+
+    if (
+      !pricing?.success ||
+      pricing.data.source !== "FINORA_POSTGRESQL_PRICING" ||
+      pricing.data.branchId !== branchId ||
+      !Array.isArray(pricing.data.plans) ||
+      pricing.data.plans.length !== 4
+    ) {
+      return denyCommercialWrite(
+        capability,
+        "Authoritative FINORA branch pricing is unavailable.",
+      );
+    }
+
+    const subscription = pricing.data.currentSubscription;
+
+    if (!subscription || subscription.status !== "ACTIVE") {
+      return denyCommercialWrite(
+        capability,
+        "An ACTIVE FINORA server subscription is required.",
+      );
+    }
+
+    const start = Date.parse(subscription.startsAt);
+    const expiry = Date.parse(subscription.expiresAt);
+    const serverNow = Date.parse(subscription.serverNow);
+
+    const months = subscription.selectedPlanMonths ??
+      Number(
+        /^SUBSCRIPTION_(1|3|6|12)_MONTHS?$/.exec(
+          subscription.planCode,
+        )?.[1] ?? 0,
+      );
+
+    if (
+      ![1, 3, 6, 12].includes(months) ||
+      !Number.isFinite(start) ||
+      !Number.isFinite(expiry) ||
+      !Number.isFinite(serverNow) ||
+      start > serverNow ||
+      serverNow >= expiry
+    ) {
+      return denyCommercialWrite(
+        capability,
+        "FINORA server subscription validity check failed.",
+      );
+    }
+
+    return {
+      allowed: true,
+      capability,
+      authority: "SERVER",
+      storageMode: "USB",
+    };
+  }
 
   const accessAuthorityResult =
     await evaluateAuthoritativeFinoraBranchAccess(

@@ -41,9 +41,7 @@ import { getFinoraLoginSessionBridge } from "../../services/auth/loginSessionBri
 // IMPORTS
 // ============================================================
 
-import {
-  useEffect,
-} from "react";
+import { useEffect, useState } from "react";
 
 import {
   getSession,
@@ -73,6 +71,9 @@ const FINORA_MAIN_SESSION_VALIDATE_INTERVAL_MS =
 export default function SessionGuard({
   children,
 }: SessionGuardProps) {
+  // FINORA_P1_726V3_NETWORK_LOCK
+  const [serverTemporarilyUnavailable, setServerTemporarilyUnavailable] =
+    useState(false);
 
   // ==========================================================
   // SESSION ACTIVITY / EXPIRATION MONITOR
@@ -95,8 +96,21 @@ export default function SessionGuard({
     let validationInFlight =
       false;
 
-    let forcedExit =
-      false;
+    let forcedExit = false;
+
+    const isTemporaryNetworkFailure = (code: string): boolean =>
+      [
+        "SERVER_UNAVAILABLE",
+        "SERVER_REVALIDATION_FAILED",
+        "SERVER_TOUCH_UNAVAILABLE",
+        "ANDROID_SERVER_REVALIDATION_FAILED",
+      ].includes(code);
+
+    function lockForNetworkRecovery(): void {
+      if (!forcedExit) {
+        setServerTemporarilyUnavailable(true);
+      }
+    }
 
     // --------------------------------------------------------
     // FORCED SECURITY EXIT
@@ -183,12 +197,20 @@ export default function SessionGuard({
         lastMainTouchAt = now;
         try {
           const result = await touchFinoraServerGuardSession(session.sessionId);
-          if (!result.success || result.sessionId !== session.sessionId ||
-              getSession()?.sessionId !== session.sessionId) {
+          if (!result.success) {
+            if (isTemporaryNetworkFailure(result.errorCode)) {
+              lockForNetworkRecovery();
+            } else {
+              forceSessionExit();
+            }
+          } else if (
+            result.sessionId !== session.sessionId ||
+            getSession()?.sessionId !== session.sessionId
+          ) {
             forceSessionExit();
           }
         } catch {
-          forceSessionExit();
+          lockForNetworkRecovery();
         } finally {
           touchInFlight = false;
         }
@@ -280,7 +302,11 @@ export default function SessionGuard({
         try {
           const result = await validateFinoraServerGuardSession(session.sessionId);
           if (!result.success) {
-            forceSessionExit();
+            if (isTemporaryNetworkFailure(result.errorCode)) {
+              lockForNetworkRecovery();
+            } else {
+              forceSessionExit();
+            }
             return;
           }
 
@@ -315,9 +341,13 @@ export default function SessionGuard({
             businessDate: session.businessDate,
           });
 
-          if (!persisted) forceSessionExit();
+          if (!persisted) {
+            forceSessionExit();
+          } else {
+            setServerTemporarilyUnavailable(false);
+          }
         } catch {
-          forceSessionExit();
+          lockForNetworkRecovery();
         } finally {
           validationInFlight = false;
         }
@@ -479,10 +509,33 @@ export default function SessionGuard({
   // RENDER
   // ==========================================================
 
-  return (
-    <>
-      {children}
-    </>
+  return serverTemporarilyUnavailable ? (
+    <div
+      role="alert"
+      aria-live="assertive"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 2147483647,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        gap: 12,
+        background: "#101827",
+        color: "#ffffff",
+        textAlign: "center",
+        padding: 24,
+      }}
+    >
+      <strong>FINORA - Connection verification required</strong>
+      <span>
+        Server unavailable. Reception is temporarily locked.
+      </span>
+      <span>Automatic session verification retries every 60 seconds.</span>
+    </div>
+  ) : (
+    <>{children}</>
   );
 
 }

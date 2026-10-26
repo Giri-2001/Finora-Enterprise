@@ -1,3 +1,10 @@
+import {
+  isFinoraAndroidWallet,
+} from "../../services/wallet/finoraAndroidWalletBridge";
+import {
+  getFinoraAndroidTransactions,
+  getFinoraAndroidRecharges,
+} from "../../services/wallet/finoraAndroidWalletReads";
 /* FINORA_P1_580R_LIVE_HISTORY
  * Read-only, verified PostgreSQL Wallet history.
  */
@@ -113,9 +120,11 @@ export default function ServerWalletLiveHistory({
       return () => { active = false; };
     }
 
-    const bridge = getFinoraServerWalletBridge();
+    // FINORA_P1_723K_HISTORY
+    const android = isFinoraAndroidWallet();
+    const bridge = android ? null : getFinoraServerWalletBridge();
 
-    if (!bridge) {
+    if (!android && !bridge) {
       setState("ERROR");
       setError("History service unavailable.");
       return () => { active = false; };
@@ -126,8 +135,12 @@ export default function ServerWalletLiveHistory({
     void (async () => {
       try {
         const [tx, req] = await Promise.all([
-          bridge.transactions(),
-          bridge.recharges(),
+          android
+            ? getFinoraAndroidTransactions(walletId)
+            : bridge!.transactions(),
+          android
+            ? getFinoraAndroidRecharges(walletId)
+            : bridge!.recharges(),
         ]);
 
         if (!active) return;

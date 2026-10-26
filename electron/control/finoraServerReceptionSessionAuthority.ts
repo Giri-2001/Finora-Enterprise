@@ -22,8 +22,9 @@ type Entry = {
   committed: boolean;
 };
 
-const MAX_AGE_MS = 30 * 60 * 1000;
-const IDLE_MS = 15 * 60 * 1000;
+// FINORA_P1_726P_VERIFIED_SLIDING
+// Maximum time since the last successful server authorization.
+const SERVER_VERIFICATION_GRACE_MS = 30 * 60 * 1000;
 
 const sessions = new WeakMap<object, Entry>();
 
@@ -61,11 +62,13 @@ function validId(value: unknown): value is string {
 function live(entry: Entry): boolean {
   const now = Date.now();
 
+  // No fixed login-age limit. A session remains locally eligible
+  // only while recent successful server verifications continue.
+  // This does not replace mandatory server verification.
   return (
     now >= entry.createdAt &&
-    now - entry.createdAt < MAX_AGE_MS &&
     now >= entry.lastActivity &&
-    now - entry.lastActivity < IDLE_MS
+    now - entry.lastActivity < SERVER_VERIFICATION_GRACE_MS
   );
 }
 
@@ -150,7 +153,8 @@ export async function validateFinoraServerReceptionSession(
   try {
     verified = await verifyServer(entry.businessSessionId);
   } catch {
-    sessions.delete(sender);
+    // FINORA_P1_726P_NETWORK_RECOVERY
+    // Keep handle for later revalidation, but deny this request.
     return { success: false as const, errorCode: "SERVER_UNAVAILABLE" };
   }
 
@@ -163,6 +167,11 @@ export async function validateFinoraServerReceptionSession(
 
     return { success: false as const, errorCode: "SERVER_REVALIDATION_DENIED" };
   }
+
+  // FINORA_P1_726P_VERIFIED_REFRESH
+  // Refresh local lifetime ONLY after a successful server check.
+  // Do not renew when the server rejects authorization.
+  entry.lastActivity = Date.now();
 
   return {
     success: true as const,

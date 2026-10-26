@@ -27,9 +27,10 @@
 // STATUS  : Production Foundation
 // ============================================================
 
+// FINORA_P1_725V2_SERVER_SETTINGS_IDENTITY
 import type {
-  FinoraProvisionedBusinessProfileV1,
-} from "../../../types/business/finoraBusinessProfileControl.types";
+  FinoraServerSettingsIdentity,
+} from "../../../services/business/finoraServerSettingsIdentity";
 
 import type {
   BranchSettings,
@@ -50,7 +51,7 @@ export type BranchSettingsEditableField =
 
 export interface BranchSettingsFormProps {
   identity:
-    FinoraProvisionedBusinessProfileV1;
+    FinoraServerSettingsIdentity;
 
   settings:
     BranchSettings;

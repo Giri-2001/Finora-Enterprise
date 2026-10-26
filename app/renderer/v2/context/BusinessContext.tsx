@@ -61,6 +61,7 @@ import {
   hasBusinessContext,
   replaceBusinessContext,
   setBusinessContext,
+  setFinoraServerReceptionBusinessContext,
 } from "../services/business/businessContextService";
 
 import type {
@@ -85,6 +86,14 @@ export interface BusinessContextValue {
 
   replaceContext(
     context: BusinessAccessContext,
+  ): Promise<StorageResult>;
+
+  setServerReceptionContext(
+    scope: {
+      ownerId: string;
+      businessId: string;
+      branchId: string;
+    },
   ): Promise<StorageResult>;
 
   clearContext():
@@ -193,6 +202,25 @@ export function BusinessContextProvider({
       [],
     );
 
+  // FINORA_P1_718I_SERVER_RECEPTION_PROVIDER
+  // This updates React state after a server-verified Reception
+  // session. It does not independently authenticate or authorize
+  // USB business-data operations.
+  const handleSetServerReceptionContext = useCallback(
+    async (scope: {
+      ownerId: string;
+      businessId: string;
+      branchId: string;
+    }): Promise<StorageResult> => {
+      const result = await setFinoraServerReceptionBusinessContext(scope);
+      if (result.success) {
+        setReactContext(getBusinessContext());
+      }
+      return result;
+    },
+    [],
+  );
+
   // ==========================================================
   // CLEAR CONTEXT
   // ==========================================================
@@ -229,6 +257,9 @@ export function BusinessContextProvider({
         replaceContext:
           handleReplaceContext,
 
+        setServerReceptionContext:
+          handleSetServerReceptionContext,
+
         clearContext:
           handleClearContext,
 
@@ -237,6 +268,7 @@ export function BusinessContextProvider({
         context,
         handleSetContext,
         handleReplaceContext,
+        handleSetServerReceptionContext,
         handleClearContext,
       ],
     );
