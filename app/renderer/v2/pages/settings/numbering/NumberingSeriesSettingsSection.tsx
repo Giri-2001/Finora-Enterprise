@@ -1,3 +1,4 @@
+import { formatCustomerId } from "../../../utils/numbering/numbering.formatter";
 // ============================================================
 // FINORA ENTERPRISE OS™
 //
@@ -674,29 +675,75 @@ export default function NumberingSeriesSettingsSection() {
   // FINORA_P1_730D_SERVER_SETTINGS_READ
   // Prevent the USB-only form from presenting a global counter.
   // No duplicate Series Lock is possible in this view.
+  // FINORA_P1_734N_LIVE_NUMBERING_FORM
+  // Keep the existing input-box design while PostgreSQL is authoritative.
+  // Do not enable USB-only configuration or customer-number reservation.
   if (centralNumberingMigrationPending) {
-    return (
-      <div className="finora-settings-form">
-        {serverNumberingLoading ? (
-          <SettingsFeedback kind="info" title="Checking Central Customer Numbering" message="Reading verified PostgreSQL branch numbering." />
-        ) : serverNumbering ? (
-          <>
-            <SettingsFeedback kind="info" title="Server Customer Series — Read Only" message="Central series is visible. Customer Registration server reservation is not yet enabled." />
-            <div>Series Status: {serverNumbering.status}</div>
-            <div>Starting Customer Number: {serverNumbering.startingCustomerNumber}</div>
-            <div>Last Issued Customer Number: {serverNumbering.lastIssuedCustomerNumber === null ? "None" : serverNumbering.lastIssuedCustomerNumber}</div>
-            <div>Next Customer Number (Preview Only): {serverNumbering.nextCustomerNumber === null ? "Series Exhausted" : serverNumbering.nextCustomerNumber}</div>
-            <div>Business Code: {serverNumbering.businessCode}</div>
-            <div>Branch Code: {serverNumbering.branchCode}</div>
-          </>
-        ) : (
+    if (serverNumberingLoading) {
+      return (
+        <div className="finora-settings-form">
           <SettingsFeedback
-            kind="warning"
-            title="Central Numbering Migration Required"
-            message={`Central numbering is not verified (${serverNumberingError ?? "SERVER_NOT_READY"}). Existing USB series remains preserved. Do not create a new series or issue a number from another device.`}
+            kind="info"
+            title="Checking Central Customer Numbering"
+            message="Reading the authorized PostgreSQL branch series."
           />
-        )}
-      </div>
+        </div>
+      );
+    }
+
+    if (serverNumbering) {
+      const serverPreview =
+        serverNumbering.nextCustomerNumber === null
+          ? null
+          : ({
+              customerId: formatCustomerId(serverNumbering.businessCode, serverNumbering.branchCode, serverNumbering.nextCustomerNumber),
+            } as unknown as CustomerNumberPreview);
+
+      return (
+        <>
+          <SettingsFeedback
+            kind="info"
+            title="Customer Series — PostgreSQL LIVE"
+            message="The original Customer Series is permanently locked. The next Customer number is preview-only; central reservation is not enabled yet."
+          />
+          <NumberingSeriesSettingsForm
+            configuration={
+              serverNumbering as unknown as CustomerSeriesConfiguration
+            }
+            setupPreview={null}
+            nextPreview={serverPreview}
+            startingCustomerNumber={
+              String(serverNumbering.startingCustomerNumber)
+            }
+            disabled={true}
+            saving={false}
+            onStartingCustomerNumberChange={() => {}}
+            onSubmit={() => {}}
+          />
+        </>
+      );
+    }
+
+    return (
+      <>
+        <SettingsFeedback
+          kind="warning"
+          title="Customer Series Setup Not Yet Available"
+          message={`Server series is not verified (${serverNumberingError ?? "SERVER_NOT_READY"}). New branches must use server-side one-time locking before Customer IDs can be issued. No USB-only series will be created.`}
+        />
+        <NumberingSeriesSettingsForm
+          configuration={null}
+          setupPreview={null}
+          nextPreview={null}
+          startingCustomerNumber={startingCustomerNumber}
+          disabled={false}
+          saving={false}
+          onStartingCustomerNumberChange={
+            handleStartingCustomerNumberChange
+          }
+          onSubmit={() => {}}
+        />
+      </>
     );
   }
   if (loading) {
