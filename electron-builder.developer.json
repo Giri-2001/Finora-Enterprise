@@ -1,6 +1,6 @@
 {
   "appId": "com.finora.developer.controlcenter",
-  "productName": "FINORA Developer Control Center",
+  "productName": "FINORA Developer",
   "artifactName": "Finora_Control_Center.${ext}",
   "icon": "assets/icons/finora.ico",
   "asar": true,
