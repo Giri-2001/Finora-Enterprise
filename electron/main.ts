@@ -3727,6 +3727,17 @@ ipcMain.handle(
   },
 );
 
+// FINORA_P1_752Q_MODULE_PRIVATE_SENDER_AUTHORITY
+// These WeakMaps are Electron Main-only. No renderer access.
+// Exact WebContents remains the isolation key.
+const finoraBusinessSessionsBySender =
+  new WeakMap<object, {
+    sessionId: string;
+    expiresAt: string;
+  }>();
+
+const finoraAccountBusinessLoginGeneration =
+  new WeakMap<object, number>();
 function createMainWindow(): void {
   const createdWindow = new BrowserWindow({
     width: 1400,
@@ -4003,6 +4014,113 @@ function createMainWindow(): void {
               }),
       });
 
+    // FINORA_P1_752R_ACCOUNT_SSO_RECHARGE_SCOPE
+    // Recharge alone uses sender-bound, server-verified Account authority.
+    // Subscription Purchase retains its independent existing scope.
+    const accountRechargeScopeCoordinator =
+      createFinoraVerifiedRechargeScopeCoordinator({
+        verifiedScope: async () => {
+          const fail = (errorCode: string) => ({
+            success: false as const,
+            errorCode,
+          });
+
+          const sender = createdWindow.webContents;
+          if (sender.isDestroyed()) return fail("UNAUTHORIZED");
+
+          const business =
+            finoraBusinessSessionsBySender.get(sender);
+
+          const generation =
+            finoraAccountBusinessLoginGeneration.get(sender);
+
+          const account =
+            getFinoraSenderWalletPrincipal(sender);
+
+          if (
+            !business ||
+            !account ||
+            generation === undefined ||
+            !Number.isSafeInteger(generation) ||
+            generation < 0
+          ) return fail("UNAUTHORIZED");
+
+          try {
+            const { verifyFinoraServerBusinessSession } =
+              await import(
+                "./control/finoraServerBusinessSessionVerifier.js"
+              );
+
+            const verified =
+              await verifyFinoraServerBusinessSession(
+                business.sessionId
+              );
+
+            if (!verified.success) {
+              return fail(verified.errorCode);
+            }
+
+            const principal = verified.principal;
+            const current =
+              getFinoraSenderWalletPrincipal(sender);
+
+            if (
+              sender.isDestroyed() ||
+              finoraBusinessSessionsBySender.get(sender) !== business ||
+              finoraAccountBusinessLoginGeneration.get(sender) !== generation ||
+              principal.role !== "OWNER" ||
+              principal.userId !== account.userId ||
+              principal.ownerId !== account.ownerId ||
+              principal.businessId !== account.businessId ||
+              principal.branchId !== account.branchId ||
+              !current ||
+              current.userId !== account.userId ||
+              current.ownerId !== account.ownerId ||
+              current.businessId !== account.businessId ||
+              current.branchId !== account.branchId
+            ) return fail("STALE_OPERATION");
+
+            return {
+              success: true as const,
+              data: {
+                ownerId: principal.ownerId,
+                businessId: principal.businessId,
+                branchId: principal.branchId,
+                sessionRevision: generation,
+              },
+            };
+          } catch {
+            return fail("SERVER_UNAVAILABLE");
+          }
+        },
+
+        serverBalance: async () => {
+          const sender = createdWindow.webContents;
+
+          const authorization = sender.isDestroyed()
+            ? null
+            : getFinoraSenderWalletAuthorization(sender);
+
+          if (
+            !authorization ||
+            !/^Bearer [a-f0-9]{64}$/.test(authorization)
+          ) {
+            return {
+              success: false as const,
+              errorCode: "UNAUTHORIZED",
+            };
+          }
+
+          const { createFinoraServerWalletBalanceClient } =
+            await import(
+              "./control/finoraServerWalletBalanceClient.js"
+            );
+
+          return createFinoraServerWalletBalanceClient()(
+            authorization.slice(7)
+          );
+        },
+      });
     // FINORA_P1_611Z_DURABLE_RECHARGE_STORE
     // Main-process-only encrypted retry store.
     // Construction does not read, write or submit a recharge.
@@ -4014,7 +4132,7 @@ function createMainWindow(): void {
     // No IPC exposure, no recharge POST, no payment or credit operation.
     const authenticatedRechargeIntentCoordinator =
       createFinoraAuthenticatedRechargeIntentCoordinator({
-        scopeResolver: verifiedRechargeScopeCoordinator,
+        scopeResolver: accountRechargeScopeCoordinator,
         store: durableRechargeIntentStore,
       });
 
@@ -4138,12 +4256,256 @@ function createMainWindow(): void {
       }
     };
 
+    // FINORA_P1_752S_ACCOUNT_SSO_RECHARGE
+    // Only called through the trusted Owner IPC sender boundary.
+    // Server verifies the Business Session, account identity and Wallet.
+    // The encrypted pending UUID wins over renderer retry UUID.
+    let accountRechargeBusy = false;
+
+    const submitAccountSSORecharge = async (
+      input: unknown,
+      sender: typeof createdWindow.webContents,
+    ) => {
+      const fail = (errorCode: string) => ({
+        success: false as const,
+        errorCode,
+      });
+
+      if (
+        accountRechargeBusy ||
+        sender !== createdWindow.webContents ||
+        sender.isDestroyed()
+      ) {
+        return fail(
+          accountRechargeBusy ? "STALE_OPERATION" : "UNAUTHORIZED"
+        );
+      }
+
+      if (
+        !input ||
+        typeof input !== "object" ||
+        Array.isArray(input)
+      ) return fail("INVALID_REQUEST");
+
+      const request = input as Record<string, unknown>;
+
+      if (
+        Object.keys(request).length !== 3 ||
+        !Number.isSafeInteger(request.amountInr) ||
+        (request.amountInr as number) < 50 ||
+        (request.amountInr as number) > 2000 ||
+        (request.paymentMethod !== "PHONEPE" &&
+          request.paymentMethod !== "GOOGLE_PAY") ||
+        typeof request.idempotencyKey !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          request.idempotencyKey
+        )
+      ) return fail("INVALID_REQUEST");
+
+      accountRechargeBusy = true;
+
+      try {
+        const authorization =
+          getFinoraSenderWalletAuthorization(sender);
+
+        if (
+          !authorization ||
+          !/^Bearer [a-f0-9]{64}$/.test(authorization)
+        ) return fail("UNAUTHORIZED");
+
+        const before = await accountRechargeScopeCoordinator.resolve();
+
+        if (!before.success) return fail(before.errorCode);
+
+        const requested = {
+          amountInr: request.amountInr as number,
+          paymentMethod:
+            request.paymentMethod as "PHONEPE" | "GOOGLE_PAY",
+          idempotencyKey:
+            (request.idempotencyKey as string).toLowerCase(),
+        };
+
+        // Read encrypted pending intent BEFORE any server POST.
+        const previous =
+          await authenticatedRechargeIntentCoordinator.verifiedLoad();
+
+        if (!previous.success) return fail(previous.errorCode);
+
+        let intent = previous.data.intent;
+
+        if (intent) {
+          if (
+            intent.amountInr !== requested.amountInr ||
+            intent.paymentMethod !== requested.paymentMethod
+          ) {
+            // FINORA_P1_753D_CONFLICT_ORIGIN
+            // Local encrypted intent mismatch. No server POST occurs.
+            return fail("LOCAL_RECHARGE_INTENT_CONFLICT");
+          }
+        } else {
+          const saved =
+            await authenticatedRechargeIntentCoordinator.verifiedSave(
+              requested
+            );
+
+          if (!saved.success) return fail(saved.errorCode);
+
+          const confirmed =
+            await authenticatedRechargeIntentCoordinator.verifiedLoad();
+
+          if (!confirmed.success) return fail(confirmed.errorCode);
+
+          if (!confirmed.data.intent) {
+            return fail("RECHARGE_INTENT_LOAD_FAILED");
+          }
+
+          intent = confirmed.data.intent;
+        }
+
+        // Revalidate after filesystem and network awaits.
+        const after = await accountRechargeScopeCoordinator.resolve();
+
+        if (!after.success) return fail(after.errorCode);
+
+        if (
+          sender.isDestroyed() ||
+          getFinoraSenderWalletAuthorization(sender) !== authorization ||
+          before.data.ownerId !== after.data.ownerId ||
+          before.data.businessId !== after.data.businessId ||
+          before.data.branchId !== after.data.branchId ||
+          before.data.walletId !== after.data.walletId ||
+          before.data.sessionRevision !== after.data.sessionRevision
+        ) return fail("STALE_OPERATION");
+
+        const { createFinoraServerWalletRechargeClient } =
+          await import(
+            "./control/finoraServerWalletRechargeClient.js"
+          );
+
+        // Always submit the encrypted server-scoped UUID.
+        // Never generate a fresh UUID for an existing intent.
+        const result =
+          await createFinoraServerWalletRechargeClient()(
+            authorization.slice(7),
+            {
+              amountInr: intent.amountInr,
+              paymentMethod: intent.paymentMethod,
+              idempotencyKey: intent.idempotencyKey,
+            }
+          );
+
+        // Distinguish server HTTP 409 from a local encrypted conflict.
+        if (!result.success && result.errorCode === "IDEMPOTENCY_CONFLICT") {
+          return fail("SERVER_RECHARGE_IDEMPOTENCY_CONFLICT");
+        }
+
+        // FINORA_P1_753I_SERVER_CONFIRMED_SETTLEMENT
+        // Unknown transport/server outcomes retain their encrypted UUID.
+        // Only an exact server-confirmed receipt settles the local intent.
+        if (result.success === true) {
+          const confirmed = result.data.request;
+
+          if (
+            confirmed.walletId !== before.data.walletId ||
+            confirmed.amountInr !== intent.amountInr.toFixed(2) ||
+            confirmed.paymentMethod !== intent.paymentMethod ||
+            !["PENDING", "APPROVED", "DECLINED"].includes(confirmed.status)
+          ) {
+            return fail("INVALID_SERVER_RESPONSE");
+          }
+
+          const finalScope = await accountRechargeScopeCoordinator.resolve();
+          if (
+            !finalScope.success ||
+            sender.isDestroyed() ||
+            getFinoraSenderWalletAuthorization(sender) !== authorization ||
+            finalScope.data.ownerId !== before.data.ownerId ||
+            finalScope.data.businessId !== before.data.businessId ||
+            finalScope.data.branchId !== before.data.branchId ||
+            finalScope.data.walletId !== before.data.walletId ||
+            finalScope.data.sessionRevision !== before.data.sessionRevision
+          ) {
+            return fail("STALE_OPERATION");
+          }
+
+          const settled =
+            await authenticatedRechargeIntentCoordinator
+              .verifiedClearIfMatches(intent.idempotencyKey);
+
+          if (!settled.success || !settled.data.cleared) {
+            // Preserve the server-confirmed receipt for the UI.
+            // A subsequent request may still need reconciliation.
+            console.warn(
+              "[FINORA RECHARGE] Confirmed server receipt; encrypted intent settlement incomplete."
+            );
+          }
+        }
+
+        // The API owns PENDING/APPROVED decisions and wallet credits.
+        // On unknown outcomes keep the encrypted intent untouched.
+        if (
+          sender.isDestroyed() ||
+          getFinoraSenderWalletAuthorization(sender) !== authorization
+        ) return fail("STALE_OPERATION");
+
+        return result;
+      } catch {
+        return fail("SERVER_UNAVAILABLE");
+      } finally {
+        accountRechargeBusy = false;
+      }
+    };
     const serverWalletRegistration = registerFinoraServerWalletIpc({
       ipc: ipcMain,
       owner: createdWindow.webContents,
       packaged: app.isPackaged,
       ownerEntryPath: path.join(__dirname, "../dist/index.html"),
       service: unifiedWalletReadOnlyService,
+      rechargeService: submitAccountSSORecharge,
+      // FINORA_P1_753Y2_MAIN_RECOVERY
+      // Only trusted Main accesses the original encrypted UUID.
+      rechargeResumeService: async () => {
+        const sender = createdWindow.webContents;
+
+        if (
+          sender.isDestroyed() ||
+          !getFinoraSenderWalletAuthorization(sender)
+        ) return null;
+
+        const loaded =
+          await authenticatedRechargeIntentCoordinator.verifiedLoad();
+
+        if (!loaded.success || !loaded.data.intent) return null;
+
+        const intent = loaded.data.intent;
+
+        return {
+          amountInr: intent.amountInr,
+          paymentMethod: intent.paymentMethod,
+          idempotencyKey: intent.idempotencyKey,
+        };
+      },
+      // FINORA_P1_753L_ACCOUNT_PENDING
+      // Read-only authenticated local retry metadata. Never return UUID.
+      rechargePendingService: async () => {
+        const sender = createdWindow.webContents;
+        if (sender.isDestroyed() ||
+            !getFinoraSenderWalletAuthorization(sender)) {
+          return { success: false as const, errorCode: "UNAUTHORIZED" };
+        }
+        const loaded =
+          await authenticatedRechargeIntentCoordinator.verifiedLoad();
+        if (!loaded.success) return loaded;
+        const intent = loaded.data.intent;
+        return {
+          success: true as const,
+          data: {
+            pending: intent !== null,
+            amountInr: intent?.amountInr ?? null,
+            paymentMethod: intent?.paymentMethod ?? null,
+          },
+        };
+      },
       purchaseService: verifiedSubscriptionPurchase,
       // FINORA_P1_648E_RESUME
       // Explicit user action only. Reuse encrypted Main-owned UUID.
@@ -4732,7 +5094,7 @@ app.whenReady().then(async () => {
           ? "finora:account:wallet-transactions"
           : "finora:account:wallet-recharges";
 
-      ipcMain.handle(channel, async (event) => {
+      ipcMain.handle(channel, async (event, pageInput?: unknown) => {
         if (
           !event.senderFrame ||
           !isTrustedRenderer(event.senderFrame)
@@ -4768,7 +5130,53 @@ app.whenReady().then(async () => {
           };
         }
 
+        // FINORA_P1_747M_VERIFIED_PAGINATION
+        // No renderer-supplied owner, branch, wallet or URL.
+        let historyPage: { limit: number; offset: number } | null = null;
+
+        if (pageInput !== undefined) {
+          if (
+            pageInput === null ||
+            typeof pageInput !== "object" ||
+            Array.isArray(pageInput)
+          ) {
+            return { success: false as const, errorCode: "INVALID_REQUEST" };
+          }
+
+          const input = pageInput as Record<string, unknown>;
+
+          if (
+            Object.keys(input).length !== 2 ||
+            !Object.prototype.hasOwnProperty.call(input, "limit") ||
+            !Object.prototype.hasOwnProperty.call(input, "offset") ||
+            typeof input.limit !== "number" ||
+            typeof input.offset !== "number" ||
+            !Number.isSafeInteger(input.limit) ||
+            !Number.isSafeInteger(input.offset) ||
+            input.limit < 1 ||
+            input.limit > 100 ||
+            input.offset < 0 ||
+            input.offset > 10000000
+          ) {
+            return { success: false as const, errorCode: "INVALID_REQUEST" };
+          }
+
+          historyPage = {
+            limit: input.limit,
+            offset: input.offset,
+          };
+        }
         try {
+          if (historyPage) {
+            return kind === "transactions"
+              ? await accountWalletHistoryClient.transactionsPage(
+                  matched[1], historyPage
+                )
+              : await accountWalletHistoryClient.rechargesPage(
+                  matched[1], historyPage
+                );
+          }
+
           return kind === "transactions"
             ? await accountWalletHistoryClient.transactions(matched[1])
             : await accountWalletHistoryClient.recharges(matched[1]);
@@ -5218,14 +5626,8 @@ app.whenReady().then(async () => {
         }
       },
     );
-    const finoraBusinessSessionsBySender =
-      new WeakMap<object, {
-        sessionId: string;
-        expiresAt: string;
-      }>();    // FINORA_P1_696W_LOGIN_GENERATION
-    // Isolate concurrent Account/Business login attempts per sender.
-    const finoraAccountBusinessLoginGeneration =
-      new WeakMap<object, number>();
+    // FINORA_P1_752Q_SHARED_SENDER_SCOPE
+    // Sender-keyed authorities are declared privately at module scope.
 
     // FINORA_P1_706M_SERVER_USB_DEPENDENCY_BRIDGE
     // Scope-local session maps remain private.
@@ -5948,8 +6350,9 @@ app.whenReady().then(async () => {
               ) {
                 return deny("SERVER_UNAVAILABLE");
               }
+              // FINORA_P1_751N2_PRESERVE_GUARD_REASON
               invalidateFinoraServerReceptionSession(sender, sessionId);
-              return deny("SESSION_REVALIDATION_DENIED");
+              return deny(result.errorCode);
             }
             if (!current()) {
               invalidateFinoraServerReceptionSession(sender, sessionId);
@@ -5959,26 +6362,16 @@ app.whenReady().then(async () => {
             const account =
               getFinoraSenderWalletPrincipal(sender);
 
-            const verified =
-              await verifyFinoraServerBusinessSession(
-                businessSession.sessionId,
-              );
-
-            // FINORA_P1_726T_SECOND_VERIFY_NETWORK
-            // Do not destroy the session for a temporary network
-            // outage. This validation request remains denied.
-            // Never treat a confirmed authorization rejection as
-            // a recoverable connectivity failure.
+            // FINORA_P1_755L_SINGLE_GUARD_VERIFICATION
+            // Reception authority has already verified this exact
+            // server Business Session in the current request.
+            // Reuse that verified principal, not another network
+            // request that could race with session changes.
+            const verified = {
+              success: true as const,
+              principal: result.principal,
+            };
             if (
-              !verified.success &&
-              verified.errorCode === "SERVER_UNAVAILABLE" &&
-              current()
-            ) {
-              return deny("SERVER_UNAVAILABLE");
-            }
-
-            if (
-              !verified.success ||
               !account ||
               !current() ||
               !(["userId", "ownerId", "businessId", "branchId"] as const)
@@ -6019,7 +6412,11 @@ app.whenReady().then(async () => {
               receptionCommitRequired: true as const,
             };
           } catch {
-            return deny("SERVER_RECEPTION_UNAVAILABLE");
+            // FINORA_P1_752A_FAIL_CLOSED_RECOVERY
+            // Unexpected verification failures never grant access.
+            // Keep the session handle for a fresh server check rather
+            // than converting an unconfirmed failure into a logout.
+            return deny("SERVER_UNAVAILABLE");
           }
         },
       );
@@ -7154,6 +7551,45 @@ app.whenReady().then(async () => {
         } catch {
           clearFinoraAccountWalletSession();
         }
+        // FINORA_P1_752E_VERIFIED_SENDER_WALLET
+        // Password-only server authentication; no Reception grant.
+        // Retain only if the exact Main Login scope matches.
+        const ownerSender = mainWindow?.webContents;
+        if (ownerSender && !ownerSender.isDestroyed()) {
+          try {
+            const senderResult = await establishFinoraSenderWallet(
+              ownerSender,
+              session.oneTimeCredentials.username,
+              session.oneTimeCredentials.password,
+            );
+
+            const senderPrincipal = senderResult.success
+              ? getFinoraSenderWalletPrincipal(ownerSender)
+              : null;
+
+            const scopeMatches =
+              !!senderPrincipal &&
+              senderPrincipal.userId === session.userId &&
+              senderPrincipal.ownerId === session.ownerId &&
+              senderPrincipal.businessId === session.businessId &&
+              senderPrincipal.branchId === session.branchId;
+
+            if (!scopeMatches || ownerSender.isDestroyed()) {
+              clearFinoraSenderWallet(ownerSender);
+            }
+
+            if (process.env.FINORA_WALLET_DIAGNOSTICS === "1") {
+              console.info("[FINORA SENDER WALLET HANDOFF]", {
+                success: scopeMatches && !ownerSender.isDestroyed(),
+                errorCode: senderResult.success
+                  ? scopeMatches ? "NONE" : "SCOPE_MISMATCH"
+                  : senderResult.errorCode ?? "AUTHENTICATION_FAILED",
+              });
+            }
+          } catch {
+            clearFinoraSenderWallet(ownerSender);
+          }
+        }
         /*
          * FINORA_P1_578HL_NORMAL_LOGIN_PROOF_FIRST
          *
@@ -7247,7 +7683,9 @@ app.whenReady().then(async () => {
           // independent signed Proof authentication.
           if (!result.success) {
             unifiedWalletSession.clearLocal();
-        clearFinoraAccountWalletSession();
+            // FINORA_P1_751Z_ACCOUNT_WALLET_PRESERVATION
+            // Legacy Wallet failure must not erase a separately
+            // server-authenticated Account Wallet session.
           }
 
           // FINORA_P1_578EA_AUTO_PROOF_HANDOFF

@@ -1,3 +1,4 @@
+import { confirmFinoraServerDisconnect } from "./finoraConfirmServerDisconnect";
 import { useCallback, useEffect, useState } from "react";
 import { RefreshCw, Server, ShieldCheck, Unplug } from "lucide-react";
 
@@ -88,9 +89,7 @@ export default function FinoraControlCenterServerConnectionPanel() {
   }
 
   async function disconnect() {
-    if (busy || !window.confirm(
-      "Disconnect FINORA Server access? Server records and Wallet balances remain unchanged."
-    )) return;
+    if (busy || !(await confirmFinoraServerDisconnect())) return;
 
     setBusy(true);
     try {
@@ -165,7 +164,7 @@ export default function FinoraControlCenterServerConnectionPanel() {
             border: `1px solid ${color}`,
             borderRadius: 999,
             padding: "9px 14px",
-          }}>
+          }} className="finora-cc-p756j-connected-badge">
           {connected ? "● LIVE CONNECTED" :
             state === "CHECKING" ? "● VERIFYING" :
             state === "SETUP" ? "● SETUP REQUIRED" :
@@ -179,7 +178,7 @@ export default function FinoraControlCenterServerConnectionPanel() {
         {" · "}{message}
       </p>
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }} className="finora-cc-p756j-connection-actions">
         {!connected && (
           <>
             <input

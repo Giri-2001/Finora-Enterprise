@@ -246,7 +246,7 @@ export default function NumberingSeriesSettingsForm({
                   : startingCustomerNumber
               }
               readOnly={locked}
-              disabled={disabled || saving}
+              disabled={!locked && (disabled || saving)}
               aria-readonly={locked}
               required={!locked}
               onChange={(event) =>

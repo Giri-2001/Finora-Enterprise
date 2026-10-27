@@ -1744,3 +1744,329 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
       minmax(0, 1fr) !important;
   }
 }
+
+
+/* ===========================================================
+   FINORA_P1_756H_DEVELOPER_RESPONSIVE
+   UI-only Control Center mobile/tablet layout.
+   Does not modify recharge, pricing or server behavior.
+=========================================================== */
+
+.finora-cc-polish-stats,
+.finora-cc-polish-subscriptions,
+.finora-cc-polish-pending-grid,
+.finora-cc-polish-branches-grid {
+  min-width: 0;
+}
+
+.finora-cc-polish-stats > *,
+.finora-cc-polish-subscriptions > *,
+.finora-cc-polish-pending-grid > *,
+.finora-cc-polish-branches-grid > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Tablet: three enterprise metric cards in each row. */
+@media (min-width: 601px) and (max-width: 900px) {
+  .finora-cc-polish-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  .finora-cc-polish-stats > article {
+    padding: 13px !important;
+    overflow-wrap: anywhere;
+  }
+
+  .finora-cc-polish-stats > article > div:nth-child(2) {
+    font-size: clamp(19px, 2.8vw, 29px) !important;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Subscription plans: full-width cards below desktop widths. */
+@media (max-width: 900px) {
+  .finora-cc-polish-subscriptions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  .finora-cc-polish-subscriptions > * {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .finora-cc-polish-subscriptions input {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* Mobile: orderly controls, full-width cards, no narrow actions. */
+@media (max-width: 600px) {
+  .finora-cc-polish-dashboard {
+    padding: 16px !important;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .finora-cc-polish-overview-header,
+  .finora-cc-polish-overview-filters,
+  .finora-cc-polish-pending-header,
+  .finora-cc-polish-branches-header,
+  .finora-cc-polish-branches-search {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    width: 100%;
+    min-width: 0;
+    gap: 12px !important;
+  }
+
+  .finora-cc-polish-overview-header > *,
+  .finora-cc-polish-overview-filters > *,
+  .finora-cc-polish-pending-header > *,
+  .finora-cc-polish-branches-header > *,
+  .finora-cc-polish-branches-search > * {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .finora-cc-polish-overview-header > button,
+  .finora-cc-polish-overview-filters > button,
+  .finora-cc-polish-overview-filters > input,
+  .finora-cc-polish-pending-header > button,
+  .finora-cc-polish-branches-header > button,
+  .finora-cc-polish-branches-search > input,
+  .finora-cc-polish-branches-search > button {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 44px;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    justify-content: center;
+    align-items: center;
+    flex: none !important;
+  }
+
+  .finora-cc-polish-overview-filters > input {
+    color-scheme: dark;
+  }
+
+  .finora-cc-polish-overview-filters > span {
+    width: 100%;
+    line-height: 1.5;
+  }
+
+  .finora-cc-polish-stats,
+  .finora-cc-polish-pending-grid,
+  .finora-cc-polish-branches-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+    width: 100%;
+  }
+
+  .finora-cc-polish-stats > article {
+    padding: 16px !important;
+    overflow-wrap: anywhere;
+  }
+
+  .finora-cc-polish-pending-grid > article {
+    width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .finora-cc-polish-branches-grid > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow-wrap: anywhere;
+  }
+
+  /* Pending recharge pagination retains its existing page actions. */
+  .finora-recharge-pagination {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    justify-items: stretch !important;
+    gap: 10px !important;
+    width: 100%;
+  }
+
+  .finora-recharge-pagination > button,
+  .finora-recharge-pagination > .finora-recharge-page-badge {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+
+/* ========================================================
+   FINORA_P1_756I_BRANCH_PAGINATION
+   Mobile-only branch directory pagination polish.
+   ======================================================== */
+
+@media (max-width: 600px) {
+
+  /* Pagination outer row: page label then action row. */
+  div:has(> .finora-cc-branch-page-label) {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+  }
+
+  /* Page number: centered and full width. */
+  .finora-cc-branch-page-label {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    min-height: 46px !important;
+    padding: 10px 14px !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(96,165,250,.38) !important;
+    background: rgba(37,99,235,.14) !important;
+    color: #e8f0ff !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Previous and Next: equal columns. */
+  div:has(> .finora-cc-branch-page-label) > div:has(> button) {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  div:has(> .finora-cc-branch-page-label) > div > button {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 46px !important;
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+    box-sizing: border-box !important;
+    text-align: center !important;
+  }
+
+}
+
+
+/* FINORA_P1_756J_SERVER_CONNECTION_MOBILE */
+@media (max-width: 600px) {
+
+  /* Center the LIVE CONNECTED badge. */
+  .finora-cc-p756j-connected-badge {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: fit-content !important;
+    max-width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Verify and Disconnect share one full-width row. */
+  .finora-cc-p756j-connection-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 10px !important;
+  }
+
+  .finora-cc-p756j-connection-actions > button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 46px !important;
+    margin: 0 !important;
+    padding: 10px 8px !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+    white-space: normal !important;
+  }
+}
+
+
+/* ==========================================================
+   FINORA_P1_756K_TABLET_SUBSCRIPTION
+   Full width Subscription Plans + two tablet inputs per row.
+   Owner Pricing Notice and pricing logic are unchanged.
+========================================================== */
+
+@media (min-width: 601px) and (max-width: 900px) {
+
+  .finora-cc-p756k-plan-panel {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    grid-column: 1 / -1 !important;
+    justify-self: stretch !important;
+    box-sizing: border-box !important;
+  }
+
+  .finora-cc-polish-subscriptions {
+    display: grid !important;
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    align-items: stretch !important;
+  }
+
+  .finora-cc-polish-subscriptions > label {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .finora-cc-polish-subscriptions input {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+}
+
+/* Phone: retain one full-width subscription input per row. */
+@media (max-width: 600px) {
+
+  .finora-cc-p756k-plan-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .finora-cc-polish-subscriptions {
+    grid-template-columns:
+      minmax(0, 1fr) !important;
+  }
+
+}

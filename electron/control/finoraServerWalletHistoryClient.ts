@@ -94,9 +94,24 @@ export function createFinoraServerWalletHistoryClient(
     token: string,
     kind: "transactions" | "recharges",
     validate: (x: unknown) => x is T,
+    page: { limit: number; offset: number } = {
+      limit: 50,
+      offset: 0,
+    },
   ): Promise<HistoryResult<T>> {
     if (!/^[a-f0-9]{64}$/.test(token)) {
       return { success: false, errorCode: "UNAUTHORIZED" };
+    }
+
+    if (
+      !Number.isSafeInteger(page.limit) ||
+      page.limit < 1 ||
+      page.limit > 100 ||
+      !Number.isSafeInteger(page.offset) ||
+      page.offset < 0 ||
+      page.offset > 10000000
+    ) {
+      return { success: false, errorCode: "INVALID_REQUEST" };
     }
 
     const controller = new AbortController();
@@ -104,7 +119,7 @@ export function createFinoraServerWalletHistoryClient(
 
     try {
       const response = await transport(
-        `${BASE}/owner/wallet/${kind}?limit=50&offset=0`,
+        `${BASE}/owner/wallet/${kind}?limit=${page.limit}&offset=${page.offset}`,
         {
           method: "GET",
           headers: {
@@ -155,11 +170,11 @@ export function createFinoraServerWalletHistoryClient(
         data.source !== expectedSource ||
         !validText(data.walletId, 128) ||
         data.currency !== "INR" ||
-        data.limit !== 50 ||
-        data.offset !== 0 ||
+        data.limit !== page.limit ||
+        data.offset !== page.offset ||
         typeof data.hasMore !== "boolean" ||
         !Array.isArray(rows) ||
-        rows.length > 50 ||
+        rows.length > page.limit ||
         !rows.every(validate)
       ) {
         return { success: false, errorCode: "INVALID_SERVER_RESPONSE" };
@@ -188,6 +203,16 @@ export function createFinoraServerWalletHistoryClient(
   }
 
   return Object.freeze({
+    // FINORA_P1_747L_PAGED_HISTORY
+    // Same authenticated read(), with server-validated pagination.
+    transactionsPage: (
+      sessionToken: string,
+      page: { limit: number; offset: number },
+    ) => read(sessionToken, "transactions", transaction, page),
+    rechargesPage: (
+      sessionToken: string,
+      page: { limit: number; offset: number },
+    ) => read(sessionToken, "recharges", recharge, page),
     transactions: (token: string) =>
       read(token, "transactions", transaction),
     recharges: (token: string) =>

@@ -14,6 +14,10 @@ export interface FinoraServerDashboardView {
     activePlans: number;
     monthlyIncomeInr: number | null;
     monthlyIncomeStatus: string;
+    selectedMonth?: string;
+    monthlyReceiptCount?: number;
+    totalCashCollectedInr?: number;
+    totalCashReceiptCount?: number;
   };
   subscriptionMonitor: {
     page: number;
@@ -42,6 +46,20 @@ function nonNegativeInteger(v: unknown): v is number {
     Number.isSafeInteger(v) && v >= 0;
 }
 
+/* FINORA_P1_739R_STRICT_FINANCIAL_RESPONSE */
+function validInr(v: unknown): v is number {
+  return typeof v === "number" &&
+    Number.isFinite(v) &&
+    v >= 0 &&
+    Number.isSafeInteger(Math.round(v * 100)) &&
+    Math.abs(v * 100 - Math.round(v * 100)) < 0.000001;
+}
+
+function validMonth(v: unknown): v is string {
+  return typeof v === "string" &&
+    /^\d{4}-(0[1-9]|1[0-2])$/.test(v) &&
+    Number(v.slice(0, 4)) >= 2020;
+}
 function validDashboard(v: unknown): v is FinoraServerDashboardView {
   if (!record(v) || v.ok !== true || v.source !== "POSTGRESQL") {
     return false;
@@ -59,9 +77,27 @@ function validDashboard(v: unknown): v is FinoraServerDashboardView {
     !nonNegativeInteger(m.totalBranches) ||
     !nonNegativeInteger(m.activePlans) ||
     m.activePlans > m.totalBranches ||
-    m.monthlyIncomeInr !== null ||
-    m.monthlyIncomeStatus !==
-      "VERIFIED_BILLING_SOURCE_NOT_CONFIGURED" ||
+    // FINORA_P1_739J_VERIFIED_MONTHLY_INCOME
+    // Accept either the legacy unavailable status or an actual
+    // verified non-negative INR value from the authenticated server.
+    !(
+      (
+        m.monthlyIncomeInr === null &&
+        m.monthlyIncomeStatus ===
+          "VERIFIED_BILLING_SOURCE_NOT_CONFIGURED"
+      ) ||
+      (
+        validInr(m.monthlyIncomeInr) &&
+        m.monthlyIncomeStatus ===
+          "VERIFIED_RECHARGE_CASH_COLLECTIONS" &&
+        validMonth(m.selectedMonth) &&
+        nonNegativeInteger(m.monthlyReceiptCount) &&
+        validInr(m.totalCashCollectedInr) &&
+        nonNegativeInteger(m.totalCashReceiptCount) &&
+        m.totalCashCollectedInr >= m.monthlyIncomeInr &&
+        m.totalCashReceiptCount >= m.monthlyReceiptCount
+      )
+    ) ||
     !nonNegativeInteger(s.page) ||
     !nonNegativeInteger(s.size) ||
     !Array.isArray(s.branches) ||
@@ -89,6 +125,7 @@ export async function loadFinoraServerDashboard(
   page = 1,
   size = 25,
   transport: typeof fetch = globalThis.fetch,
+  month?: string,
 ): Promise<FinoraServerDashboardView> {
   if (
     typeof adminKey !== "string" ||
@@ -118,6 +155,19 @@ export async function loadFinoraServerDashboard(
   );
   url.searchParams.set("page", String(page));
   url.searchParams.set("size", String(size));
+
+  // FINORA_P1_739P_MONTH_REQUEST
+  if (month !== undefined) {
+    if (
+      !/^\d{4}-(0[1-9]|1[0-2])$/.test(month) ||
+      Number(month.slice(0, 4)) < 2020 ||
+      Number(month.slice(0, 4)) > 9999
+    ) {
+      throw new Error("DASHBOARD_MONTH_INVALID");
+    }
+
+    url.searchParams.set("month", month);
+  }
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12000);
@@ -162,6 +212,15 @@ export async function loadFinoraServerDashboard(
       body.subscriptionMonitor.branches.length > size
     ) {
       throw new Error("DASHBOARD_PAGINATION_MISMATCH");
+    }
+
+    // FINORA_P1_739R_MONTH_RESPONSE_MATCH
+    // A requested month must match the authenticated server reply.
+    if (
+      month !== undefined &&
+      body.metrics.selectedMonth !== month
+    ) {
+      throw new Error("DASHBOARD_MONTH_RESPONSE_MISMATCH");
     }
 
     return body;

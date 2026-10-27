@@ -27,13 +27,16 @@ public class MainActivity
          * Register FINORA native plugins BEFORE
          * BridgeActivity creates the Capacitor bridge.
          */
-        registerPlugin(
-            FinoraControlPlugin.class
-        );
-
-        registerPlugin(
-            FinoraDeveloperControlCenterPlugin.class
-        );
+        // FINORA_P1_757C_VARIANT_NATIVE_REGISTRATION
+        if (BuildConfig.FINORA_DEVELOPER_VARIANT) {
+            registerPlugin(
+                FinoraDeveloperControlCenterPlugin.class
+            );
+        } else {
+            registerPlugin(
+                FinoraControlPlugin.class
+            );
+        }
 
         registerPlugin(
             FinoraControlBundleImportPlugin.class

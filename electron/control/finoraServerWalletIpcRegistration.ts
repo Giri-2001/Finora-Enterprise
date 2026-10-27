@@ -111,6 +111,14 @@ export function registerFinoraServerWalletIpc(options: {
   packaged: boolean;
   ownerEntryPath: string;
   service: Service;
+  // FINORA_P1_752O_TRUSTED_RECHARGE_SENDER
+  rechargeService?: Parameters<
+    typeof createFinoraServerWalletIpcBoundary
+  >[0]["rechargeService"];
+  // FINORA_P1_753L_PENDING_CHANNEL
+  rechargePendingService?: () => Promise<unknown>;
+  // FINORA_P1_753Y2_RECOVERY_OPTION
+  rechargeResumeService?: () => Promise<unknown>;
   historyService?: {
     transactions: () => Promise<unknown>;
     recharges: () => Promise<unknown>;
@@ -149,6 +157,7 @@ export function registerFinoraServerWalletIpc(options: {
   const boundary = createFinoraServerWalletIpcBoundary({
     service: options.service,
     authorize,
+    rechargeService: options.rechargeService,
   });
   const recoveryBoundary = options.recoveryService
     ? createFinoraWalletRecoveryIpcBoundary({
@@ -294,6 +303,130 @@ export function registerFinoraServerWalletIpc(options: {
           invalidate();
         }
         return boundary[method](event, args[0]);
+      });
+      installed.push(channel);
+    }
+
+    // FINORA_P1_753Y2_RECOVERY_IPC
+    {
+      const channel = "finora:server-wallet:recharge-resume";
+
+      ipc.handle(channel, async (
+        event: IpcMainInvokeEvent,
+        ...args: unknown[]
+      ) => {
+        const fail = (errorCode: string) => ({
+          success: false as const,
+          errorCode,
+        });
+
+        if (
+          disposed ||
+          !authorize(event) ||
+          args.length !== 0 ||
+          !options.rechargeResumeService
+        ) {
+          return fail("UNAUTHORIZED");
+        }
+
+        const ticket = historyRevision;
+
+        try {
+          const input = await options.rechargeResumeService();
+
+          if (
+            disposed ||
+            ticket !== historyRevision ||
+            !authorize(event)
+          ) {
+            return fail("STALE_OPERATION");
+          }
+
+          if (
+            !input ||
+            typeof input !== "object" ||
+            Array.isArray(input)
+          ) {
+            return fail("NO_PENDING_RECHARGE");
+          }
+
+          // Reuse existing authenticated Recharge IPC boundary:
+          // sender validation, request validation, response sanitization.
+          // Main's existing Recharge service validates Wallet scope,
+          // server response and exact encrypted-intent settlement.
+          return await boundary.recharge(event, input);
+        } catch {
+          return fail("RECHARGE_RECONCILIATION_REQUIRED");
+        }
+      });
+
+      installed.push(channel);
+    }
+
+    // FINORA_P1_753L_PENDING_CHANNEL
+    // Read-only. No renderer-selected scope or original UUID.
+    {
+      const channel = "finora:server-wallet:recharge-pending";
+      ipc.handle(channel, async (
+        event: IpcMainInvokeEvent,
+        ...args: unknown[]
+      ) => {
+        const fail = (errorCode: string) => ({
+          success: false as const, errorCode,
+        });
+        if (disposed || !authorize(event) ||
+            args.length !== 0 || !options.rechargePendingService) {
+          return fail("UNAUTHORIZED");
+        }
+        const ticket = historyRevision;
+        try {
+          const result = await options.rechargePendingService();
+          if (disposed || ticket !== historyRevision) {
+            return fail("STALE_OPERATION");
+          }
+          if (!authorize(event)) return fail("UNAUTHORIZED");
+          if (!result || typeof result !== "object" ||
+              Array.isArray(result)) return fail("SERVER_UNAVAILABLE");
+          const value = result as Record<string, unknown>;
+          if (value.success !== true) {
+            return fail(
+              typeof value.errorCode === "string" &&
+              ["UNAUTHORIZED", "STALE_OPERATION",
+               "RECHARGE_INTENT_LOAD_FAILED"].includes(value.errorCode)
+                ? value.errorCode : "SERVER_UNAVAILABLE"
+            );
+          }
+          const data = value.data;
+          if (!data || typeof data !== "object" ||
+              Array.isArray(data)) return fail("INVALID_SERVER_RESPONSE");
+          const status = data as Record<string, unknown>;
+          if (typeof status.pending !== "boolean" ||
+              !(status.amountInr === null ||
+                (Number.isSafeInteger(status.amountInr) &&
+                 (status.amountInr as number) >= 50 &&
+                 (status.amountInr as number) <= 2000)) ||
+              !(status.paymentMethod === null ||
+                status.paymentMethod === "PHONEPE" ||
+                status.paymentMethod === "GOOGLE_PAY") ||
+              (status.pending &&
+               (status.amountInr === null ||
+                status.paymentMethod === null)) ||
+              (!status.pending &&
+               (status.amountInr !== null ||
+                status.paymentMethod !== null))) {
+            return fail("INVALID_SERVER_RESPONSE");
+          }
+          return {
+            success: true as const,
+            data: {
+              pending: status.pending,
+              amountInr: status.amountInr,
+              paymentMethod: status.paymentMethod,
+            },
+          };
+        } catch {
+          return fail("SERVER_UNAVAILABLE");
+        }
       });
       installed.push(channel);
     }

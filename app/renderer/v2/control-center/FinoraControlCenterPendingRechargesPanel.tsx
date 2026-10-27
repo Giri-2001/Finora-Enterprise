@@ -1,3 +1,4 @@
+import "./FinoraPremiumRechargePagination.css";
 import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import FinoraRechargePaymentReview from "./FinoraRechargePaymentReview";
@@ -112,7 +113,7 @@ export default function FinoraControlCenterPendingRechargesPanel() {
         minWidth: 0,
       }}
     >
-      <div style={{
+      <div className="finora-cc-polish-pending-header" style={{
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
@@ -157,39 +158,125 @@ export default function FinoraControlCenterPendingRechargesPanel() {
       )}
 
       {status === "READY" && rows.length > 0 && (
-        <div style={{
+        <div className="finora-cc-polish-pending-grid" style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(245px,1fr))",
-          gap: 12,
+          gridTemplateColumns:
+            "repeat(auto-fill,minmax(min(100%,350px),1fr))",
+          gap: 16,
+          marginTop: 14,
         }}>
           {rows.map(row => (
-            <article key={row.requestId} style={{
-              border: "1px solid rgba(148,163,184,.25)",
-              padding: 15,
-              borderRadius: 14,
-              overflowWrap: "anywhere",
-            }}>
-              <strong>{row.ownerName}</strong>
-              <div>{row.businessName} / {row.branchName}</div>
-              <div>Wallet: {row.walletId}</div>
-              <div>Amount: <strong>{money(row.amountInr)}</strong></div>
-              <div>Payment: {row.paymentMethod}</div>
-              <div>Request: {row.requestId}</div>
-              <div>Status: {row.status}</div>
+            <article
+              key={row.requestId}
+              style={{
+                display: "grid",
+                gap: 12,
+                padding: 18,
+                minWidth: 0,
+                alignContent: "start",
+                borderRadius: 20,
+                border: "1px solid rgba(96,165,250,.32)",
+                background:
+                  "radial-gradient(circle at top left,rgba(37,99,235,.19),transparent 60%),linear-gradient(145deg,#182947,#0c172a)",
+                boxShadow: "0 14px 34px rgba(0,0,0,.24)",
+                overflowWrap: "anywhere",
+              }}
+            >
+              <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 10,
+              }}>
+                <div>
+                  <div style={{
+                    color: "#93c5fd",
+                    fontSize: 10,
+                    fontWeight: 800,
+                    letterSpacing: ".12em",
+                  }}>
+                    FINORA / WALLET RECHARGE
+                  </div>
+                  <h3 style={{
+                    fontSize: 20,
+                    margin: "7px 0 4px",
+                    color: "#f8fafc",
+                  }}>
+                    {row.branchName}
+                  </h3>
+                  <div style={{
+                    fontSize: 12,
+                    color: "#cbd5e1",
+                  }}>
+                    {row.ownerName} / {row.businessName}
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  color: "#fcd34d",
+                  background: "rgba(245,158,11,.13)",
+                  border: "1px solid rgba(245,158,11,.35)",
+                  borderRadius: 999,
+                  padding: "6px 10px",
+                }}>
+                  {row.status}
+                </span>
+              </div>
+
+              <div style={{
+                padding: 16,
+                background: "rgba(37,99,235,.12)",
+                border: "1px solid rgba(96,165,250,.22)",
+                borderRadius: 14,
+              }}>
+                <div style={{
+                  color: "#93c5fd",
+                  fontSize: 11,
+                  fontWeight: 750,
+                }}>
+                  REQUESTED RECHARGE
+                </div>
+                <div style={{
+                  fontSize: 27,
+                  fontWeight: 850,
+                  color: "#f8fafc",
+                  marginTop: 7,
+                }}>
+                  {money(row.amountInr)}
+                </div>
+                <div style={{
+                  color: "#cbd5e1",
+                  fontSize: 12,
+                  marginTop: 6,
+                }}>
+                  Payment: {row.paymentMethod}
+                </div>
+              </div>
+
+              <details style={{
+                color: "#94a3b8",
+                fontSize: 11,
+              }}>
+                <summary style={{ cursor: "pointer" }}>
+                  Request identifiers
+                </summary>
+                <div style={{ marginTop: 8 }}>
+                  Request: {row.requestId}
+                </div>
+                <div>Wallet: {row.walletId}</div>
+              </details>
+
               <FinoraRechargePaymentReview
                 request={row}
                 onCompleted={() => setRefresh(x => x + 1)}
               />
-              <small>
-                Awaiting independently verified payment.
-                No approval action available here.
-              </small>
             </article>
           ))}
         </div>
       )}
 
-      <div style={{
+      <div className="finora-recharge-pagination" style={{
         display: "flex",
         gap: 12,
         justifyContent: "flex-end",
@@ -199,7 +286,7 @@ export default function FinoraControlCenterPendingRechargesPanel() {
           disabled={status === "LOADING" || offset === 0}
           onClick={() => setOffset(x => Math.max(0, x - SIZE))}
         >Previous</button>
-        <span>Page {Math.floor(offset / SIZE) + 1}</span>
+        <span className="finora-recharge-page-badge">Page {Math.floor(offset / SIZE) + 1}</span>
         <button type="button"
           disabled={status === "LOADING" || !hasMore}
           onClick={() => setOffset(x => x + SIZE)}

@@ -1,3 +1,5 @@
+import { getSession } from "../../../store/authStore";
+import { Capacitor } from "@capacitor/core";
 import { formatCustomerId } from "../../../utils/numbering/numbering.formatter";
 // ============================================================
 // FINORA ENTERPRISE OS™
@@ -78,17 +80,57 @@ export default function NumberingSeriesSettingsSection() {
     let active = true;
     async function loadServerNumbering(): Promise<void> {
       try {
-        const scope = await resolveFinoraNumberingScope();
+        // FINORA_P1_737U_ANDROID_NUMBERING
+        // Android uses the verified login's expected scope.
+        // Native server reads independently enforce authorization.
+        // Windows retains signed Business Profile verification.
+        let expectedScope: {
+          ownerId: string;
+          businessId: string;
+          branchId: string;
+        } | null = null;
+
+        if (
+          Capacitor.isNativePlatform() &&
+          Capacitor.getPlatform() === "android"
+        ) {
+          const session = getSession();
+
+          if (
+            session?.sessionId &&
+            session.role === "OWNER" &&
+            session.ownerId &&
+            session.businessId &&
+            session.branchId
+          ) {
+            expectedScope = {
+              ownerId: session.ownerId,
+              businessId: session.businessId,
+              branchId: session.branchId,
+            };
+          }
+        } else {
+          const scope = await resolveFinoraNumberingScope();
+
+          if (scope.success && scope.data) {
+            expectedScope = {
+              ownerId: scope.data.ownerId,
+              businessId: scope.data.businessId,
+              branchId: scope.data.branchId,
+            };
+          }
+        }
+
         if (!active) return;
-        if (!scope.success || !scope.data) {
-          setServerNumberingError("AUTHORIZED_NUMBERING_SCOPE_UNAVAILABLE");
+
+        if (!expectedScope) {
+          setServerNumberingError(
+            "AUTHORIZED_NUMBERING_SCOPE_UNAVAILABLE",
+          );
           return;
         }
-        const result = await readFinoraServerNumbering({
-          ownerId: scope.data.ownerId,
-          businessId: scope.data.businessId,
-          branchId: scope.data.branchId,
-        });
+
+        const result = await readFinoraServerNumbering(expectedScope);
         if (!active) return;
         if (!result.success) {
           setServerNumberingError(result.errorCode);
@@ -703,7 +745,7 @@ export default function NumberingSeriesSettingsSection() {
         <>
           <SettingsFeedback
             kind="info"
-            title="Customer Series — PostgreSQL LIVE"
+            title="Customer Series — Active"
             message="The original Customer Series is permanently locked. The next Customer number is preview-only; central reservation is not enabled yet."
           />
           <NumberingSeriesSettingsForm

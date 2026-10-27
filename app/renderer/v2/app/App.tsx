@@ -2507,9 +2507,27 @@ setContextReady(true);
   // LOGIN
   // ==========================================================
 
+  // FINORA_P1_736U_FRESH_LOGIN_RECOVERY
+  // Clear stale rejection UI only after a new login session exists.
+  // Reception authorization remains subject to server revalidation.
   function handleLogin(): void {
     const nextSession = getSession();
 
+    if (!nextSession?.sessionId) {
+      return;
+    }
+
+    try {
+      window.sessionStorage.removeItem(
+        FINORA_LOGIN_KICKOUT_STAGE,
+      );
+    } catch {
+      // Session storage cleanup must not grant authentication.
+    }
+
+    setLoginRejectionError(null);
+    setContextError(null);
+    setContextReady(false);
     setSession(nextSession);
   }
 

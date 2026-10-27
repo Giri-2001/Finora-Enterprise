@@ -7,7 +7,10 @@ type Principal = FinoraServerReceptionPrincipal;
 
 type Verification =
   | { success: true; principal: Principal }
-  | { success: false };
+  | {
+      success: false;
+      errorCode?: string;
+    };
 
 type VerifyServer = (
   businessSessionId: string,
@@ -78,8 +81,9 @@ export async function issueFinoraServerReceptionSession(
   expectedPrincipal: Principal,
   verifyServer: VerifyServer,
 ) {
-  sessions.delete(sender);
-
+  // FINORA_P1_753U_ATOMIC_ISSUANCE
+  // Never erase an existing verified Reception session before
+  // the replacement Business Session passes server verification.
   if (!validId(businessSessionId)) {
     return { success: false as const, errorCode: "INVALID_SERVER_SESSION" };
   }
@@ -97,6 +101,27 @@ export async function issueFinoraServerReceptionSession(
     !samePrincipal(verified.principal, expectedPrincipal)
   ) {
     return { success: false as const, errorCode: "SERVER_SCOPE_DENIED" };
+  }
+
+  // FINORA_P1_753U_ATOMIC_ISSUANCE
+  // Repeated issuance for the SAME verified Business Session must
+  // not invalidate an already live Reception session.
+  const existing = sessions.get(sender);
+
+  if (
+    existing &&
+    existing.businessSessionId === businessSessionId &&
+    live(existing) &&
+    samePrincipal(existing.principal, verified.principal)
+  ) {
+    // Extend local validity only after this successful server check.
+    existing.lastActivity = Date.now();
+
+    return {
+      success: true as const,
+      sessionId: existing.sessionId,
+      principal: existing.principal,
+    };
   }
 
   const created = createFinoraServerReceptionSession(
@@ -158,14 +183,51 @@ export async function validateFinoraServerReceptionSession(
     return { success: false as const, errorCode: "SERVER_UNAVAILABLE" };
   }
 
+  // FINORA_P1_754S2_TYPED_REVALIDATION
+  // Temporary transport/malformed responses are not proof of revocation.
+  // Retain the handle but deny operations until successful revalidation.
+  // Never extend session validity on failure.
   if (
-    sessions.get(sender) !== entry ||
-    !verified.success ||
-    !samePrincipal(verified.principal, entry.principal)
+    !verified.success &&
+    (
+      verified.errorCode === "SERVER_UNAVAILABLE" ||
+      verified.errorCode === "INVALID_SERVER_RESPONSE"
+    ) &&
+    sessions.get(sender) === entry
   ) {
-    if (sessions.get(sender) === entry) sessions.delete(sender);
+    return {
+      success: false as const,
+      errorCode: "SERVER_UNAVAILABLE",
+    };
+  }
 
-    return { success: false as const, errorCode: "SERVER_REVALIDATION_DENIED" };
+  // A parallel authenticated login may have replaced this session.
+  // Never delete the replacement.
+  if (sessions.get(sender) !== entry) {
+    return {
+      success: false as const,
+      errorCode: "SESSION_CHANGED",
+    };
+  }
+
+  if (!verified.success) {
+    // Server refusal remains authoritative.
+    sessions.delete(sender);
+    return {
+      success: false as const,
+      errorCode: typeof verified.errorCode === "string"
+        ? verified.errorCode
+        : "SERVER_REVALIDATION_DENIED",
+    };
+  }
+
+  if (!samePrincipal(verified.principal, entry.principal)) {
+    // Verified identity mismatch must fail closed.
+    sessions.delete(sender);
+    return {
+      success: false as const,
+      errorCode: "SERVER_IDENTITY_MISMATCH",
+    };
   }
 
   // FINORA_P1_726P_VERIFIED_REFRESH

@@ -99,6 +99,12 @@ export function mapFinoraServerReceptionGuardCandidate(
     return { success: false, errorCode: "SERVER_UNAVAILABLE" };
   }
 
+  // FINORA_P1_751H_EXACT_REJECTION_CLASSIFICATION
+  if (response?.success === false &&
+      typeof response.errorCode === "string" &&
+      /^[A-Z][A-Z0-9_]{2,80}$/.test(response.errorCode)) {
+    return { success: false, errorCode: response.errorCode };
+  }
   if (
     !response ||
     response.success !== true ||

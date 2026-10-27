@@ -22,6 +22,10 @@ type IntentStore = {
   load(
     scope: RechargeIntentScope,
   ): Promise<RechargeIntent | null>;
+  clearIfMatches(
+    scope: RechargeIntentScope,
+    idempotencyKey: string,
+  ): Promise<boolean>;
 };
 
 type VerifiedIntentAuthority = RechargeIntentScope & {
@@ -92,7 +96,8 @@ export function createFinoraAuthenticatedRechargeIntentCoordinator(
   if (
     typeof dependencies?.scopeResolver?.resolve !== "function" ||
     typeof dependencies?.store?.save !== "function" ||
-    typeof dependencies?.store?.load !== "function"
+    typeof dependencies?.store?.load !== "function" ||
+    typeof dependencies?.store?.clearIfMatches !== "function"
   ) {
     throw new Error("RECHARGE_INTENT_COORDINATOR_DEPENDENCIES_INVALID");
   }
@@ -190,8 +195,55 @@ export function createFinoraAuthenticatedRechargeIntentCoordinator(
     };
   }
 
+  // FINORA_P1_753I_VERIFIED_CLEAR
+  // Only a server-confirmed receipt can authorize this caller to
+  // settle the exact encrypted retry identity.
+  async function verifiedClearIfMatches(
+    idempotencyKey: string,
+  ): Promise<Result<{ cleared: boolean }>> {
+    const before = await resolveScope();
+    if (!before.success) return before;
+
+    if (
+      typeof idempotencyKey !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idempotencyKey)
+    ) {
+      return { success: false, errorCode: "INVALID_REQUEST" };
+    }
+
+    let existing: RechargeIntent | null;
+    try {
+      existing = await dependencies.store.load(persistentScope(before.data));
+    } catch {
+      return { success: false, errorCode: "RECHARGE_INTENT_LOAD_FAILED" };
+    }
+
+    if (
+      !existing ||
+      existing.idempotencyKey.toLowerCase() !== idempotencyKey.toLowerCase()
+    ) {
+      return { success: false, errorCode: "RECHARGE_INTENT_MISMATCH" };
+    }
+
+    const after = await resolveScope();
+    if (!after.success || !sameScope(before.data, after.data)) {
+      return { success: false, errorCode: "STALE_OPERATION" };
+    }
+
+    try {
+      const cleared = await dependencies.store.clearIfMatches(
+        persistentScope(before.data),
+        idempotencyKey.toLowerCase(),
+      );
+      return { success: true, data: { cleared } };
+    } catch {
+      return { success: false, errorCode: "RECHARGE_INTENT_CLEAR_FAILED" };
+    }
+  }
+
   return Object.freeze({
     verifiedSave,
     verifiedLoad,
+    verifiedClearIfMatches,
   });
 }

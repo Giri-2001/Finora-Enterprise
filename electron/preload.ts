@@ -3731,16 +3731,47 @@ const windowControlsBridge = {
 const serverWalletBridge = Object.freeze({
   // FINORA_P1_580P_HISTORY_BRIDGE
   // Fixed read-only channels. No renderer-supplied scope or token.
-  transactions: async () => {
+  // FINORA_P1_747N_PAGED_HISTORY
+  // Only validated pagination numbers cross IPC.
+  // No renderer-supplied session, owner, branch or Wallet identity.
+  transactions: async (page?: { limit: number; offset: number }) => {
     try {
-      return await ipcRenderer.invoke("finora:account:wallet-transactions");
+      return page === undefined
+        ? await ipcRenderer.invoke("finora:account:wallet-transactions")
+        : await ipcRenderer.invoke("finora:account:wallet-transactions", page);
     } catch {
       return { success: false, errorCode: "SERVER_UNAVAILABLE" };
     }
   },
-  recharges: async () => {
+  recharges: async (page?: { limit: number; offset: number }) => {
     try {
-      return await ipcRenderer.invoke("finora:account:wallet-recharges");
+      return page === undefined
+        ? await ipcRenderer.invoke("finora:account:wallet-recharges")
+        : await ipcRenderer.invoke("finora:account:wallet-recharges", page);
+    } catch {
+      return { success: false, errorCode: "SERVER_UNAVAILABLE" };
+    }
+  },
+  // FINORA_P1_753Y2_RECOVERY_PRELOAD
+  rechargeResume: async () => {
+    try {
+      return await ipcRenderer.invoke(
+        "finora:server-wallet:recharge-resume"
+      );
+    } catch {
+      return {
+        success: false,
+        errorCode: "RECHARGE_RECONCILIATION_REQUIRED",
+      };
+    }
+  },
+  // FINORA_P1_753L_PENDING_PRELOAD
+  // Read-only encrypted intent metadata, never UUID or bearer token.
+  rechargePending: async () => {
+    try {
+      return await ipcRenderer.invoke(
+        "finora:server-wallet:recharge-pending"
+      );
     } catch {
       return { success: false, errorCode: "SERVER_UNAVAILABLE" };
     }

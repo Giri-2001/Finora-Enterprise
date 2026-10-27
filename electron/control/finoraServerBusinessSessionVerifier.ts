@@ -55,10 +55,19 @@ export async function verifyFinoraServerBusinessSession(
       signal: AbortSignal.timeout(10000),
     });
 
+    // FINORA_P1_748K_TRANSIENT_SERVER_FAILURE
+    // Temporary HTTP failures must not masquerade as revocation.
     if (!response.ok) {
+      const temporarilyUnavailable =
+        response.status === 408 ||
+        response.status === 429 ||
+        response.status >= 500;
+
       return {
         success: false,
-        errorCode: "BUSINESS_SESSION_REJECTED",
+        errorCode: temporarilyUnavailable
+          ? "SERVER_UNAVAILABLE"
+          : "BUSINESS_SESSION_REJECTED",
       };
     }
 

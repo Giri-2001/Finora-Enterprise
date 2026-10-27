@@ -997,7 +997,7 @@ export default function GlobalHeader({
         </button>
 
         {(
-          Capacitor.getPlatform() !== "android" && Boolean(window.finora?.windowControls?.toggleFullscreen)
+          !isMobile && !window.matchMedia("(max-width: 900px)").matches && Capacitor.getPlatform() !== "android" && Boolean(window.finora?.windowControls?.toggleFullscreen)
         ) ? (
           <button
             type="button"

@@ -2907,7 +2907,7 @@ export default function FinoraControlCenterBranchRegistryPanel({
                   "pointer",
               }}
             >
-              FINORA Income
+              FINORA Prices
             </button>
           )}
           {directoryMode && !openedBranch && (

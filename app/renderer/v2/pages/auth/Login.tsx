@@ -2439,6 +2439,35 @@ setError(
         return;
       }
 
+      // FINORA_P1_737E_NATIVE_BUSINESS_PROOF
+      // Account/Wallet success alone never grants Reception access.
+      // Preserve the precise native failure code without exposing tokens.
+      if (
+        FinoraP1075Capacitor.isNativePlatform() &&
+        FinoraP1075Capacitor.getPlatform() === "android"
+      ) {
+        const nativeBusinessResult = result as {
+          businessSessionVerified?: boolean;
+          businessSessionErrorCode?: string;
+        };
+
+        if (nativeBusinessResult.businessSessionVerified !== true) {
+          const rawCode = nativeBusinessResult.businessSessionErrorCode;
+          const safeCode =
+            typeof rawCode === "string" &&
+            /^[A-Z0-9_]{1,80}$/.test(rawCode)
+              ? rawCode
+              : "BUSINESS_SESSION_NOT_VERIFIED";
+
+          finoraLoginStage = "ANDROID_BUSINESS_SESSION_PROOF";
+          setError("Business Session verification failed [" + safeCode + "].");
+          setCredentialEnrollmentMessage(
+            "Server authorization is required before Reception can open.",
+          );
+          return;
+        }
+      }
+
       setError("");
       // FINORA_P1_720Y_NATIVE_REVALIDATION
       // Android must independently revalidate its native

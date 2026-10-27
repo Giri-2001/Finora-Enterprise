@@ -121,7 +121,7 @@ export default function SessionGuard({
     // Therefore no renderer LOGOUT audit is generated here.
     // --------------------------------------------------------
 
-    function forceSessionExit(): void {
+    function forceSessionExit(reason = "UNCLASSIFIED"): void {
       if (forcedExit) {
         return;
       }
@@ -143,7 +143,11 @@ export default function SessionGuard({
       }
 
       // FINORA_P1_709Q_GUARD_TRACE
-      window.alert("FINORA SESSION GUARD REJECTED THE RECEPTION SESSION.");
+      console.warn("[FINORA SESSION GUARD REJECTION]", reason);
+      window.alert(
+        "FINORA SESSION GUARD REJECTED THE RECEPTION SESSION." +
+        "\nReason: " + reason
+      );
       invalidateSession();
       window.location.reload();
     }
@@ -201,7 +205,7 @@ export default function SessionGuard({
             if (isTemporaryNetworkFailure(result.errorCode)) {
               lockForNetworkRecovery();
             } else {
-              forceSessionExit();
+              forceSessionExit("TOUCH_" + result.errorCode);
             }
           } else if (
             result.sessionId !== session.sessionId ||
@@ -305,7 +309,7 @@ export default function SessionGuard({
             if (isTemporaryNetworkFailure(result.errorCode)) {
               lockForNetworkRecovery();
             } else {
-              forceSessionExit();
+              forceSessionExit("VALIDATE_" + result.errorCode);
             }
             return;
           }

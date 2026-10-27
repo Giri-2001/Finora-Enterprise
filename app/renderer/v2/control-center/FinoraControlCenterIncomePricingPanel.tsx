@@ -597,7 +597,7 @@ export default function FinoraControlCenterIncomePricingPanel({
                 "#f8fafc",
             }}
           >
-            FINORA Income
+            FINORA Prices
           </div>
 
           <div
@@ -871,7 +871,7 @@ export default function FinoraControlCenterIncomePricingPanel({
           background:
             "rgba(14, 116, 144, 0.08)",
         }}
-      >
+       className="finora-cc-p756k-plan-panel">
         <div>
           <div
             style={{
@@ -903,7 +903,7 @@ export default function FinoraControlCenterIncomePricingPanel({
           </div>
         </div>
 
-        <div
+        <div className="finora-cc-polish-subscriptions"
           style={{
             display:
               "grid",

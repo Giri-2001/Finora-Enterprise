@@ -38,6 +38,8 @@ import type { FinoraControlCenterBranchRegistryRecord } from "../../../../electr
 import type { FinoraControlCenterIssuanceWorkflow } from "./FinoraControlCenterIssuanceForm.types";
 
 import FinoraControlCenterBranchRegistryPanel from "./FinoraControlCenterBranchRegistryPanel";
+import FinoraControlCenterHeaderPrices from "./FinoraControlCenterHeaderPrices";
+import FinoraControlCenterHeaderWalletHistory from "./FinoraControlCenterHeaderWalletHistory";
 import FinoraControlCenterLiveWalletPanel from "./FinoraControlCenterLiveWalletPanel";
 import FinoraControlCenterPendingRechargesPanel from "./FinoraControlCenterPendingRechargesPanel";
 import FinoraControlCenterDashboardOverview from "./FinoraControlCenterDashboardOverview";
@@ -1414,7 +1416,7 @@ function FinoraControlCenterPrivilegedShell() {
     "BRANCHES" |
     "SETTINGS"
   >(
-    "CONTROL",
+    "BRANCHES",
   );
 
   const [
@@ -1644,9 +1646,9 @@ const [
             position:
               "relative",
             paddingRight:
-              "330px",
+              "520px",
             marginBottom:
-              0,
+              12,
           }}
         >
           <h1
@@ -1681,6 +1683,49 @@ const [
                 "8px",
             }}
           >
+            {/* FINORA_P1_741J4_HEADER_OWNER_ACTION */}
+{activeView === "BRANCHES" &&
+ loadState === "READY" &&
+ trustRecord && (
+<button
+    type="button"
+    onClick={() => {
+      setNewBranchProvisioning(true);
+      setSelectedIssuanceBranch(undefined);
+      setIssuanceWorkflow("BRANCH_ACTIVATION");
+      setBranchAccessLaunchAction("ISSUE");
+      setWorkspaceFocusRequestId(current => current + 1);
+      setActiveView("CONTROL");
+    }}
+    style={{
+      minHeight: 40,
+      padding: "8px 12px",
+      borderRadius: 10,
+      border: "1px solid rgba(52,211,153,.55)",
+      background: "linear-gradient(135deg,#065f46,#064e3b)",
+      color: "#ecfdf5",
+      fontSize: 14,
+      fontWeight: 750,
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+      boxShadow: "0 8px 22px rgba(0,0,0,.2)",
+      cursor: "pointer",
+    }}
+  >
+    + New Owner & Branch
+  </button>
+)}
+            {/* FINORA_P1_741L_HEADER_PRICES */}
+{activeView === "BRANCHES" &&
+ loadState === "READY" &&
+ trustRecord && (
+  <FinoraControlCenterHeaderPrices />
+)}
+            {/* FINORA_P1_742D_HISTORY_HEADER */}
+{activeView === "BRANCHES" &&
+ loadState === "READY" &&
+ trustRecord && (
+  <FinoraControlCenterHeaderWalletHistory />
+)}
             <button
               data-finora-developer-action="settings"
               type="button"
@@ -1689,7 +1734,7 @@ const [
                   (current) =>
                     current ===
                     "SETTINGS"
-                      ? "CONTROL"
+                      ? "BRANCHES"
                       : "SETTINGS",
                 );
               }}
@@ -1725,7 +1770,7 @@ const [
                 : "Settings"}
             </button>
 
-            <button
+            <button hidden
               data-finora-developer-action="branches"
               type="button"
               onClick={() => {
@@ -1771,9 +1816,7 @@ const [
           </div>
         </header>
 
-        {activeView === "CONTROL" && (
-          <section
-            data-finora-operations-dashboard="P566BH"
+        {false && activeView === "CONTROL" && (<section data-finora-operations-dashboard="P566BH"
             aria-label="FINORA operations dashboard"
             style={{
               padding: "20px",
@@ -2618,6 +2661,7 @@ const [
           <>
                         {activeView === "BRANCHES" && (
   <>
+
   <FinoraControlCenterServerConnectionPanel />
   <FinoraControlCenterDashboardOverview />
 </>
@@ -2664,7 +2708,7 @@ const [
             )}
 
 
-            {activeView === "BRANCHES" && (
+            {/* FINORA_P1_741D_LEGACY_REGISTRY_HIDDEN */ false && activeView === "BRANCHES" && (
             <FinoraControlCenterBranchRegistryPanel
               key={activeView}
               directoryMode
@@ -2736,12 +2780,35 @@ const [
             <div
               style={{
                 display:
-                  activeView === "CONTROL"
+                  /* FINORA_P1_741F_PROVISIONING_ONLY */
+                  activeView === "CONTROL" && newBranchProvisioning
                     ? "block"
                     : "none",
               }}
             >
-            <FinoraControlCenterIssuanceWorkspace
+<button
+  type="button"
+  data-finora-action="back-to-live-dashboard"
+  onClick={() => {
+    setNewBranchProvisioning(false);
+    setActiveView("BRANCHES");
+  }}
+  style={{
+    marginBottom: 16,
+    minHeight: 40,
+    padding: "8px 16px",
+    borderRadius: 10,
+    border: "1px solid rgba(96,165,250,.45)",
+    background: "rgba(30,64,175,.2)",
+    color: "#dbeafe",
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontWeight: 700,
+    cursor: "pointer",
+  }}
+>
+  ← Back to LIVE Dashboard
+</button>
+  <FinoraControlCenterIssuanceWorkspace
               selectedBranch={
                 selectedIssuanceBranch
               }

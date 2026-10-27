@@ -249,6 +249,9 @@ import {
 import {
   fetchFinoraServerPendingRecharges,
 } from "./finoraServerPendingRechargeClient.js";
+import {
+  fetchFinoraServerRechargeHistory,
+} from "./finoraServerRechargeHistoryClient.js";
 
 import {
   hasFinoraServerAdminCredential,
@@ -344,6 +347,9 @@ GET_SERVER_BRANCH_DIRECTORY:
     "finora:control-center:get-server-live-wallets",
   GET_SERVER_PENDING_RECHARGES:
     "finora:control-center:get-server-pending-recharges",
+  // FINORA_P1_742A2_HISTORY_CHANNEL
+  GET_SERVER_RECHARGE_HISTORY:
+    "finora:control-center:get-server-recharge-history",
   DECIDE_SERVER_WALLET_RECHARGE:
     "finora:control-center:decide-server-wallet-recharge",
 
@@ -1550,6 +1556,93 @@ try {
       );
     },
   );
+  // FINORA_P1_742B_HISTORY_HANDLER
+  // Read-only pending requests. Admin key never leaves Electron main.
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS
+      .GET_SERVER_RECHARGE_HISTORY,
+    async (event, input: unknown) => {
+      if (
+        !isTrustedFinoraControlCenterRenderer(
+          event.senderFrame,
+        )
+      ) {
+        return failure(
+          "FINORA Recharge History access is restricted to the dedicated Control Center renderer.",
+        );
+      }
+
+      if (
+        typeof input !== "object" ||
+        input === null ||
+        Array.isArray(input)
+      ) {
+        return failure(
+          "FINORA Recharge History pagination request is invalid.",
+        );
+      }
+
+      const request = input as Record<string, unknown>;
+      if (
+        Object.keys(request).some(
+          key => key !== "limit" && key !== "offset" && key !== "status",
+        )
+      ) {
+        return failure(
+          "FINORA Recharge History request contains unsupported fields.",
+        );
+      }
+
+      const limit = request.limit;
+      const offset = request.offset;
+      const status = request.status;
+      if (
+        typeof limit !== "number" ||
+        typeof offset !== "number" ||
+        !Number.isSafeInteger(limit) ||
+        !Number.isSafeInteger(offset) ||
+        limit < 1 ||
+        limit > 100 ||
+        offset < 0 ||
+        offset > 10000000
+      ) {
+        return failure(
+          "FINORA Recharge History pagination request is invalid.",
+        );
+      }
+
+      if (
+        status !== "ALL" &&
+        status !== "APPROVED" &&
+        status !== "DECLINED"
+      ) {
+        return failure("Invalid recharge history status.");
+      }
+
+      return executePrivileged(
+        async () => {
+          const adminApiKey =
+            await readFinoraServerAdminCredential();
+          try {
+            return await fetchFinoraServerRechargeHistory(
+              adminApiKey,
+              limit,
+              offset,
+              status,
+            );
+          } catch (error) {
+            if (
+              error instanceof Error &&
+              error.message === "RECHARGE_ADMIN_UNAUTHORIZED"
+            ) {
+              await clearFinoraServerAdminCredential();
+            }
+            throw error;
+          }
+        },
+      );
+    },
+  );
   // FINORA_P1_591C_APPROVAL_IPC
   // Trusted Control Center only. The credential stays in Electron main.
   // The server owns wallet identity, amount and financial transaction.
@@ -2048,7 +2141,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
           Array.isArray(input) ||
           Object.getPrototypeOf(input) !== Object.prototype ||
           Object.keys(input).some(
-            key => !["page", "size"].includes(key)
+            key => !["page", "size", "month"].includes(key)
           )
         )
       ) {
@@ -2056,7 +2149,7 @@ registerFinoraDeveloperSecurityControlCenterHandler(
       }
 
       const query = input as
-        | { page?: unknown; size?: unknown }
+        | { page?: unknown; size?: unknown; month?: unknown }
         | undefined;
 
       if (
@@ -2067,7 +2160,13 @@ registerFinoraDeveloperSecurityControlCenterHandler(
         (query?.size !== undefined &&
           (typeof query.size !== "number" ||
            !Number.isSafeInteger(query.size) ||
-           query.size < 1 || query.size > 100))
+           query.size < 1 || query.size > 100)) ||
+        // FINORA_P1_739P_MONTH_VALIDATION
+        (query?.month !== undefined &&
+          (typeof query.month !== "string" ||
+           !/^\d{4}-(0[1-9]|1[0-2])$/.test(query.month) ||
+           Number(query.month.slice(0, 4)) < 2020 ||
+           Number(query.month.slice(0, 4)) > 9999))
       ) {
         return failure("DASHBOARD_QUERY_INVALID");
       }
@@ -2097,6 +2196,8 @@ registerFinoraDeveloperSecurityControlCenterHandler(
             adminApiKey,
             query?.page as number | undefined,
             query?.size as number | undefined,
+            undefined,
+            query?.month as string | undefined,
           );
         } catch (error) {
           throw error;

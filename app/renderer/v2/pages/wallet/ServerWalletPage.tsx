@@ -284,6 +284,8 @@ export default function ServerWalletPage({
   const [password, setPassword] = useState("");
   const [securityCode, setSecurityCode] = useState("");
   const [balance, setBalance] = useState<ServerWalletBalance | null>(null);
+  // FINORA_P1_751W_STALE_BALANCE
+  const [rechargeBalanceStale, setRechargeBalanceStale] = useState(false);
 
   // FINORA_P1_582F_VERIFIED_HEADER: notification only; no trusted amount in event.
   useEffect(() => {
@@ -309,6 +311,10 @@ export default function ServerWalletPage({
     walletId: string;
     input: ServerWalletRechargeInput;
   } | null>(null);
+  // FINORA_P1_753N_RECOVERY_BUTTON
+  const [rechargeRecoveryStatus, setRechargeRecoveryStatus] =
+    useState<string | null>(null);
+  const [rechargeRecoveryBusy, setRechargeRecoveryBusy] = useState(false);
   const operation = useRef(0);
   const running = useRef(false);
   const mounted = useRef(false);
@@ -677,6 +683,8 @@ export default function ServerWalletPage({
         return;
       }
       if (!validBalance(result.data)) throw new Error("INVALID_SERVER_RESPONSE");
+      // Server-confirmed balance re-enables the recharge controls.
+      setRechargeBalanceStale(false);
 
       setBalance({
         source: result.data.source, walletId: result.data.walletId,
@@ -993,7 +1001,7 @@ export default function ServerWalletPage({
   async function submitRecharge(event: FormEvent<HTMLFormElement>) {
     if (androidBalanceOnly) return;
     event.preventDefault();
-    if (running.current || !available || !balance || receipt) return;
+    if (running.current || !available || !balance || rechargeBalanceStale || receipt) return;
 
     const walletId = balance.walletId;
     let intent = rechargeIntent.current;
@@ -1046,12 +1054,17 @@ export default function ServerWalletPage({
 
       if (!result.success) {
         setRechargeFailed(true);
-        setBalance(null);
+        // Preserve display snapshot; disable submissions until server refresh.
+        setRechargeBalanceStale(true);
         setRechargeMessage(
           result.errorCode === "UNAUTHORIZED"
             ? "Sign in again, then retry this same request."
-            : result.errorCode === "IDEMPOTENCY_CONFLICT"
-              ? "This request conflicts with an existing submission. Contact support before submitting another."
+            : result.errorCode === "LOCAL_RECHARGE_INTENT_CONFLICT"
+              ? "An earlier encrypted Recharge request exists for this Wallet with different details. No new request was sent. Recover or reconcile that request before starting another."
+              : result.errorCode === "SERVER_RECHARGE_IDEMPOTENCY_CONFLICT"
+                ? "The FINORA server rejected this request as an idempotency conflict. No new request is confirmed. Check server records before retrying."
+                : result.errorCode === "IDEMPOTENCY_CONFLICT"
+                  ? "Recharge request conflict. Verify the pending server request before submitting again."
               : result.errorCode === "WALLET_NOT_AVAILABLE"
                 ? "Your wallet is unavailable. The request details are retained on this screen."
                 : result.errorCode === "RATE_LIMITED"
@@ -1093,7 +1106,8 @@ export default function ServerWalletPage({
       );
     } catch {
       if (current()) {
-        setBalance(null);
+        // Unknown outcome never grants new spendable balance.
+        setRechargeBalanceStale(true);
         setRechargeFailed(true);
         setRechargeMessage("Request outcome is unconfirmed. Refresh your wallet, then retry this same request.");
       }
@@ -1129,7 +1143,7 @@ export default function ServerWalletPage({
         width: "100%",
         maxWidth: "none",
         margin: 0,
-        padding: "clamp(12px, 2vw, 28px)",
+        padding: "7px 7px 14px",
         boxSizing: "border-box",
         fontFamily: "Inter, sans-serif",
         background: theme.colors.background.page,
@@ -1142,13 +1156,10 @@ export default function ServerWalletPage({
           display: grid;
           grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
           grid-template-areas:
-            "header header"
-            "balance access"
-            "message access"
-            "recharge access"
+            "left access"
             "subscription subscription";
-          grid-template-rows: auto auto auto auto auto;
-          gap: 16px;
+          grid-template-rows: auto auto;
+          gap: 7px;
           align-items: start;
         }
 
@@ -1229,10 +1240,32 @@ export default function ServerWalletPage({
             transform: none;
           }
         }
-        .finora-wallet-header {
-          grid-area: header;
+
+        /* FINORA_P1_747X2_EXACT_LEFT_STACK */
+        .finora-wallet-left-stack {
+          grid-area: left;
+          display: flex;
+          flex-direction: column;
+          gap: 9px;
+          min-width: 0;
+          align-self: start;
         }
 
+        .finora-wallet-left-stack > .finora-wallet-balance,
+        .finora-wallet-left-stack > .finora-wallet-recharge {
+          width: 100%;
+          margin: 0;
+          flex: 0 0 auto;
+        }
+        /* FINORA_P1_748E_SAFE_TYPOGRAPHY */
+        .finora-wallet-balance > div:first-of-type > div:first-child {
+          font-weight: 700 !important;
+        }
+
+        .finora-wallet-access button {
+          font-size: 14px !important;
+          font-weight: 500 !important;
+        }
         .finora-wallet-balance {
           grid-area: balance;
         }
@@ -1264,9 +1297,46 @@ export default function ServerWalletPage({
           box-sizing: border-box;
         }
 
-        .finora-wallet-access {
-          align-self: stretch;
-        }
+        /* FINORA_P1_752Z_HISTORY_EQUAL_HEIGHT */
+        /* FINORA_P1_754J2_COMPACT_HISTORY */
+.finora-wallet-access {
+  align-self: stretch;
+  height: auto;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+/* Reduce history row height without changing transaction data. */
+/* FINORA_P1_754K_HISTORY_ROW_HEIGHT */
+/* FINORA_P1_754N_HISTORY_FINAL */
+.finora-wallet-access table thead th,
+.finora-wallet-access table tbody td {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  line-height: 1.3 !important;
+  vertical-align: middle;
+}
+
+/* Maintain readable secondary details in every theme. */
+.finora-wallet-access table tbody td:last-child {
+  min-width: 220px;
+}
+
+.finora-wallet-access table tbody td:last-child > div,
+.finora-wallet-access table tbody td:last-child > span,
+.finora-wallet-access table tbody td:last-child > p {
+  opacity: 1 !important;
+}
+
+/* Pagination must sit immediately below the history table. */
+.finora-wallet-access div:has(
+  > button[aria-label="Previous history page"]
+) {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
 
         .finora-wallet-dashboard fieldset,
         .finora-server-wallet-dashboard input,
@@ -1289,6 +1359,17 @@ export default function ServerWalletPage({
           overflow: hidden;
         }
 
+        /* FINORA_P1_747Y2_PREMIUM_HISTORY_TOOLBAR */
+        .finora-wallet-access select,
+        .finora-wallet-access button {
+          font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+          font-weight: 500 !important;
+        }
+
+        .finora-wallet-access button {
+          font-size: 13px !important;
+        }
+
         .finora-wallet-access table {
           min-width: 600px;
         }
@@ -1302,25 +1383,512 @@ export default function ServerWalletPage({
           .finora-server-wallet-dashboard {
             grid-template-columns: minmax(0, 1fr);
             grid-template-areas:
-              "header"
-              "balance"
-              "message"
+              "left"
               "access"
-              "recharge"
               "subscription";
             grid-template-rows: auto;
-            gap: 14px;
+            gap: 7px;
           }
         }
-      `}</style>
-      <header className="finora-wallet-header">
-        <h1 style={{ display: "flex", alignItems: "center", gap: 12, margin: 0 }}>
-          <Wallet aria-hidden="true" size={28} /> FINORA Wallet
-        </h1>
-        <p style={{ color: theme.colors.text.secondary }}>Your wallet balance is maintained on the FINORA server.</p>
-      </header>
+        /* FINORA_P1_755P_MOBILE_HISTORY_CARDS */
+@media (max-width: 600px) {
 
-      <section className="finora-wallet-balance" style={panel} aria-label="Server wallet balance" aria-busy={busy}>
+  /* Stop the desktop table's 600px minimum width
+     from clipping mobile history and pagination. */
+  .finora-wallet-access table {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  .finora-wallet-access table thead {
+    display: none !important;
+  }
+
+  .finora-wallet-access table tbody {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Each transaction becomes a mobile card. */
+  .finora-wallet-access table tbody > tr:has(> td:not([colspan])) {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 0 10px !important;
+    padding: 10px 12px !important;
+    border: 1px solid rgba(148,163,184,.28) !important;
+    border-radius: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  .finora-wallet-access table tbody > tr > td:not([colspan]) {
+    display: grid !important;
+    grid-template-columns: 84px minmax(0,1fr) !important;
+    gap: 8px !important;
+    align-items: start !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 8px 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+    box-sizing: border-box !important;
+  }
+
+  .finora-wallet-access table tbody > tr > td:not([colspan])::before {
+    font-weight: 700 !important;
+    font-size: 11px !important;
+    opacity: .8 !important;
+    white-space: normal !important;
+  }
+
+  .finora-wallet-access table tbody > tr > td:nth-child(1)::before {
+    content: "Date / Time";
+  }
+
+  .finora-wallet-access table tbody > tr > td:nth-child(2)::before {
+    content: "Transaction";
+  }
+
+  .finora-wallet-access table tbody > tr > td:nth-child(3)::before {
+    content: "Details";
+  }
+
+  .finora-wallet-access table tbody > tr > td:nth-child(4)::before {
+    content: "Amount";
+  }
+
+  .finora-wallet-access table tbody > tr > td:nth-child(5)::before {
+    content: "Status";
+  }
+
+  .finora-wallet-access table tbody > tr > td:last-child {
+    min-width: 0 !important;
+  }
+
+  .finora-wallet-access table tbody > tr > td:last-child * {
+    max-width: 100% !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  /* Pagination is now inside a full-width mobile table.
+     Give its row normal block layout. */
+  .finora-wallet-access table tbody > tr:has(.finora-history-pagination-grid) {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .finora-wallet-access table tbody > tr > td:has(> .finora-history-pagination-grid) {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 12px 0 4px !important;
+    box-sizing: border-box !important;
+  }
+
+  .finora-wallet-access .finora-history-pagination-grid {
+    position: static !important;
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) !important;
+    grid-template-rows: auto auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  .finora-wallet-access .finora-history-pagination-grid > div:first-child {
+    display: none !important;
+  }
+
+  .finora-wallet-access .finora-history-pagination-grid > div:nth-child(2) {
+    display: flex !important;
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 12px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .finora-wallet-access .finora-history-pagination-grid > div:nth-child(3) {
+    display: block !important;
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    text-align: center !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    font-size: 12px !important;
+  }
+}
+/* FINORA_P1_755Q_FULL_WIDTH_DECLINE_DETAILS */
+@media (max-width: 600px) {
+
+  /*
+   * Status may contain multiple lines:
+   * Approved / Declined, Reason and Decision.
+   * Do not constrain these details to a narrow grid column.
+   */
+  .finora-wallet-access table tbody > tr > td:nth-child(5):not([colspan]) {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding: 10px 0 4px !important;
+    box-sizing: border-box !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .finora-wallet-access table tbody > tr > td:nth-child(5):not([colspan])::before {
+    content: "Status" !important;
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 8px !important;
+    font-weight: 700 !important;
+  }
+
+  .finora-wallet-access table tbody > tr > td:nth-child(5):not([colspan]) > div {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .finora-wallet-access table tbody > tr > td:nth-child(5):not([colspan]) > div > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-wrap: anywhere !important;
+    white-space: normal !important;
+    line-height: 1.5 !important;
+  }
+
+  /*
+   * Status labels keep their original approval/decline colors.
+   * Secondary explanation text has sufficient contrast.
+   */
+  .finora-wallet-access table tbody > tr > td:nth-child(5):not([colspan]) > div > div:not(:first-child) {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    opacity: 1 !important;
+  }
+
+  /*
+   * Pagination and messages use colspan cells.
+   * Never add a transaction field label to these rows.
+   */
+  .finora-wallet-access table tbody > tr > td[colspan]::before {
+    content: none !important;
+    display: none !important;
+  }
+
+  .finora-wallet-access table tbody > tr:has(.finora-history-pagination-grid) > td {
+    padding-top: 8px !important;
+    padding-bottom: 6px !important;
+  }
+}
+/* FINORA_P1_755O_MOBILE_PAGINATION */
+@media (max-width: 600px) {
+
+  /* Prevent the five-column history table from determining
+     the visible pagination footer width. */
+  .finora-wallet-access .finora-history-pagination-grid {
+    position: sticky !important;
+    left: 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto auto !important;
+    width: calc(100vw - 76px) !important;
+    max-width: calc(100vw - 76px) !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Remove empty desktop spacer. */
+  .finora-history-pagination-grid > div:first-child {
+    display: none !important;
+  }
+
+  /* Row 1: previous / page / next. */
+  .finora-history-pagination-grid > div:nth-child(2) {
+    display: flex !important;
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-wrap: nowrap !important;
+    gap: 12px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Row 2: showing x of y records. */
+  .finora-history-pagination-grid > div:nth-child(3) {
+    display: block !important;
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    text-align: center !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+    white-space: normal !important;
+  }
+
+  .finora-history-pagination-grid button[aria-label="Previous history page"],
+  .finora-history-pagination-grid button[aria-label="Next history page"] {
+    width: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .finora-history-pagination-grid input[aria-label="History page number"] {
+    width: 56px !important;
+    min-width: 56px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Hide the diagonal-arrow fullscreen toggle in the
+     Global Header while viewing Wallet on mobile. */
+  button:has(> svg.lucide-maximize-2) {
+    display: none !important;
+  }
+}
+/* FINORA_P1_755G_MOBILE_FINAL_ALIGNMENT */
+@media (max-width: 600px) {
+
+  /* Submit Recharge: center without modifying form validation. */
+  .finora-wallet-recharge form > div:has(> button) {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    gap: 10px !important;
+  }
+
+  .finora-wallet-recharge form > div > button {
+    min-height: 44px !important;
+    max-width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  /* History pagination outer layout: two centered rows. */
+  .finora-wallet-access div:has(
+    > div > button[aria-label="Previous history page"]
+  ) {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* First row: Previous / Page / Next. */
+  .finora-wallet-access div:has(
+    > button[aria-label="Previous history page"]
+  ) {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 12px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Second row: Showing X of Y records. */
+  .finora-wallet-access div:has(
+    > div > button[aria-label="Previous history page"]
+  ) > div:last-child {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    text-align: center !important;
+    white-space: normal !important;
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Pagination arrows retain comfortable touch targets. */
+  .finora-wallet-access button[aria-label="Previous history page"],
+  .finora-wallet-access button[aria-label="Next history page"] {
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    min-height: 48px !important;
+    flex-shrink: 0 !important;
+  }
+}
+/* FINORA_P1_755T_TABLET_RESPONSIVE */
+
+/* Tablet portrait and compact tablet landscape. */
+@media (min-width: 601px) and (max-width: 900px) {
+
+  /* Center the recharge submit action. */
+  .finora-wallet-recharge form > div:has(> button[type="submit"]) {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .finora-wallet-recharge button[type="submit"] {
+    min-height: 44px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  /*
+   * FINORA Premium Plans:
+   * two cards per row instead of three + one.
+   */
+  .finora-premium-subscriptions :is(div,section):has(
+    > .finora-premium-plan-card
+  ) {
+    display: grid !important;
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+    align-items: stretch !important;
+  }
+
+  .finora-premium-subscriptions .finora-premium-plan-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* Narrow phones retain their existing single-column behavior. */
+@media (max-width: 600px) {
+  .finora-premium-subscriptions :is(div,section):has(
+    > .finora-premium-plan-card
+  ) {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+/* FINORA_P1_755F_EXACT_HISTORY_TOOLBAR */
+@media (max-width: 600px) {
+  .finora-wallet-access > div:has(> h2) {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .finora-wallet-access .finora-wallet-history-toolbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-auto-flow: row !important;
+    gap: 10px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+  }
+
+  /* Flatten only the toolbar's nested filter containers.
+     Their selects and refresh button become grid items. */
+  .finora-wallet-history-toolbar > div,
+  .finora-wallet-history-toolbar > div > div {
+    display: contents !important;
+  }
+
+  .finora-wallet-history-toolbar select,
+  .finora-wallet-history-toolbar button {
+    display: block !important;
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 44px !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    align-self: stretch !important;
+    justify-self: stretch !important;
+    flex: none !important;
+  }
+}
+/* FINORA_P1_749_WALLET_UI_POLISH */
+        .finora-wallet-left-stack {
+          gap: 10px !important;
+        }
+
+        .finora-wallet-access button[aria-label="Previous history page"],
+        .finora-wallet-access button[aria-label="Next history page"] {
+          width: 48px !important;
+          height: 48px !important;
+          min-width: 48px !important;
+          min-height: 48px !important;
+          padding: 0 !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          font-size: 22px !important;
+          line-height: 1 !important;
+          flex-shrink: 0;
+        }
+      `}
+      </style>
+
+      <div className="finora-wallet-left-stack">
+      <section className="finora-wallet-balance" style={{ ...panel, padding: 16 }} aria-label="Server wallet balance" aria-busy={busy}>
         {/* FINORA_P1_580U_BALANCE_REFRESH_TOP_RIGHT */}
 <div style={{
   display: "flex",
@@ -1329,17 +1897,26 @@ export default function ServerWalletPage({
   gap: 12,
   flexWrap: "wrap"
 }}>
-  <div style={{ color: theme.colors.text.secondary }}>
-    Available balance
+  <div style={{
+    color: theme.colors.text.secondary,
+    fontSize: 18,
+    fontWeight: 500,
+  }}>
+    FINORA Wallet Available
   </div>
   <button type="button" style={button} disabled={!available || busy}
             onClick={() => void run("balance")}>
             <RefreshCw size={17} aria-hidden="true" /> Refresh
           </button>
 </div>
-        <div style={{ fontSize: "clamp(28px, 5vw, 44px)", fontWeight: 700, margin: "12px 0" }}>
+        <div style={{ fontSize: "clamp(28px, 5vw, 44px)", fontWeight: 700, margin: "12px 0", color: "var(--finora-wallet-positive, #16a34a)" }}>
           {busy ? "Checking..." : balance ? "\u20B9" + balance.balanceInr : "Unavailable"}
         </div>
+        {rechargeBalanceStale && balance && (
+          <p role="status" style={{ color: theme.colors.text.secondary, fontWeight: 600 }}>
+            Last verified balance only. Refresh server Wallet before further operations.
+          </p>
+        )}
         {balance && (
           <p style={{ color: theme.colors.text.secondary, overflowWrap: "anywhere" }}>
             Wallet {balance.walletId} ? Updated {formatFinoraDateTime(balance.updatedAt)}
@@ -1350,92 +1927,40 @@ export default function ServerWalletPage({
         </div>
 
 <div className="finora-wallet-status" role={failed ? "alert" : "status"} aria-live="polite"
-        style={{ ...panel, padding: 16, color: theme.colors.text.primary }}>
+        style={{
+          ...panel,
+          padding: 16,
+          color: theme.colors.text.primary,
+          display:
+            available &&
+            !failed &&
+            message === "Verified branch Wallet loaded from FINORA server."
+              ? "none"
+              : undefined,
+        }}>
         {!available
           ? "Server wallet access is unavailable in this application environment."
           : message}
       </div>
 </section>
 
-      {/* FINORA_P1_580J_HISTORY_LAYOUT */}
-      <section className="finora-wallet-access" style={panel}
-        aria-label="FINORA Wallet Transaction History">
-        <div style={{
-          display: "flex", justifyContent: "space-between",
-          alignItems: "center", flexWrap: "wrap", gap: 10
-        }}>
-          <h2 style={{ margin: 0, fontSize: 20 }}>
-            FINORA Wallet Transaction History
-          </h2>
-          <div style={{
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "flex-end",
-  gap: 8
-}}>
 
-  {/* FINORA_P1_580S_REFRESH_POSITION */}
-  <button
-    type="button"
-    onClick={() => window.dispatchEvent(
-      new Event("finora:wallet-history-refresh")
-    )}
-    style={{
-      padding: "7px 12px",
-      borderRadius: 8,
-      border: `1px solid ${theme.components.card.border}`,
-      background: "transparent",
-      color: theme.colors.text.primary,
-      font: "inherit",
-      fontSize: 12,
-      cursor: "pointer"
-    }}
-  >
-    Refresh history
-  </button>
-</div>
-        </div>
-        <p style={{
-          fontSize: 12, color: theme.colors.text.secondary
-        }}>
-          Customer, loan, collection and recharge transactions
-          for this verified branch.
-        </p>
-        <div style={{ overflowX: "auto", width: "100%" }}>
-          <table style={{
-            width: "100%", borderCollapse: "collapse",
-            fontSize: 12, textAlign: "left"
-          }}>
-            <thead>
-              <tr>
-                {["Date / Time", "Transaction", "Reference / Customer ID",
-                  "Amount", "Status"].map(heading => (
-                  <th key={heading} scope="col" style={{
-                    padding: "10px 8px",
-                    borderBottom: `1px solid ${theme.components.card.border}`,
-                    whiteSpace: "nowrap"
-                  }}>
-                    {heading}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <ServerWalletLiveHistory walletId={balance?.walletId ?? null} />
-          </table>
-        </div>
-      </section>
-{/* FINORA_P1_580Y_RECHARGE_UI */}
-<section className="finora-wallet-recharge" style={panel} aria-label="Server wallet recharge" aria-busy={busy}>
+      {/* FINORA_P1_580Y_RECHARGE_UI */}
+<section className="finora-wallet-recharge" style={{ ...panel, padding: 16 }} aria-label="Server wallet recharge" aria-busy={busy}>
         <h2 style={{ marginTop: 0 }}>Request a recharge</h2>
 
         <form onSubmit={submitRecharge}>
-          <fieldset disabled={androidBalanceOnly || !available || busy || !balance || hasIntent}
+          <fieldset disabled={androidBalanceOnly || !available || busy || !balance || (hasIntent && !receipt)}
             style={{ border: 0, padding: 0, margin: 0,
               display: "grid", gap: 16,
               gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))" }}>
             <label>Recharge amount (INR)
               <input name="rechargeAmount" type="text" inputMode="numeric"
-                value={amount} onChange={event => setAmount(event.target.value.replace(/\D/g, ""))}
+                value={amount} onChange={event => {
+                  // FINORA_P1_754C_COMPACT_RECHARGE
+                  if (receipt) prepareAnotherRecharge();
+                  setAmount(event.target.value.replace(/\D/g, ""));
+                }}
                 autoComplete="off" maxLength={4} required
                 pattern="[0-9]{2,4}"
                 aria-invalid={amount !== "" && (Number(amount) < 50 || Number(amount) > 2000)}
@@ -1446,7 +1971,7 @@ export default function ServerWalletPage({
                     ? "#e11d48"
                     : theme.components.card.border
                 }}
-                placeholder="MIN 50 - MAX 2000" />
+                placeholder="Enter recharge amount" />
               {/* FINORA_P1_582I_AMOUNT_VALIDATION */}
               {amount !== "" && Number(amount) < 50 && (
                 <div role="alert" style={{
@@ -1474,6 +1999,7 @@ export default function ServerWalletPage({
                 onChange={event => {
                   const value = event.target.value;
                   if (value === "PHONEPE" || value === "GOOGLE_PAY") {
+                    if (receipt) prepareAnotherRecharge();
                     setPaymentMethod(value);
                   }
                 }} style={field}>
@@ -1484,22 +2010,17 @@ export default function ServerWalletPage({
           </fieldset>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
-            <button type="submit" style={{ ...button, background: theme.components.button.primaryBackground, color: theme.components.button.primaryText }}
-              disabled={!available || busy || !balance || !!receipt ||
+            <button type={receipt ? "button" : "submit"}
+              onClick={receipt ? prepareAnotherRecharge : undefined}
+              style={{ ...button, background: theme.components.button.primaryBackground, color: theme.components.button.primaryText }}
+              disabled={!available || busy || !balance || rechargeBalanceStale ||
                 !/^[0-9]{2,4}$/.test(amount) ||
                 Number(amount) < 50 ||
                 Number(amount) > 2000 ||
                 (!!rechargeIntent.current &&
                   rechargeIntent.current.walletId !== balance.walletId)}>
-              {hasIntent ? "Retry same request" : "Submit recharge request"}
+              Submit recharge request
             </button>
-            {receipt && (
-              <button type="button" style={button}
-                disabled={busy || !balance || receipt.request.walletId !== balance.walletId}
-                onClick={prepareAnotherRecharge}>
-                Prepare another recharge
-              </button>
-            )}
           </div>
         </form>
 
@@ -1508,29 +2029,322 @@ export default function ServerWalletPage({
             Sign in or refresh your wallet before submitting or retrying.
           </p>
         )}
-        {hasIntent && !receipt && (
-          <p style={{ color: "var(--finora-theme-danger, #C24141)" }}>
-            Keep this screen open until the request is confirmed. Retries here
-            reuse the same request details. Leaving or reloading loses these
-            local retry details; it does not cancel a server request.
-          </p>
-        )}
-        {rechargeMessage && (
+        {/* FINORA_P1_754U: Hide technical retry warning from normal UI.
+            Secure idempotency and encrypted recovery remain unchanged. */}
+        {!receipt && rechargeMessage && (
           <p role={rechargeFailed ? "alert" : "status"} aria-live="polite"
             style={{ color: rechargeFailed ? "#9f1239" : "#334155" }}>
             {rechargeMessage}
           </p>
         )}
-        {receipt && (
-          <div style={{ background: theme.colors.background.page, padding: 16, borderRadius: 10,
-            overflowWrap: "anywhere" }}>
-            <strong>Request status: {receipt.request.status}</strong>
-            <p>Amount: INR {receipt.request.amountInr}</p>
-            <p>Request ID: {receipt.request.requestId}</p>
-            <p>{receipt.replayed ? "Existing request returned." : "New request received."}</p>
+        {/* FINORA P1-754C: Successful receipts appear in Transaction History. */}
+        {/* FINORA_P1_754A_HIDDEN_RECOVERY_CONTROLS
+            Recovery functionality remains available in source.
+            Normal Wallet UI does not display diagnostic controls. */}
+        {!androidBalanceOnly && (
+          <div style={{
+            marginTop: 0,
+            display: "none",
+            flexDirection: "column",
+            gap: 8,
+          }}>
+            <button
+              type="button"
+              disabled={rechargeRecoveryBusy || busy || !balance}
+              onClick={async () => {
+                setRechargeRecoveryBusy(true);
+                setRechargeRecoveryStatus("Checking encrypted Recharge record...");
+                try {
+                  const bridge = getFinoraServerWalletBridge();
+                  if (!bridge) {
+                    setRechargeRecoveryStatus(
+                      "Wallet bridge unavailable. Sign in again."
+                    );
+                    return;
+                  }
+                  const result = await bridge.rechargePending();
+                  if (!result.success) {
+                    setRechargeRecoveryStatus(
+                      "Unable to verify the saved Recharge record [" +
+                      result.errorCode + "]. No request was submitted."
+                    );
+                    return;
+                  }
+                  if (!result.data.pending) {
+                    setRechargeRecoveryStatus(
+                      "No encrypted Recharge retry record exists for this Wallet on this device. This does not confirm server request status."
+                    );
+                    return;
+                  }
+                  setRechargeRecoveryStatus(
+                    "Existing encrypted Recharge: INR " +
+                    result.data.amountInr +
+                    " via " +
+                    (result.data.paymentMethod === "GOOGLE_PAY"
+                      ? "Google Pay" : "PhonePe") +
+                    ". Server request status is not yet confirmed. Do not create another request until reconciled."
+                  );
+                } catch {
+                  setRechargeRecoveryStatus(
+                    "Recharge recovery check failed. No request was submitted."
+                  );
+                } finally {
+                  setRechargeRecoveryBusy(false);
+                }
+              }}
+              style={{
+                alignSelf: "flex-start",
+                padding: "9px 14px",
+                borderRadius: 9,
+                border: "1px solid #94a3b8",
+                background: "transparent",
+                color: "inherit",
+                fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: rechargeRecoveryBusy ? "wait" : "pointer",
+              }}
+            >
+              {rechargeRecoveryBusy
+                ? "Checking Recharge..."
+                : "Check Existing Recharge"}
+            </button>
+            {/* FINORA_P1_753Y2_RECOVERY_BUTTON */}
+            <button
+              type="button"
+              disabled={rechargeRecoveryBusy || busy || !balance}
+              onClick={async () => {
+                setRechargeRecoveryBusy(true);
+                setRechargeRecoveryStatus(
+                  "Reconciling original encrypted Recharge with server..."
+                );
+
+                try {
+                  const walletBridge = getFinoraServerWalletBridge();
+
+                  if (!walletBridge) {
+                    setRechargeRecoveryStatus(
+                      "Wallet bridge unavailable. No recovery submitted."
+                    );
+                    return;
+                  }
+
+                  const result = await walletBridge.rechargeResume();
+
+                  if (!result.success) {
+                    setRechargeRecoveryStatus(
+                      "Recharge reconciliation not confirmed [" +
+                      result.errorCode +
+                      "]. Existing encrypted request must be retained."
+                    );
+                    return;
+                  }
+
+                  setReceipt(result.data);
+                  setRechargeRecoveryStatus(
+                    "Server confirmed existing Recharge: INR " +
+                    result.data.request.amountInr +
+                    " via " +
+                    (result.data.request.paymentMethod === "GOOGLE_PAY"
+                      ? "Google Pay"
+                      : "PhonePe") +
+                    ". Status: " +
+                    result.data.request.status +
+                    ". Request ID: " +
+                    result.data.request.requestId +
+                    ". No new UUID generated."
+                  );
+                } catch {
+                  setRechargeRecoveryStatus(
+                    "Recovery could not be confirmed. Do not submit another Recharge."
+                  );
+                } finally {
+                  setRechargeRecoveryBusy(false);
+                }
+              }}
+              style={{
+                alignSelf: "flex-start",
+                padding: "9px 14px",
+                borderRadius: 9,
+                border: "1px solid #94a3b8",
+                background: "transparent",
+                color: "inherit",
+                fontFamily:
+                  "Inter, ui-sans-serif, system-ui, sans-serif",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: rechargeRecoveryBusy ? "wait" : "pointer",
+              }}
+            >
+              Recover Existing Recharge
+            </button>
+            {rechargeRecoveryStatus && (
+              <p role="status" aria-live="polite" style={{
+                margin: 0,
+                fontSize: 13,
+                lineHeight: 1.5,
+                overflowWrap: "anywhere",
+              }}>
+                {rechargeRecoveryStatus}
+              </p>
+            )}
           </div>
         )}
       </section>
+      </div>
+
+{/* FINORA_P1_747Z_COMPACT_LEFT */}
+      {/* FINORA_P1_580J_HISTORY_LAYOUT */}
+      <section className="finora-wallet-access" style={{ ...panel, padding: 14, alignSelf: "stretch", height: "100%", boxSizing: "border-box" }}
+        aria-label="FINORA Wallet Transaction History">
+        <div style={{
+          display: "flex", justifyContent: "space-between",
+          alignItems: "center", flexWrap: "wrap", gap: 10
+        }}>
+          <h2 style={{ margin: 0, fontSize: 20 }}>
+            Wallet History {/* FINORA_P1_754M3_VISIBLE_TITLE */}
+          </h2>
+          <div className="finora-wallet-history-toolbar" style={{
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8
+}}>
+
+  {/* FINORA_P1_747Q_HISTORY_FILTERS */}
+  <div style={{
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 7,
+  }}>
+    <select
+      aria-label="Filter wallet transaction type"
+      defaultValue="ALL"
+      onChange={(event) => window.dispatchEvent(
+        new CustomEvent("finora:wallet-history-category-filter", {
+          detail: event.currentTarget.value,
+        })
+      )}
+      style={{
+        width: "160px",
+        minHeight: 38,
+        height: 38,
+        padding: "0 35px 0 13px",
+        borderRadius: 11,
+        border: `1px solid ${theme.components.card.border}`,
+        color: theme.colors.text.primary,
+        backgroundColor: theme.colors.background.page,
+        backgroundImage: "url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2364758b%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22m6 9 6 6 6-6%22/%3E%3C/svg%3E')",
+        backgroundPosition: "right 11px center",
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "15px 15px",
+        appearance: "none",
+        WebkitAppearance: "none",
+        fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+        fontWeight: 400,
+        fontSize: 12,
+        cursor: "pointer",
+        boxSizing: "border-box",
+        flexShrink: 0,
+      }}
+    >
+      <option value="ALL">All Transactions</option>
+      <option value="SUBSCRIPTIONS">Subscriptions</option>
+      <option value="RECHARGES">Recharges</option>
+      <option value="TRANSACTIONS">Other Transactions</option>
+    </select>
+
+    <select
+      aria-label="Filter wallet history date"
+      defaultValue="ALL"
+      onChange={(event) => window.dispatchEvent(
+        new CustomEvent("finora:wallet-history-date-filter", {
+          detail: event.currentTarget.value,
+        })
+      )}
+      style={{
+        width: "160px",
+        minHeight: 38,
+        height: 38,
+        padding: "0 35px 0 13px",
+        borderRadius: 11,
+        border: `1px solid ${theme.components.card.border}`,
+        color: theme.colors.text.primary,
+        backgroundColor: theme.colors.background.page,
+        backgroundImage: "url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2364758b%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22m6 9 6 6 6-6%22/%3E%3C/svg%3E')",
+        backgroundPosition: "right 11px center",
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "15px 15px",
+        appearance: "none",
+        WebkitAppearance: "none",
+        fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+        fontWeight: 400,
+        fontSize: 12,
+        cursor: "pointer",
+        boxSizing: "border-box",
+        flexShrink: 0,
+      }}
+    >
+      <option value="ALL">All Dates</option>
+      <option value="TODAY">Today</option>
+      <option value="YESTERDAY">Yesterday</option>
+      <option value="MONTH">This Month</option>
+      <option value="YEAR">This Year</option>
+    </select>
+  </div>
+  {/* FINORA_P1_580S_REFRESH_POSITION */}
+  <button
+    type="button"
+    onClick={() => window.dispatchEvent(
+      new Event("finora:wallet-history-refresh")
+    )}
+    style={{
+      width: 145,
+      height: 38,
+      minHeight: 38,
+      padding: "0 12px",
+      borderRadius: 11,
+      border: `1px solid ${theme.components.card.border}`,
+      background: "transparent",
+      color: theme.colors.text.primary,
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+      fontWeight: 400,
+      fontSize: 12,
+      boxSizing: "border-box",
+      flexShrink: 0,
+      cursor: "pointer"
+    }}
+  >
+    Refresh history
+  </button>
+</div>
+        </div>
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table style={{
+            width: "100%", borderCollapse: "collapse",
+            fontSize: 13, textAlign: "left"
+          }}>
+            <thead>
+              <tr>
+                {["Date / Time", "Transaction", "Details / Reference",
+                  "Amount", "Status"].map(heading => (
+                  <th key={heading} scope="col" style={{
+                    padding: "13px 8px 10px",
+                    borderBottom: `1px solid ${theme.components.card.border}`,
+                    whiteSpace: "nowrap"
+                  }}>
+                    {heading}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <ServerWalletLiveHistory walletId={balance?.walletId ?? null} />
+          </table>
+        </div>
+      </section>
+
 
       <section
         className="finora-premium-subscriptions"
@@ -1538,7 +2352,7 @@ export default function ServerWalletPage({
         aria-label="FINORA subscription plans"
       >
         {/* FINORA_P1_634J_PURCHASE_REVIEW_UI */}
-        {(() => {
+        {purchaseReviewOpen && (() => {
           const selectedPlan = livePricing?.plans.find(
             plan => plan.months === previewPlan
           );
@@ -1559,13 +2373,30 @@ export default function ServerWalletPage({
 
           return (
             <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Subscription Purchase"
+              /* FINORA_P1_750C_SUBSCRIPTION_MODAL */
               style={{
+                position: "fixed",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                zIndex: 9999,
+                width: "min(520px, calc(100vw - 32px))",
+                maxHeight: "min(85vh, 760px)",
+                overflowY: "auto",
+                boxSizing: "border-box",
                 border: `1px solid ${theme.components.card.border}`,
-                borderRadius: 14,
-                padding: 16,
-                marginBottom: 20,
+                borderRadius: 18,
+                padding: 22,
+                marginBottom: 0,
                 display: "grid",
-                gap: 12,
+                gap: 14,
+                background: theme.components.card.background,
+                color: theme.colors.text.primary,
+                boxShadow: "0 0 0 100vmax rgba(0,0,0,0.72), 0 24px 70px rgba(0,0,0,0.5)",
+                fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
               }}
             >
               <div>
@@ -1596,7 +2427,7 @@ export default function ServerWalletPage({
                   borderRadius: 10,
                   border: `1px solid ${theme.components.card.border}`,
                   cursor: available ? "pointer" : "not-allowed",
-                  opacity: available ? 1 : 0.55,
+                  opacity: 1, color: theme.colors.text.primary, background: theme.colors.background.page, fontSize: 14,
                   fontWeight: 700,
                 }}
               >
@@ -1736,8 +2567,7 @@ export default function ServerWalletPage({
                 original: live ? Number(live.regularPriceInr) : null,
                 price: live ? Number(live.offerPriceInr) : null,
                 fees: live?.fees ?? null,
-                label: months === 6 ? "POPULAR" :
-                  months === 12 ? "BEST VALUE" : "",
+                label: "",
               };
             }),
           ].map(plan => {
@@ -1782,7 +2612,7 @@ export default function ServerWalletPage({
                     previewRenewMonths === null ||
                     previewRenewMonths === plan.months
                   ) {
-                    setPreviewPlan(plan.months);
+                    setPreviewPlan(plan.months); setPurchaseReviewOpen(true);
                   }
                 }}
                 onKeyDown={event => {
@@ -1796,7 +2626,7 @@ export default function ServerWalletPage({
                       previewRenewMonths === null ||
                       previewRenewMonths === plan.months
                     ) {
-                      setPreviewPlan(plan.months);
+                      setPreviewPlan(plan.months); setPurchaseReviewOpen(true);
                     }
                   }
                 }}
@@ -1804,7 +2634,7 @@ export default function ServerWalletPage({
                   minHeight: 220,
                   textAlign: "left",
                   cursor: affordable ? "pointer" : "not-allowed",
-                  opacity: affordable ? 1 : 0.65,
+                  opacity: 1, /* FINORA_P1_750C_READABLE_PLANS */
                   display: "flex",
                   flexDirection: "column",
                   gap: 12,
@@ -1844,33 +2674,22 @@ export default function ServerWalletPage({
           : "A full year of business confidence."}
   </span>
 </div>
-                  {plan.label && (
-                    <span style={{
-                      fontSize: 10, fontWeight: 800, letterSpacing: ".05em",
-                      color: theme.components.button.primaryText,
-                      background: theme.components.button.primaryBackground,
-                      borderRadius: 999, padding: "5px 8px"
-                    }}>
-                      {plan.label}
-                    </span>
-                  )}
-                </div>
-                <div>
-                  {/* FINORA_P1_580C_SINGLE_PRICE */}
-                  <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-.04em", marginTop: -14 /* FINORA_P1_580D_PRICE_GAP */ }}>
-                    {plan.price === null
-                      ? "Price unavailable"
-                      : `₹${plan.price.toLocaleString("en-IN")}`}
-                  </div>
-                </div>
-                {/* FINORA_P565B_STATUS: Actual subscribed plan only */}
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: 6,
+                    flexWrap: "wrap",
+                    marginLeft: "auto",
+                  }}>
+{/* FINORA_P565B_STATUS: Actual subscribed plan only */}
 {subscription &&
   subscription.planMonths === plan.months && (() => {
     const state = finoraSubscriptionBadge(subscription);
     const badgeColors = finoraSubscriptionBadgeColors(state.tone);
 
     return (
-      <div style={{ marginTop: 10, marginBottom: 10 }}>
+      <div style={{ margin: 0, flexShrink: 0 }}>
         <span
           aria-label={`Subscription ${state.label}`}
           style={{
@@ -1892,7 +2711,28 @@ export default function ServerWalletPage({
       </div>
     );
   })()}
-<div style={{
+
+                  {plan.label && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 800, letterSpacing: ".05em",
+                      color: theme.components.button.primaryText,
+                      background: theme.components.button.primaryBackground,
+                      borderRadius: 999, padding: "5px 8px"
+                    }}>
+                      {plan.label}
+                    </span>
+                  )}
+                  </div>
+                </div>
+                <div>
+                  {/* FINORA_P1_580C_SINGLE_PRICE */}
+                  <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-.04em", marginTop: -14 /* FINORA_P1_580D_PRICE_GAP */ }}>
+                    {plan.price === null
+                      ? "Price unavailable"
+                      : `₹${plan.price.toLocaleString("en-IN")}`}
+                  </div>
+                </div>
+                <div style={{
   padding: 12,
   borderRadius: 12,
   background: theme.colors.background.page,
@@ -2099,10 +2939,7 @@ export default function ServerWalletPage({
           </div>
           <strong>{previewRenewMonths === null ? "OFF" : `${previewRenewMonths} Month${previewRenewMonths === 1 ? "" : "s"} · ON (Preview)`}</strong>
         </div>
-        <p style={{ fontSize: 12, color: theme.colors.text.secondary, marginBottom: 0 }}>
-          Prices shown for design review. Final amount and renewal authorization
-          must come from FINORA server. No money is deducted by these controls.
-        </p>
+
       </section>
     </main>
   );

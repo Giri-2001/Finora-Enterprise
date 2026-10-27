@@ -38,3 +38,4 @@ release-developer/
 *.corrupt
 *.corrupt-*
 _finora-*-backup-*/
+/android/app/src/developer/assets/public/index.html

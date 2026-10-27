@@ -23,6 +23,27 @@ android {
         }
     }
 
+    // FINORA_P1_756F_DUAL_ANDROID_FLAVORS
+    // Separate installable Owner and Developer identities.
+    // Variant-specific UI bootstrap and privilege isolation
+    // are separate mandatory release gates.
+    flavorDimensions "finoraApp"
+
+    productFlavors {
+        owner {
+            dimension "finoraApp"
+            applicationId "com.finora.enterprise"
+            resValue "string", "finora_variant_label", "FINORA Enterprise"
+            buildConfigField "boolean", "FINORA_DEVELOPER_VARIANT", "false"
+        }
+
+        developer {
+            dimension "finoraApp"
+            applicationId "com.finora.developer.controlcenter"
+            resValue "string", "finora_variant_label", "FINORA Developer"
+            buildConfigField "boolean", "FINORA_DEVELOPER_VARIANT", "true"
+        }
+    }
     // ============================================================
     // ============================================================
     // FINORA ENTERPRISE - JAVA / CORE LIBRARY DESUGARING

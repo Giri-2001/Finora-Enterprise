@@ -141,9 +141,6 @@ export function formatCustomerId(
   return joinNumberParts([
     FINORA_NUMBER_PREFIX,
     FINORA_CUSTOMER_PREFIX,
-    normalizeNumberingCode(
-      businessCode,
-    ),
     formatNumericSegment(
       customerNumber,
       CUSTOMER_NUMBER_LENGTH,
@@ -183,9 +180,6 @@ export function formatLoanNumber(
   return joinNumberParts([
     FINORA_NUMBER_PREFIX,
     FINORA_LOAN_PREFIX,
-    normalizeNumberingCode(
-      businessCode,
-    ),
     formatNumericSegment(
       customerNumber,
       CUSTOMER_NUMBER_LENGTH,
@@ -237,9 +231,6 @@ export function formatCollectionNumber(
   return joinNumberParts([
     FINORA_NUMBER_PREFIX,
     FINORA_COLLECTION_PREFIX,
-    normalizeNumberingCode(
-      businessCode,
-    ),
     formatNumericSegment(
       customerNumber,
       CUSTOMER_NUMBER_LENGTH,
@@ -294,9 +285,6 @@ export function formatReceiptNumber(
   return joinNumberParts([
     FINORA_NUMBER_PREFIX,
     FINORA_RECEIPT_PREFIX,
-    normalizeNumberingCode(
-      businessCode,
-    ),
     formatNumericSegment(
       customerNumber,
       CUSTOMER_NUMBER_LENGTH,

@@ -86,6 +86,7 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
   const [search, setSearch] = useState("");
   const [offset, setOffset] = useState(0);
   const [selectedServerIdentity, setSelectedServerIdentity] = useState<FinoraSelectedServerBranchIdentity | null>(null);
+  const [flippedBranchKey, setFlippedBranchKey] = useState<string | null>(null);
   const [page, setPage] = useState<DirectoryPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -255,7 +256,7 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
         color: "#e8f0ff",
       }}
     >
-      <div
+      <div className="finora-cc-polish-branches-header"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -289,7 +290,7 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
         </button>
       </div>
 
-      <form
+      <form className="finora-cc-polish-branches-search"
         onSubmit={onSearch}
         style={{
           display: "flex",
@@ -351,101 +352,369 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
           {page.branches.length === 0 ? (
             <p>No matching server branches.</p>
           ) : (
-            <div
+            <div className="finora-cc-polish-branches-grid"
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 290px), 1fr))",
+                gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 320px), 1fr))",
                 gap: 12,
                 marginTop: 12,
               }}
             >
-              {page.branches.map((branch) => (
-                <article
-                  key={`${branch.owner_id}:${branch.business_id}:${branch.branch_id}`}
-                  style={{
-                    border: "1px solid #293b59",
-                    borderRadius: 12,
-                    padding: 16,
-                    background: "#121e36",
-                    overflowWrap: "anywhere",
-                  }}
-                >
-                  <strong style={{ fontSize: 16 }}>
-                    {display(branch.branch_name)}
-                  </strong>
+              {/* FINORA_P1_743F4_FLIP_CARD */}
+{page.branches.map((branch) => {
+  const key = `${branch.owner_id}:${branch.business_id}:${branch.branch_id}`;
+  const flipped = flippedBranchKey === key;
+  // FINORA_P1_745D2_LIFECYCLE
+  const nowMs = Date.now();
+  const expiryMs = branch.subscription_expiry
+    ? Date.parse(branch.subscription_expiry)
+    : NaN;
+  const validExpiry = Number.isFinite(expiryMs);
+  const remainingDays = validExpiry
+    ? Math.max(0, Math.ceil((expiryMs - nowMs) / 86400000))
+    : null;
 
-                  <div style={{ marginTop: 12 }}>
-                    <button
-                      type="button"
-                      disabled={branch.branch_status !== "ACTIVE"}
-                        aria-pressed={
-                        selectedServerIdentity?.ownerId === branch.owner_id &&
-                        selectedServerIdentity?.businessId === branch.business_id &&
-                        selectedServerIdentity?.branchId === branch.branch_id
-                      }
-                      onClick={() =>
-                        setSelectedServerIdentity({
-                          ownerId: branch.owner_id,
-                          businessId: branch.business_id,
-                          branchId: branch.branch_id,
-                        })
-                      }
-                    >
-                      {selectedServerIdentity?.ownerId === branch.owner_id &&
-                      selectedServerIdentity?.businessId === branch.business_id &&
-                      selectedServerIdentity?.branchId === branch.branch_id
-                        ? "Selected (Read Only)"
-                        : "Select Branch"}
-                    </button>
-                  </div>
+  const serverStatus = (branch.subscription_status ?? "")
+    .trim().toUpperCase();
 
-                  {selectedServerIdentity?.ownerId === branch.owner_id &&
-                    selectedServerIdentity?.businessId === branch.business_id &&
-                    selectedServerIdentity?.branchId === branch.branch_id && (
-                      <div
-                        role="status"
-                        style={{
-                          padding: 12,
-                          marginTop: 12,
-                          background: "#17304a",
-                          border: "1px solid #39617e",
-                          borderRadius: 9,
-                          fontSize: 12,
-                          lineHeight: 1.8,
-                        }}
-                      >
-                        <strong>Selected server identity</strong>
-                        <div>Owner ID: {branch.owner_id}</div>
-                        <div>Business ID: {branch.business_id}</div>
-                        <div>Branch ID: {branch.branch_id}</div>
-                        <div>
-                          Read-only selection. No wallet, subscription,
-                          provisioning or financial authority granted.
-                        </div>
-                      </div>
-                    )}
-                  <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.9 }}>
-                    <div>Owner: {display(branch.owner_name)}</div>
-                    <div>Business: {display(branch.business_name)}</div>
-                    <div>Branch ID: {display(branch.branch_id)}</div>
-                    <div>Branch status: {display(branch.branch_status)}</div>
-                    <div>Storage: {display(branch.storage_mode)}</div>
-                    <div>Wallet ID: {display(branch.wallet_id)}</div>
-                    <div>
-                      Wallet balance:{" "}
-                      {branch.balance_inr === null
-                        ? "—"
-                        : `₹${display(branch.balance_inr)}`}
-                    </div>
-                    <div>Wallet status: {display(branch.wallet_status)}</div>
-                    <div>Subscription: {display(branch.plan_code)}</div>
-                    <div>
-                      Subscription status: {display(branch.subscription_status)}
-                    </div>
-                    <div>Expiry: {formatFinoraDateTime(branch.subscription_expiry)}</div>
-                  </div>
-                </article>
-              ))}
+  const lifecycle =
+    serverStatus === "EXPIRED" ||
+    (validExpiry && expiryMs <= nowMs)
+      ? "EXPIRED"
+      : !validExpiry ||
+        !["ACTIVE", "EXPIRING_SOON", "EXPIRING SOON"]
+          .includes(serverStatus)
+        ? "UNKNOWN"
+        : remainingDays !== null && remainingDays <= 7
+          ? "EXPIRING SOON"
+          : "ACTIVE";
+
+  const remainingLabel =
+    remainingDays === null
+      ? "Unavailable"
+      : lifecycle === "EXPIRED"
+        ? "0 days"
+        : `${remainingDays} day${remainingDays === 1 ? "" : "s"}`;
+
+  const lifecycleColors = {
+    ACTIVE: {
+      text: "#4ade80",
+      border: "rgba(34,197,94,.65)",
+      glow: "rgba(22,163,74,.28)",
+    },
+    "EXPIRING SOON": {
+      text: "#fdba74",
+      border: "rgba(249,115,22,.75)",
+      glow: "rgba(234,88,12,.30)",
+    },
+    EXPIRED: {
+      text: "#fca5a5",
+      border: "rgba(239,68,68,.75)",
+      glow: "rgba(185,28,28,.30)",
+    },
+    UNKNOWN: {
+      text: "#cbd5e1",
+      border: "rgba(148,163,184,.55)",
+      glow: "rgba(100,116,139,.22)",
+    },
+  }[lifecycle];
+
+  const selected =
+    selectedServerIdentity?.ownerId === branch.owner_id &&
+    selectedServerIdentity?.businessId === branch.business_id &&
+    selectedServerIdentity?.branchId === branch.branch_id;
+
+  const face = {
+    position: "absolute" as const,
+    inset: 0,
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 12,
+    padding: 18,
+    borderRadius: 20,
+    border: `1px solid ${lifecycleColors.border}`,
+    background: `radial-gradient(circle at top left,${lifecycleColors.glow},transparent 60%),linear-gradient(145deg,#182947,#0c172a)`,
+    boxShadow: "0 14px 32px rgba(0,0,0,.22)",
+    boxSizing: "border-box" as const,
+    backfaceVisibility: "hidden" as const,
+    WebkitBackfaceVisibility: "hidden" as const,
+    overflow: "hidden" as const,
+  };
+
+  const buttonStyle = {
+    minHeight: 40,
+    padding: "9px 12px",
+    borderRadius: 11,
+    border: "1px solid rgba(96,165,250,.40)",
+    background: "rgba(37,99,235,.23)",
+    color: "#eff6ff",
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontSize: 12,
+    fontWeight: 750,
+    cursor: "pointer",
+  };
+
+  const balance =
+    branch.balance_inr === null
+      ? "—"
+      : Number.isFinite(Number(branch.balance_inr))
+        ? `₹${Number(branch.balance_inr).toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}`
+        : display(branch.balance_inr);
+
+  return (
+    <article
+      key={key}
+      aria-label={`Live branch ${branch.branch_name}`}
+      style={{
+        width: "100%",
+        maxWidth: 340, minWidth: 0, height: 500,
+        perspective: 1200,
+      }}
+    >
+      <div style={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        transformStyle: "preserve-3d",
+        transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+        transition: "transform 500ms ease",
+      }}>
+        {/* FRONT SUMMARY */}
+        <div
+          style={{
+            ...face,
+            visibility: flipped ? "hidden" : "visible",
+            pointerEvents: flipped ? "none" : "auto",
+          }}
+          onClick={() => setFlippedBranchKey(key)} aria-hidden={flipped}
+        >
+          <div style={{
+            color: "#93c5fd",
+            fontSize: 10,
+            letterSpacing: ".12em",
+            fontWeight: 800,
+          }}>
+            FINORA • LIVE BRANCH
+          </div>
+
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 8,
+          }}>
+            <div style={{ minWidth: 0 }}>
+              <h3 style={{
+                margin: 0,
+                fontSize: 22,
+                color: "#f8fafc",
+                overflowWrap: "anywhere",
+              }}>
+                {display(branch.branch_name)}
+              </h3>
+              <div style={{ fontSize: 12, color: "#cbd5e1", marginTop: 5 }}>
+                {display(branch.owner_name)}
+              </div>
+            </div>
+            <span style={{
+              padding: "6px 9px",
+              borderRadius: 20,
+              background: lifecycleColors.glow,
+              color: lifecycleColors.text,
+              fontSize: 10,
+              fontWeight: 800,
+            }}>
+              {lifecycle}
+            </span>
+          </div>
+
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0,1fr)", gap: 9,
+          }}>
+            <div style={{
+              padding: 12,
+              borderRadius: 13,
+              background: "rgba(16,185,129,.10)",
+              border: "1px solid rgba(52,211,153,.18)",
+              minWidth: 0,
+            }}>
+              <div style={{ color: "#94a3b8", fontSize: 10 }}>
+                WALLET
+              </div>
+              <strong style={{
+                display: "block",
+                marginTop: 5, fontSize: 18, color: "#6ee7b7",
+              }}>
+                {balance}
+              </strong>
+            </div>
+
+            <div style={{
+              padding: 12,
+              borderRadius: 13,
+              background: "rgba(59,130,246,.10)",
+              border: "1px solid rgba(96,165,250,.18)",
+              minWidth: 0,
+            }}>
+              <div style={{ color: "#94a3b8", fontSize: 10 }}>
+                PLAN
+              </div>
+              <strong style={{
+                display: "block",
+                marginTop: 8,
+                fontSize: 12,
+                color: "#dbeafe",
+                overflowWrap: "anywhere",
+              }}>
+                {display(branch.plan_code)}
+              </strong>
+            </div>
+          </div>
+
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: 12,
+            gap: 8,
+          }}>
+            <span style={{ color: "#94a3b8" }}>Expiry</span>
+            <strong style={{ color: "#e2e8f0", textAlign: "right" }}>
+              {formatFinoraDateTime(branch.subscription_expiry)}
+            </strong>
+          </div>
+
+                    <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 8,
+            fontSize: 12,
+          }}>
+            <span style={{ color: "#94a3b8" }}>
+              Remaining Days
+            </span>
+            <strong style={{
+              color: lifecycleColors.text,
+              textAlign: "right",
+            }}>
+              {remainingLabel}
+            </strong>
+          </div>
+<div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: 12,
+          }}>
+            <span style={{ color: "#94a3b8" }}>Subscription</span>
+            <strong style={{ color: lifecycleColors.text }}>{lifecycle}</strong>
+          </div>
+
+          <div style={{
+  marginTop: "auto",
+  textAlign: "center",
+  color: "#93c5fd",
+  fontSize: 12,
+  fontWeight: 700,
+}}>
+  Click to view details
+</div>
+        </div>
+
+        {/* BACK DETAILS */}
+        <div
+          style={{
+            ...face,
+            transform: "rotateY(180deg)",
+            visibility: flipped ? "visible" : "hidden",
+            pointerEvents: flipped ? "auto" : "none",
+          }}
+          onClick={() => setFlippedBranchKey(null)} aria-hidden={!flipped}
+        >
+          <div style={{
+            color: "#93c5fd",
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: ".12em",
+          }}>
+            FINORA • BRANCH DETAILS
+          </div>
+
+          <h3 style={{
+            margin: 0,
+            fontSize: 20,
+            color: "#f8fafc",
+          }}>
+            {display(branch.branch_name)}
+          </h3>
+
+          <div style={{
+            display: "grid",
+            gap: 9,
+            overflow: "hidden", minHeight: 0, flex: 1,
+          }}>
+            {[
+              ["Owner", branch.owner_name],
+              ["Business", branch.business_name],
+              ["Branch ID", branch.branch_id],
+              ["Wallet ID", branch.wallet_id],
+              ["Storage", branch.storage_mode],
+              ["Wallet Status", branch.wallet_status],
+              ["Branch Status", branch.branch_status],
+              ["Plan Status", branch.subscription_status], ["Lifecycle", lifecycle], ["Remaining Days", remainingLabel],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  paddingBottom: 8,
+                  borderBottom: "1px solid rgba(148,163,184,.14)",
+                  fontSize: 12,
+                }}
+              >
+                <span style={{
+                  color: "#94a3b8",
+                  flexShrink: 0,
+                }}>
+                  {label}
+                </span>
+                <strong style={{
+                  color: "#e2e8f0",
+                  textAlign: "right",
+                  overflowWrap: "anywhere",
+                }}>
+                  {display(value)}
+                </strong>
+              </div>
+            ))}
+            {selected && (
+              <div role="status" style={{
+                color: "#6ee7b7",
+                fontSize: 11,
+              }}>
+                Selected identity is read-only.
+                No financial authority granted.
+              </div>
+            )}
+          </div>
+
+          <div style={{
+  textAlign: "center",
+  color: "#93c5fd",
+  fontSize: 12,
+  fontWeight: 700,
+}}>
+  Click to return
+</div>
+        </div>
+      </div>
+    </article>
+  );
+})}
             </div>
           )}
 
@@ -459,7 +728,7 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
               marginTop: 18,
             }}
           >
-            <span style={{ fontSize: 13 }}>
+            <span className="finora-cc-branch-page-label" style={{ fontSize: 13 }}>
               Page {Math.floor(offset / PAGE_SIZE) + 1}
             </span>
 

@@ -14,6 +14,8 @@ const errors = new Set([
   "WALLET_ACCESS_UNAVAILABLE", "KEY_CONFLICT",
   "UNAUTHORIZED", "WALLET_NOT_FOUND", "STALE_OPERATION",
   "WALLET_NOT_AVAILABLE", "IDEMPOTENCY_CONFLICT",
+  "LOCAL_RECHARGE_INTENT_CONFLICT",
+  "SERVER_RECHARGE_IDEMPOTENCY_CONFLICT",
 ]);
 
 function safeError(code: unknown): string {
@@ -51,6 +53,12 @@ function credentials(input: unknown): Credentials | null {
 export function createFinoraServerWalletIpcBoundary(options: {
   service: Service;
   authorize: (event: IpcMainInvokeEvent) => boolean;
+  // FINORA_P1_752O_TRUSTED_RECHARGE_SENDER
+  // Main-only callback receives the already-authorized IPC sender.
+  rechargeService?: (
+    input: Parameters<Service["recharge"]>[0],
+    sender: IpcMainInvokeEvent["sender"],
+  ) => ReturnType<Service["recharge"]>;
 }) {
   const service = options?.service;
   const authorize = options?.authorize;
@@ -300,10 +308,14 @@ export function createFinoraServerWalletIpcBoundary(options: {
       ) return fail("INVALID_REQUEST");
 
       // Snapshot before awaiting; duplicate submissions retain their retry key.
-      const result = await service.recharge({
+      const rechargeInput = {
         amountInr, paymentMethod,
         idempotencyKey: idempotencyKey.toLowerCase(),
-      });
+      };
+
+      const result = options.rechargeService
+        ? await options.rechargeService(rechargeInput, event.sender)
+        : await service.recharge(rechargeInput);
 
       if (current !== revision) return fail("STALE_OPERATION");
       if (!trusted(event)) {

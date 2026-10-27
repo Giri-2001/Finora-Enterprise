@@ -37,15 +37,32 @@ async function read(
     const plugin = finoraControlShared as NativeReads;
     const response = await plugin[method]();
 
-    if (response?.success !== true || !record(response.data)) {
+    // FINORA_P1_737S_ANDROID_NATIVE_READ_CONTRACT
+    // Native may return the validated server JSON directly or
+    // envelope it as { success: true, data: serverJSON }.
+    // Neither form is trusted unless the server reports ok=true.
+    const raw: unknown = response;
+
+    if (!record(raw)) {
       return error("SERVER_READ_UNAVAILABLE");
     }
 
-    if (response.data.ok !== true) {
+    if (raw.success === false) {
+      return error("SERVER_READ_UNAVAILABLE");
+    }
+
+    const payload: unknown =
+      raw.success === true && record(raw.data)
+        ? raw.data
+        : raw;
+
+    if (!record(payload) || payload.ok !== true) {
       return error("INVALID_SERVER_RESPONSE");
     }
 
-    return { success: true, data: response.data };
+    // Callers independently validate expected server source,
+    // fields, and authorized scope. No local fallback is allowed.
+    return { success: true, data: payload };
   } catch {
     return error("SERVER_READ_UNAVAILABLE");
   }

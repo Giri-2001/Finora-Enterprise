@@ -120,6 +120,9 @@ GET_SERVER_BRANCH_DIRECTORY:
     "finora:control-center:get-server-live-wallets",
   GET_SERVER_PENDING_RECHARGES:
     "finora:control-center:get-server-pending-recharges",
+  // FINORA_P1_742A2_HISTORY_CHANNEL
+  GET_SERVER_RECHARGE_HISTORY:
+    "finora:control-center:get-server-recharge-history",
   DECIDE_SERVER_WALLET_RECHARGE:
     "finora:control-center:decide-server-wallet-recharge",
 
@@ -827,6 +830,40 @@ export interface FinoraServerPendingRechargePageView {
   hasMore: boolean;
 }
 
+/* FINORA_P1_742C_HISTORY_BRIDGE */
+export type FinoraServerRechargeHistoryStatusView =
+  "ALL" | "APPROVED" | "DECLINED";
+
+export interface FinoraServerRechargeHistoryRecordView {
+  requestId: string;
+  amountInr: string;
+  paymentMethod: string;
+  status: "APPROVED" | "DECLINED";
+  createdAt: string;
+  decidedAt: string;
+  decidedByActor: string | null;
+  declineReason: string | null;
+  walletId: string;
+  balanceInr: string;
+  walletStatus: string;
+  branchId: string;
+  branchName: string;
+  branchStatus: string;
+  businessId: string;
+  businessName: string;
+  ownerId: string;
+  ownerName: string;
+}
+
+export interface FinoraServerRechargeHistoryPageView {
+  ok: true;
+  source: "POSTGRESQL_RECHARGE_REQUESTS";
+  requests: FinoraServerRechargeHistoryRecordView[];
+  status: FinoraServerRechargeHistoryStatusView;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
 // FINORA_P1_591D_DECISION_PRELOAD
 export type FinoraServerRechargeDecisionInputView =
   | {
@@ -1332,7 +1369,7 @@ export interface FinoraControlCenterBridge {
     >;
     // FINORA_P1_594G2_DASHBOARD
   getServerDashboard:
-    (query?: { page?: number; size?: number }) => Promise<
+    (query?: { page?: number; size?: number; month?: string }) => Promise<
       FinoraControlCenterResult<
         import("./finoraServerDashboardClient").FinoraServerDashboardView
       >
@@ -1475,6 +1512,15 @@ getServerBranchDirectory:
     (input: { limit: number; offset: number }) =>
       Promise<
         FinoraControlCenterResult<FinoraServerPendingRechargePageView>
+      >;
+  getServerRechargeHistory:
+    (input: {
+      limit: number;
+      offset: number;
+      status: FinoraServerRechargeHistoryStatusView;
+    }) =>
+      Promise<
+        FinoraControlCenterResult<FinoraServerRechargeHistoryPageView>
       >;
   decideServerWalletRecharge:
     (input: FinoraServerRechargeDecisionInputView) =>
@@ -2051,6 +2097,14 @@ getServerBranchDirectory:
         input,
       ) as Promise<
         FinoraControlCenterResult<FinoraServerPendingRechargePageView>
+      >,
+  getServerRechargeHistory:
+    (input) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.GET_SERVER_RECHARGE_HISTORY,
+        input,
+      ) as Promise<
+        FinoraControlCenterResult<FinoraServerRechargeHistoryPageView>
       >,
   decideServerWalletRecharge:
     (input) =>

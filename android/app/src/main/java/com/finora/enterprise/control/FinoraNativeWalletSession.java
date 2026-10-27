@@ -22,6 +22,9 @@ final class FinoraNativeWalletSession {
     // FINORA_P1_727C_ANDROID_NETWORK
     // Process-memory status only. Never grants business access.
     private static boolean businessVerifyNetworkUnavailable = false;
+    // P1-737H2: diagnostic category only, never credentials.
+    private static String businessVerifyFailureCode =
+        "BUSINESS_SESSION_VERIFY_FAILED";
 
 
     // FINORA_P1_720Z2
@@ -85,10 +88,32 @@ final class FinoraNativeWalletSession {
             result.put("sessionType", "ACCOUNT_WALLET_ONLY");
             result.put("businessDataAccess", false);
             result.put("wallet", wallet);
-            result.put(
-                "businessSessionVerified",
-                verifyBusinessSession(server)
-            );
+            // FINORA_P1_737C: Never confuse Wallet success with
+            // Reception authorization. Fail closed with a useful reason.
+            boolean businessVerified = verifyBusinessSession(server);
+            result.put("businessSessionVerified", businessVerified);
+
+            if (!businessVerified) {
+                String rejection = "BUSINESS_SESSION_VERIFY_FAILED";
+                JSONObject issued = server.optJSONObject("businessSession");
+
+                if (issued == null) {
+                    rejection = "BUSINESS_SESSION_NOT_ISSUED";
+                } else if (!"BUSINESS_RECEPTION".equals(
+                    issued.optString("sessionType", ""))) {
+                    rejection = "BUSINESS_SESSION_TYPE_INVALID";
+                } else if (!issued.optString("sessionId", "")
+                    .matches("^[a-f0-9]{64}$")) {
+                    rejection = "BUSINESS_SESSION_HANDLE_INVALID";
+                } else if (businessVerifyNetworkUnavailable) {
+                    rejection = "BUSINESS_SESSION_NETWORK_UNAVAILABLE";
+                }
+
+                if ("BUSINESS_SESSION_VERIFY_FAILED".equals(rejection)) {
+                    rejection = businessVerifyFailureCode;
+                }
+                result.put("businessSessionErrorCode", rejection);
+            }
         } catch (Exception ignored) {
             clear();
             return failure("NATIVE_RESPONSE_INVALID");
@@ -200,6 +225,7 @@ final class FinoraNativeWalletSession {
     // Server verification only. No Reception privilege granted.
     private static boolean verifyBusinessSession(JSONObject login) {
         businessVerifyNetworkUnavailable = false;
+        businessVerifyFailureCode = "BUSINESS_SESSION_VERIFY_FAILED";
         JSONObject session = login.optJSONObject("businessSession");
 
         if (session == null ||
@@ -240,7 +266,13 @@ final class FinoraNativeWalletSession {
                 out.write("{}".getBytes(StandardCharsets.UTF_8));
             }
 
-            if (connection.getResponseCode() != 200) {
+            int status = connection.getResponseCode();
+            if (status != 200) {
+                businessVerifyFailureCode =
+                    status == 401 ? "BUSINESS_SESSION_HTTP_401" :
+                    status == 403 ? "BUSINESS_SESSION_HTTP_403" :
+                    status == 503 ? "BUSINESS_SESSION_HTTP_503" :
+                    "BUSINESS_SESSION_HTTP_REJECTED";
                 return false;
             }
 
@@ -271,6 +303,7 @@ final class FinoraNativeWalletSession {
                 login.optJSONObject("principal");
 
             if (principal == null || walletPrincipal == null) {
+                businessVerifyFailureCode = "BUSINESS_PRINCIPAL_MISSING";
                 return false;
             }
 
@@ -285,6 +318,7 @@ final class FinoraNativeWalletSession {
                 if (walletId.isEmpty() ||
                     businessId.isEmpty() ||
                     !walletId.equals(businessId)) {
+                    businessVerifyFailureCode = "BUSINESS_SCOPE_MISMATCH";
                     return false;
                 }
             }
@@ -303,6 +337,10 @@ final class FinoraNativeWalletSession {
                     response.optString("sessionType", ""))
                 && response.optBoolean("businessDataAccess", false)
                 && "OWNER".equals(principal.optString("role", ""))
+                && principal.has("credentialChangeRequired")
+                && !principal.isNull("credentialChangeRequired")
+                && Boolean.FALSE.equals(
+                    principal.opt("credentialChangeRequired"))
                 && "USB".equalsIgnoreCase(
                     principal.optString("storageMode", ""));
 
@@ -314,13 +352,40 @@ final class FinoraNativeWalletSession {
                     new JSONObject(principal.toString());
             }
 
+            // FINORA_P1_737J_VERIFICATION_DIAGNOSTIC
+            // Error categories only. Never expose server principals.
+            if (!authorized) {
+                if (!response.optBoolean("ok", false)) {
+                    businessVerifyFailureCode = "BUSINESS_RESPONSE_NOT_OK";
+                } else if (!"BUSINESS_RECEPTION".equals(
+                    response.optString("sessionType", ""))) {
+                    businessVerifyFailureCode = "BUSINESS_RESPONSE_TYPE_INVALID";
+                } else if (!response.optBoolean(
+                    "businessDataAccess", false)) {
+                    businessVerifyFailureCode = "BUSINESS_ACCESS_NOT_GRANTED";
+                } else if (!"OWNER".equals(
+                    principal.optString("role", ""))) {
+                    businessVerifyFailureCode = "BUSINESS_OWNER_ROLE_INVALID";
+                } else if (!principal.has("credentialChangeRequired")
+                    || !Boolean.FALSE.equals(
+                        principal.opt("credentialChangeRequired"))) {
+                    businessVerifyFailureCode = "BUSINESS_CREDENTIAL_PROOF_INVALID";
+                } else if (!"USB".equalsIgnoreCase(
+                    principal.optString("storageMode", ""))) {
+                    businessVerifyFailureCode = "BUSINESS_STORAGE_MODE_INVALID";
+                } else {
+                    businessVerifyFailureCode = "BUSINESS_AUTHORITY_DENIED";
+                }
+            }
             return authorized;
 
         } catch (java.io.IOException networkFailure) {
+            businessVerifyFailureCode = "BUSINESS_VERIFY_NETWORK_ERROR";
             // A timeout/connection failure is not a 401 rejection.
             businessVerifyNetworkUnavailable = true;
             return false;
         } catch (Exception ignored) {
+            businessVerifyFailureCode = "BUSINESS_VERIFY_RUNTIME_ERROR";
             return false;
         } finally {
             if (connection != null) connection.disconnect();
@@ -521,6 +586,21 @@ final class FinoraNativeWalletSession {
                     n.optInt("startingCustomerNumber", 0) > 999999 ||
                     n.optString("lockedAt", "").isEmpty()) {
                     return failure("INVALID_NUMBERING_RESPONSE");
+                }
+            } else if (route.equals("/owner/wallet/business-identity")) {
+                // FINORA_P1_737Y_BUSINESS_IDENTITY_VALIDATION
+                // Business identity is not wallet transaction history.
+                // Require the authenticated PostgreSQL identity payload.
+                JSONObject identity = response.optJSONObject("identity");
+
+                if (identity == null ||
+                    identity.optString("ownerId", "").trim().isEmpty() ||
+                    identity.optString("businessId", "").trim().isEmpty() ||
+                    identity.optString("branchId", "").trim().isEmpty() ||
+                    identity.optString("businessName", "").trim().isEmpty() ||
+                    identity.optString("branchName", "").trim().isEmpty() ||
+                    !"USB".equals(identity.optString("storageMode", ""))) {
+                    return failure("INVALID_BUSINESS_IDENTITY");
                 }
             } else {
                 if (!response.optString("walletId", "")

@@ -138,12 +138,17 @@ export interface ServerWalletUsageRecovery {
   allowAutomaticSettlement: false;
   requiresReconciliation: true;
 }
+/* FINORA_P1_747O_HISTORY_PAGE */
+export interface FinoraWalletHistoryPageRequest {
+  limit: number;
+  offset: number;
+}
 export interface ServerWalletBridge {
   // FINORA_P1_588J_RENDERER_RECOVERY
   // Read-only recovery; never authorizes another save or a debit.
   recovery(operationId: string): Promise<ServerWalletResult<ServerWalletUsageRecovery>>;
-  transactions(): Promise<ServerWalletResult<ServerWalletHistoryPage<ServerWalletTransactionRow>>>;
-  recharges(): Promise<ServerWalletResult<ServerWalletHistoryPage<ServerWalletRechargeRow>>>;
+  transactions(page?: FinoraWalletHistoryPageRequest): Promise<ServerWalletResult<ServerWalletHistoryPage<ServerWalletTransactionRow>>>;
+  recharges(page?: FinoraWalletHistoryPageRequest): Promise<ServerWalletResult<ServerWalletHistoryPage<ServerWalletRechargeRow>>>;
   pricing(): Promise<ServerWalletResult<ServerWalletLivePricing>>;
   // FINORA_P1_648C_PENDING_BRIDGE
   subscriptionPending(): Promise<ServerWalletResult<{
@@ -157,6 +162,18 @@ export interface ServerWalletBridge {
   subscriptionPurchase(
     input: ServerWalletSubscriptionPurchaseInput,
   ): Promise<ServerWalletResult<ServerWalletSubscriptionPurchaseReceipt>>;
+  // FINORA_P1_753Y2_RECOVERY_INTERFACE
+  // Explicit server reconciliation; original UUID stays in Main.
+  rechargeResume(): Promise<
+    ServerWalletResult<ServerWalletRechargeReceipt>
+  >;
+  // FINORA_P1_753M_PENDING_BRIDGE
+  // Read-only local encrypted retry metadata; not server request status.
+  rechargePending(): Promise<ServerWalletResult<{
+    pending: boolean;
+    amountInr: number | null;
+    paymentMethod: "PHONEPE" | "GOOGLE_PAY" | null;
+  }>>;
   recharge(input: ServerWalletRechargeInput): Promise<
     ServerWalletResult<ServerWalletRechargeReceipt>
   >;
@@ -327,13 +344,13 @@ export function resolveFinoraServerWalletBridge(
             });
       },
       pricing: () => readAccountPricing(),
-      transactions: (): Promise<ServerWalletResult<ServerWalletHistoryPage<ServerWalletTransactionRow>>> =>
+      transactions: (page?: FinoraWalletHistoryPageRequest): Promise<ServerWalletResult<ServerWalletHistoryPage<ServerWalletTransactionRow>>> =>
         typeof transactions === "function"
-          ? transactions.call(candidate)
+          ? transactions.call(candidate, ...(page === undefined ? [] : [page]))
           : Promise.resolve({ success: false as const, errorCode: "UNAUTHORIZED" }),
-      recharges: (): Promise<ServerWalletResult<ServerWalletHistoryPage<ServerWalletRechargeRow>>> =>
+      recharges: (page?: FinoraWalletHistoryPageRequest): Promise<ServerWalletResult<ServerWalletHistoryPage<ServerWalletRechargeRow>>> =>
         typeof recharges === "function"
-          ? recharges.call(candidate)
+          ? recharges.call(candidate, ...(page === undefined ? [] : [page]))
           : Promise.resolve({ success: false as const, errorCode: "UNAUTHORIZED" }),
       // FINORA_P1_648C_PENDING_BRIDGE
       subscriptionPending: async (): Promise<ServerWalletResult<{
@@ -448,6 +465,105 @@ export function resolveFinoraServerWalletBridge(
           planMonths: input.planMonths,
           idempotencyKey: input.idempotencyKey,
         });
+      },
+      // FINORA_P1_753Y2_RECOVERY_BRIDGE
+      rechargeResume: async () => {
+        const method = candidate.rechargeResume;
+
+        if (typeof method !== "function") {
+          return {
+            success: false as const,
+            errorCode: "BRIDGE_UNAVAILABLE",
+          };
+        }
+
+        try {
+          const result: unknown = await method.call(candidate);
+
+          if (!record(result)) {
+            return {
+              success: false as const,
+              errorCode: "INVALID_SERVER_RESPONSE",
+            };
+          }
+
+          if (result.success === false) {
+            return {
+              success: false as const,
+              errorCode:
+                typeof result.errorCode === "string"
+                  ? result.errorCode
+                  : "RECHARGE_RECONCILIATION_REQUIRED",
+            };
+          }
+
+          if (
+            result.success !== true ||
+            !record(result.data) ||
+            !record(result.data.request)
+          ) {
+            return {
+              success: false as const,
+              errorCode: "INVALID_SERVER_RESPONSE",
+            };
+          }
+
+          return result as unknown as
+            ServerWalletResult<ServerWalletRechargeReceipt>;
+        } catch {
+          return {
+            success: false as const,
+            errorCode: "RECHARGE_RECONCILIATION_REQUIRED",
+          };
+        }
+      },
+      rechargePending: async () => {
+        // FINORA_P1_753M_PENDING_BRIDGE
+        // No UUID, wallet scope or bearer token supplied by renderer.
+        const method = candidate.rechargePending;
+        if (typeof method !== "function") {
+          return { success: false as const, errorCode: "BRIDGE_UNAVAILABLE" };
+        }
+        try {
+          const response: unknown = await method.call(candidate);
+          if (!record(response)) {
+            return { success: false as const, errorCode: "INVALID_SERVER_RESPONSE" };
+          }
+          if (response.success !== true) {
+            return {
+              success: false as const,
+              errorCode: typeof response.errorCode === "string"
+                ? response.errorCode : "SERVER_UNAVAILABLE",
+            };
+          }
+          const data = response.data;
+          if (!record(data) ||
+              typeof data.pending !== "boolean" ||
+              !(data.amountInr === null ||
+                (typeof data.amountInr === "number" &&
+                 Number.isSafeInteger(data.amountInr) &&
+                 data.amountInr >= 50 && data.amountInr <= 2000)) ||
+              !(data.paymentMethod === null ||
+                data.paymentMethod === "PHONEPE" ||
+                data.paymentMethod === "GOOGLE_PAY") ||
+              (data.pending && (data.amountInr === null ||
+                data.paymentMethod === null)) ||
+              (!data.pending && (data.amountInr !== null ||
+                data.paymentMethod !== null))) {
+            return { success: false as const, errorCode: "INVALID_SERVER_RESPONSE" };
+          }
+          return {
+            success: true as const,
+            data: {
+              pending: data.pending,
+              amountInr: data.amountInr as number | null,
+              paymentMethod: data.paymentMethod as
+                "PHONEPE" | "GOOGLE_PAY" | null,
+            },
+          };
+        } catch {
+          return { success: false as const, errorCode: "SERVER_UNAVAILABLE" };
+        }
       },
       recharge: (input: ServerWalletRechargeInput) =>
         recharge.call(candidate, input),

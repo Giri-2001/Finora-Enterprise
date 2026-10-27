@@ -1,3 +1,4 @@
+import { confirmFinoraServerDisconnect } from "./finoraConfirmServerDisconnect";
 import { generateFinoraHumanId } from "./finoraHumanReadableId";
 
 import {
@@ -3920,6 +3921,7 @@ setEnrollmentOpenState(
                       type="button"
                       disabled={serverAdminCredentialState === "SAVING"}
                       onClick={async () => {
+                         if (!(await confirmFinoraServerDisconnect())) return;
                         const bridge =
                           window.finoraControlCenter;
 
