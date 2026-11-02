@@ -69,6 +69,106 @@ function createAndroidBridge():
 
   return {
 
+    // FINORA_P1_758V2_SERVER_READ_BRIDGE
+
+    // FINORA_C8_X42_DA_SERVER_ONLY_FOUR_PLAN_PRICING
+    // Android native plugin owns credentials and HTTPS transport.
+    getServerFourPlanPricing:
+      (request) =>
+        invokeNative(
+          "getServerFourPlanPricing",
+          request,
+        ),
+
+    saveServerFourPlanPricing:
+      (payload) =>
+        invokeNative(
+          "saveServerFourPlanPricing",
+          payload,
+        ),
+
+    getServerBranchDirectory:
+      (query) =>
+        invokeNative(
+          "getServerBranchDirectory",
+          query,
+        ),
+
+    getServerPendingRecharges:
+      (query) =>
+        invokeNative(
+          "getServerPendingRecharges",
+          query,
+        ),
+
+    getServerRechargeHistory:
+      (query) =>
+        invokeNative(
+          "getServerRechargeHistory",
+          query,
+        ),
+
+    // FINORA_P1_758AB_LIVE_WALLETS
+    getServerLiveWallets:
+      (query) =>
+        invokeNative(
+          "getServerLiveWallets",
+          query,
+        ),
+
+    // FINORA_P1_758AJ_OWNER_PROVISION
+    provisionServerOwner:
+      (input) =>
+        invokeNative(
+          "provisionServerOwner",
+          input,
+        ),
+
+    // FINORA_P1_758AL_RECHARGE_DECISION
+    decideServerWalletRecharge:
+      (input) =>
+        invokeNative(
+          "decideServerWalletRecharge",
+          input,
+        ),
+
+    // FINORA_P1_758P_ANDROID_SERVER_BRIDGE
+    // Android native plugin owns secure credential storage.
+    // No Admin Key is persisted by the React renderer.
+
+    hasServerAdminCredential:
+      () =>
+        invokeNative(
+          "hasServerAdminCredential",
+        ),
+
+    configureServerAdminCredential:
+      (adminKey) =>
+        invokeNative(
+          "configureServerAdminCredential",
+          { adminKey },
+        ),
+
+    verifyServerAdminCredential:
+      () =>
+        invokeNative(
+          "verifyServerAdminCredential",
+        ),
+
+    disconnectServerAdminCredential:
+      () =>
+        invokeNative(
+          "disconnectServerAdminCredential",
+        ),
+
+    getServerDashboard:
+      (query) =>
+        invokeNative(
+          "getServerDashboard",
+          query,
+        ),
+
+
     getDeveloperSecurityState:
       () =>
         invokeNative(

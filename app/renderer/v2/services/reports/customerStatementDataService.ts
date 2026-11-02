@@ -380,6 +380,211 @@ function normalizeCollection(
 // BUILD CUSTOMER STATEMENT
 // ============================================================
 
+// FINORA_C80_B23_D3_C_LIFETIME_REPAYMENT_RATING
+// Report-only customer repayment evidence. No profile mutation.
+// PARTIAL is not itself a negative credit event.
+// Unverifiable schedules cannot receive an assumed perfect score.
+
+function calculateCustomerRepaymentRating(
+  loans: Loan[],
+): { risk: string; rating: number } {
+  const now = new Date();
+
+  const today = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
+
+  const toDate = (value: unknown): string => {
+    if (typeof value !== "string") {
+      return "";
+    }
+
+    const date = value.trim().slice(0, 10);
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return "";
+    }
+
+    const parsed = new Date(`${date}T00:00:00Z`);
+
+    return Number.isFinite(parsed.getTime()) &&
+      parsed.toISOString().slice(0, 10) === date
+      ? date
+      : "";
+  };
+
+  const events: Array<{
+    date: string;
+    overdue: boolean;
+    onTime: boolean;
+  }> = [];
+
+  let incompleteEvidence = false;
+
+  // FINORA_C80_B23_D6_B_UNPAID_OVERDUE_HIGH
+  // An unresolved overdue blocks LOW/MEDIUM classification.
+  let hasUnpaidOverdue = false;
+
+  for (const loan of loans) {
+    const schedule = getLoanSchedule(loan);
+
+    if (schedule.length === 0) {
+      incompleteEvidence = true;
+      continue;
+    }
+
+    for (const installment of schedule) {
+      const dueDate = toDate(installment.dueDate);
+      const paidDate = toDate(installment.paidDate);
+
+      const status = String(installment.status ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ");
+
+      const amount = safeNumber(
+        installment.installmentAmount ??
+          installment.amount ??
+          installment.emiAmount,
+      );
+
+      const paid = safeNumber(installment.paidAmount);
+      const waived = safeNumber(installment.waivedAmount);
+
+      if (!dueDate || amount <= 0) {
+        incompleteEvidence = true;
+        continue;
+      }
+
+      const fullySettled = paid + waived >= amount;
+      const isFinal =
+        status === "paid" ||
+        status === "overdue paid" ||
+        status === "preclosed";
+
+      // PRE-CLOSED is not treated as on-time payment evidence.
+      if (status === "preclosed") {
+        continue;
+      }
+
+      const historicalOverdue = status === "overdue paid";
+      const latePayment = Boolean(
+        paidDate && paidDate > dueDate && fullySettled,
+      );
+
+      const unpaidPastDue =
+        dueDate < today &&
+        !fullySettled &&
+        !isFinal;
+
+      const isOverdue =
+        historicalOverdue ||
+        latePayment ||
+        unpaidPastDue ||
+        (status === "overdue" && !fullySettled);
+
+      if (isOverdue) {
+        if (
+          !fullySettled &&
+          (unpaidPastDue || status === "overdue")
+        ) {
+          hasUnpaidOverdue = true;
+        }
+
+        events.push({
+          date: paidDate || dueDate,
+          overdue: true,
+          onTime: false,
+        });
+
+        continue;
+      }
+
+      if (fullySettled) {
+        // Without a payment date, punctuality cannot be proven.
+        // Waiver alone is not successful repayment evidence.
+        if (!paidDate || paid < amount) {
+          incompleteEvidence = true;
+          continue;
+        }
+
+        events.push({
+          date: paidDate,
+          overdue: false,
+          onTime: paidDate <= dueDate,
+        });
+
+        continue;
+      }
+
+      // A future PARTIAL can represent advance payment.
+      // It does not count as negative or positive evidence.
+      if (dueDate >= today) {
+        continue;
+      }
+
+      incompleteEvidence = true;
+    }
+  }
+
+  events.sort((a, b) => a.date.localeCompare(b.date));
+
+  let overdueCount = 0;
+  let recoveryStreak = 0;
+  let verifiedOnTime = 0;
+
+  for (const event of events) {
+    if (event.overdue) {
+      overdueCount += 1;
+      recoveryStreak = 0;
+    } else if (event.onTime) {
+      verifiedOnTime += 1;
+
+      if (overdueCount > 0) {
+        recoveryStreak += 1;
+      }
+    }
+  }
+
+  if (overdueCount === 0) {
+    if (incompleteEvidence) {
+      return { risk: "UNVERIFIED", rating: 0 };
+    }
+
+    if (verifiedOnTime === 0) {
+      return { risk: "NOT RATED", rating: 0 };
+    }
+
+    return { risk: "LOW", rating: 5 };
+  }
+
+  // Historical overdue is permanent evidence.
+  // Every two consecutive verified on-time payments
+  // following the latest breach recover 0.5 rating.
+  const penalty = overdueCount * 1.5;
+  const recovery = Math.floor(recoveryStreak / 2) * 0.5;
+
+  const rawRating = Math.max(
+    1,
+    Math.min(4.5, 5 - penalty + recovery),
+  );
+
+  const rating = Math.round(rawRating * 2) / 2;
+
+  const risk =
+    hasUnpaidOverdue
+      ? "HIGH"
+      : recoveryStreak >= 6 && !incompleteEvidence
+        ? "LOW"
+        : recoveryStreak >= 3
+          ? "MEDIUM"
+          : "HIGH";
+
+  return { risk, rating };
+}
 export async function buildCustomerReportStatement(
   customerId: string,
 ): Promise<CustomerReportStatement | null> {
@@ -424,6 +629,9 @@ export async function buildCustomerReportStatement(
   const customerLoans = loans.filter(
     (loan) => safeString(loan.customerId) === normalizedCustomerId,
   );
+
+  const repaymentRating =
+    calculateCustomerRepaymentRating(customerLoans);
 
   const customerLoanIds = new Set(
     customerLoans.map((loan) => safeString(loan.id)),
@@ -581,9 +789,9 @@ export async function buildCustomerReportStatement(
 
     status: safeString(customer.internal.status),
 
-    risk: safeString(customer.internal.risk),
+    risk: repaymentRating.risk,
 
-    rating: safeNumber(customer.internal.rating),
+    rating: repaymentRating.rating,
 
     address: {
       houseNumber: safeString(currentAddress.houseNumber),

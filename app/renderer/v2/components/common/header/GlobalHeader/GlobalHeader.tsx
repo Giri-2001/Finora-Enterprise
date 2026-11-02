@@ -81,6 +81,14 @@ import {
 } from "../../../../services/business/businessDateService";
 
 import {
+  useEffect as finoraHeaderUseEffect,
+  useState as finoraHeaderUseState,
+} from "react";
+
+import {
+  loadFinoraServerSettingsIdentity,
+} from "../../../../services/business/finoraServerSettingsIdentity";
+import {
   getBusinessContext,
 } from "../../../../services/business/businessContextService";
 
@@ -233,12 +241,83 @@ export default function GlobalHeader({
   const businessContext =
     getBusinessContext();
 
-  const businessName =
-    String(
-      businessContext
-        ?.businessProfile
-        ?.businessName ?? "",
-    ).trim();
+    // FINORA_R197_G_SERVER_HEADER_IDENTITY
+  // Display-only identity. Never grants authentication.
+  // Only server-verified matching business scope is shown.
+
+  const finoraHeaderOwnerId =
+    businessContext?.ownerId?.trim() ?? "";
+
+  const finoraHeaderBusinessId =
+    businessContext?.businessId?.trim() ?? "";
+
+  const finoraHeaderBranchId =
+    businessContext?.branchId?.trim() ?? "";
+
+  const [finoraVerifiedHeaderName, setFinoraVerifiedHeaderName] =
+    finoraHeaderUseState("");
+
+  finoraHeaderUseEffect(() => {
+    let active = true;
+
+    // Clear previous identity immediately when scope changes.
+    setFinoraVerifiedHeaderName("");
+
+    if (
+      !finoraHeaderOwnerId ||
+      !finoraHeaderBusinessId ||
+      !finoraHeaderBranchId
+    ) {
+      return () => {
+        active = false;
+      };
+    }
+
+    async function loadHeaderIdentity(): Promise<void> {
+      try {
+        const result = await loadFinoraServerSettingsIdentity({
+          ownerId: finoraHeaderOwnerId,
+          businessId: finoraHeaderBusinessId,
+          branchId: finoraHeaderBranchId,
+        });
+
+        if (!active || !result.success) {
+          return;
+        }
+
+        const identity = result.data;
+
+        if (
+          identity.ownerId !== finoraHeaderOwnerId ||
+          identity.businessId !== finoraHeaderBusinessId ||
+          identity.branchId !== finoraHeaderBranchId
+        ) {
+          return;
+        }
+
+        const verifiedName = identity.businessName.trim();
+
+        if (verifiedName) {
+          setFinoraVerifiedHeaderName(verifiedName);
+        }
+      } catch {
+        // Display remains blank if identity is unavailable.
+        // No unauthenticated or cross-branch fallback.
+      }
+    }
+
+    void loadHeaderIdentity();
+
+    return () => {
+      active = false;
+    };
+  }, [
+    finoraHeaderOwnerId,
+    finoraHeaderBusinessId,
+    finoraHeaderBranchId,
+  ]);
+
+  const businessName = finoraVerifiedHeaderName;
   // =========================================================
   // LIVE FINORA WALLET BALANCE
   // =========================================================
@@ -455,6 +534,15 @@ export default function GlobalHeader({
      RENDER
   ========================================================= */
 
+  // FINORA_R196_B_EXE_CENTER
+  // Only Windows/Electron desktop.
+  // Tablet/mobile retain their existing responsive layout.
+  const finoraExeHeaderExactCenter =
+    !isTablet &&
+    !useTwoRowHeader &&
+    typeof window !== "undefined" &&
+    typeof window.finora?.loginSession?.validate === "function" &&
+    window.innerWidth >= 1024; // FINORA_R197_C_EXE_BRIDGE
   return (
 
     <header
@@ -474,7 +562,9 @@ export default function GlobalHeader({
               overflow: "visible",
               boxSizing: "border-box",
             }
-          : containerStyle
+          : finoraExeHeaderExactCenter
+            ? { ...containerStyle, position: "relative" }
+            : containerStyle
       }
     >
 
@@ -558,27 +648,7 @@ export default function GlobalHeader({
         brandTitle={businessName}
         />
 
-        {isTablet && businessName ? (
-          <span
-            style={{
-              minWidth: 0,
-              maxWidth: "220px",
-              overflow: "visible",
-              textOverflow: "clip",
-              flexShrink: 0,
-              whiteSpace: "nowrap",
-              fontFamily:
-                "Inter, ui-sans-serif, system-ui, sans-serif",
-              fontSize: "14px",
-              fontWeight: 700,
-              lineHeight: 1.2,
-              color: departmentStyle.color,
-            }}
-            title={businessName}
-          >
-            {businessName}
-          </span>
-        ) : null}
+        {/* FINORA_R197_H_R1_DUPLICATE_REMOVED: Original ReceptionLogo owns the label. */}
 
       </div>
 
@@ -599,7 +669,22 @@ export default function GlobalHeader({
                 justifySelf: "center",
                 overflow: "visible",
               }
-            : centerStyle
+            : finoraExeHeaderExactCenter
+              ? {
+                  ...centerStyle,
+                  position: "absolute",
+                  left: "50%",
+                  top: "50%",
+                  transform: "translate(-50%, -50%)",
+                  width: "max-content",
+                  maxWidth: "36vw",
+                  gridColumn: "auto",
+                  gridRow: "auto",
+                  overflow: "hidden",
+                  pointerEvents: "none",
+                  zIndex: 1,
+                }
+              : centerStyle
         }
       >
 
@@ -611,6 +696,11 @@ export default function GlobalHeader({
                   maxWidth: "none",
                   overflow: "visible",
                   textOverflow: "clip",
+                }
+              : finoraExeHeaderExactCenter
+              ? {
+                  ...departmentStyle,
+                  textShadow: "none",
                 }
               : departmentStyle
           }

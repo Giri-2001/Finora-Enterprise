@@ -238,22 +238,22 @@ export const CATEGORIES = [
 
   {
     id: "loan",
-    title: "Loan Agreements / Promissory Notes",
+    title: "Loan Agreements",
     shortTitle: "Agreements",
     icon: "file-signature",
   },
 
   {
     id: "collateral",
-    title: "Collateral / Security Documents",
-    shortTitle: "Collateral",
+    title: "Gold Images",
+    shortTitle: "Gold",
     icon: "shield-check",
   },
 
   {
     id: "other",
-    title: "Other Documents",
-    shortTitle: "Other",
+    title: "Promissory Notes",
+    shortTitle: "Promissory",
     icon: "files",
   },
 

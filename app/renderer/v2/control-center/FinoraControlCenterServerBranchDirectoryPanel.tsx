@@ -24,6 +24,7 @@ type DirectoryProps = {
 type Branch = {
   owner_id: string;
   owner_name: string;
+  owner_mobile?: string | null;
   business_id: string;
   business_name: string;
   branch_id: string;
@@ -52,7 +53,28 @@ type DirectoryResponse = {
   error?: string;
 };
 
+type LiveChargeCode = "CUSTOMER_CREATE" | "LOAN_DISBURSEMENT" | "COLLECTION";
+
+type LiveChargePlan = {
+  months: 1 | 3 | 6 | 12;
+  fees: Record<LiveChargeCode, { amountInr: string; source: "GLOBAL" | "BRANCH"; revisionId: string }>;
+};
+
+type LiveChargeResponse = {
+  success: boolean;
+  data?: {
+    ok: true;
+    scope: "BRANCH";
+    branchId: string | null;
+    plans: LiveChargePlan[];
+  };
+  error?: string;
+};
 type DirectoryBridge = {
+  getServerFourPlanPricing?: (request: {
+    scope: "BRANCH";
+    branchId: string;
+  }) => Promise<LiveChargeResponse>;
   getServerBranchDirectory?: (
     query: {
       search: string;
@@ -90,6 +112,89 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
   const [page, setPage] = useState<DirectoryPage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [liveCharges, setLiveCharges] = useState<
+    Record<string, Record<LiveChargeCode, string>>
+  >({});
+
+  useEffect(() => {
+    let active = true;
+    setLiveCharges({});
+
+    if (!page) return () => { active = false; };
+
+    const bridge = getBridge();
+
+    async function loadLiveCharges() {
+      if (typeof bridge?.getServerFourPlanPricing !== "function") return;
+
+      await Promise.all(page!.branches.map(async (branch) => {
+        if (branch.branch_status !== "ACTIVE") return;
+
+        const match = (branch.plan_code ?? "").match(
+          /^SUBSCRIPTION_(1|3|6|12)_MONTHS?$/
+        );
+
+        if (!match) return;
+
+        const months = Number(match[1]);
+
+        try {
+          const response = await bridge.getServerFourPlanPricing!({
+            scope: "BRANCH",
+            branchId: branch.branch_id,
+          });
+
+          if (
+            !active ||
+            response.success !== true ||
+            response.data?.ok !== true ||
+            response.data.scope !== "BRANCH" ||
+            response.data.branchId !== branch.branch_id ||
+            !Array.isArray(response.data.plans) ||
+            response.data.plans.length !== 4
+          ) return;
+
+          const plan = response.data.plans.find(
+            item => item.months === months
+          );
+
+          if (!plan || !plan.fees) return;
+
+          const codes: LiveChargeCode[] = [
+            "CUSTOMER_CREATE",
+            "LOAN_DISBURSEMENT",
+            "COLLECTION",
+          ];
+
+          const money = /^(0|[1-9][0-9]{0,9})\.[0-9]{2}$/;
+
+          if (!codes.every(code =>
+            typeof plan.fees[code]?.amountInr === "string" &&
+            money.test(plan.fees[code].amountInr)
+          )) return;
+
+          const values: Record<LiveChargeCode, string> = {
+            CUSTOMER_CREATE: plan.fees.CUSTOMER_CREATE.amountInr,
+            LOAN_DISBURSEMENT: plan.fees.LOAN_DISBURSEMENT.amountInr,
+            COLLECTION: plan.fees.COLLECTION.amountInr,
+          };
+
+          if (active) {
+            setLiveCharges(previous => ({
+              ...previous,
+              [branch.branch_id]: values,
+            }));
+          }
+        } catch {
+          // Fail closed: never display guessed charges.
+        }
+      }));
+    }
+
+    void loadLiveCharges();
+
+    return () => { active = false; };
+  }, [page]);
   const requestId = useRef(0);
   const currentQuery = useRef({ search: "", offset: 0 });
 
@@ -470,7 +575,7 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
       aria-label={`Live branch ${branch.branch_name}`}
       style={{
         width: "100%",
-        maxWidth: 340, minWidth: 0, height: 500,
+        maxWidth: 340, minWidth: 0, height: 564,
         perspective: 1200,
       }}
     >
@@ -509,13 +614,22 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
             <div style={{ minWidth: 0 }}>
               <h3 style={{
                 margin: 0,
-                fontSize: 22,
+                fontSize: 24,
+                fontWeight: 700,
+                letterSpacing: "-0.025em",
                 color: "#f8fafc",
                 overflowWrap: "anywhere",
               }}>
                 {display(branch.branch_name)}
               </h3>
-              <div style={{ fontSize: 12, color: "#cbd5e1", marginTop: 5 }}>
+              {/* FINORA_C7P_PREMIUM_FRONT */}
+              <div style={{
+                fontSize: 15,
+                fontWeight: 600,
+                color: "#e2e8f0",
+                marginTop: 5,
+                lineHeight: 1.4,
+              }}>
                 {display(branch.owner_name)}
               </div>
             </div>
@@ -542,12 +656,21 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
               border: "1px solid rgba(52,211,153,.18)",
               minWidth: 0,
             }}>
-              <div style={{ color: "#94a3b8", fontSize: 10 }}>
+              <div style={{
+                color: "#a9c5d8",
+                fontSize: 12,
+                fontWeight: 650,
+                letterSpacing: ".045em",
+              }}>
                 WALLET
               </div>
               <strong style={{
                 display: "block",
-                marginTop: 5, fontSize: 18, color: "#6ee7b7",
+                marginTop: 5,
+                fontSize: 20,
+                fontWeight: 700,
+                letterSpacing: "-0.02em",
+                color: "#6ee7b7",
               }}>
                 {balance}
               </strong>
@@ -560,13 +683,19 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
               border: "1px solid rgba(96,165,250,.18)",
               minWidth: 0,
             }}>
-              <div style={{ color: "#94a3b8", fontSize: 10 }}>
+              <div style={{
+                color: "#a9c5d8",
+                fontSize: 12,
+                fontWeight: 650,
+                letterSpacing: ".045em",
+              }}>
                 PLAN
               </div>
               <strong style={{
                 display: "block",
                 marginTop: 8,
-                fontSize: 12,
+                fontSize: 13,
+                fontWeight: 650,
                 color: "#dbeafe",
                 overflowWrap: "anywhere",
               }}>
@@ -619,7 +748,87 @@ export function FinoraControlCenterServerBranchDirectoryPanel({
   fontSize: 12,
   fontWeight: 700,
 }}>
-  Click to view details
+  {/* FINORA_C7J_FRONT_PRICING */}
+<div
+  style={{
+    display: "grid",
+    gap: 10,
+    padding: "12px 13px",
+    marginBottom: 12,
+    border: "1px solid rgba(96,165,250,.24)",
+    borderRadius: 12,
+    background: "rgba(15,35,59,.78)",
+    textAlign: "left",
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  }}
+>
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    }}
+  >
+    <span
+      style={{
+        color: "#e2e8f0",
+        fontSize: 13,
+        fontWeight: 650,
+      }}
+    >
+      Live Usage Charges
+    </span>
+    <span
+      style={{
+        color: "#93c5fd",
+        fontSize: 10,
+        fontWeight: 600,
+      }}
+    >
+      Read Only
+    </span>
+  </div>
+
+  {([["Customer Creation", "CUSTOMER_CREATE"], ["Loan Disbursement", "LOAN_DISBURSEMENT"], ["Collection", "COLLECTION"]] as const).map(([label, code]) => (
+    <div
+      key={label}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+      }}
+    >
+      <span
+        style={{
+          color: "#a8bfdc",
+          fontSize: 11,
+          fontWeight: 500,
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          color: "#fbbf24",
+          fontSize: 11,
+          fontWeight: 600,
+        }}
+      >
+        {(() => {
+          const value = liveCharges[branch.branch_id]?.[code];
+          return typeof value === "string"
+            ? `₹${Number(value).toLocaleString("en-IN")}`
+            : "Unavailable";
+        })()}
+      </span>
+    </div>
+  ))}
+
+
+</div>
+<span>Click to view details</span>
 </div>
         </div>
 

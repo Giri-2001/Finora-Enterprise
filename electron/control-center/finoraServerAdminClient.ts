@@ -1,4 +1,4 @@
-const FINORA_API_BASE_URL =
+export const FINORA_API_BASE_URL =
   "https://api.finoraenterprise.com";
 
 const FINORA_SERVER_REQUEST_TIMEOUT_MS =
@@ -34,6 +34,10 @@ export interface FinoraServerProvisionOwnerInput {
 
   openingWalletBalance:
     number;
+
+  // FINORA_P1_758BN_OWNER_KEY
+  requestKey?:
+    string;
 }
 
 export interface FinoraServerProvisionOwnerResult {
@@ -216,10 +220,37 @@ export async function provisionFinoraServerOwner(
 ): Promise<
   FinoraServerProvisionOwnerResult
 > {
+
+  // FINORA_P1_758Y2_OWNER_WALLET_CAP
+  // This validates the client request before transport.
+  // The production API must enforce the same limit independently.
+  if (
+    typeof input.openingWalletBalance !== "number" ||
+    !Number.isFinite(input.openingWalletBalance) ||
+    input.openingWalletBalance < 0 ||
+    input.openingWalletBalance > 25000
+  ) {
+    throw new Error(
+      "OWNER_OPENING_WALLET_BALANCE_LIMIT_EXCEEDED",
+    );
+  }
+
   const protectedAdminApiKey =
     assertAdminApiKey(
       adminApiKey,
     );
+
+  // FINORA_P1_758BN_OWNER_KEY
+  const requestKey = input.requestKey;
+
+  if (
+    requestKey !== undefined &&
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestKey)
+  ) {
+    throw new Error("OWNER_IDEMPOTENCY_KEY_INVALID");
+  }
+
+  const { requestKey: _requestKey, ...ownerPayload } = input;
 
   let response:
     Response;
@@ -238,11 +269,15 @@ export async function provisionFinoraServerOwner(
 
             "x-finora-admin-key":
               protectedAdminApiKey,
+
+            ...(requestKey
+              ? { "Idempotency-Key": requestKey }
+              : {}),
           },
 
           body:
             JSON.stringify(
-              input,
+              ownerPayload,
             ),
 
           signal:

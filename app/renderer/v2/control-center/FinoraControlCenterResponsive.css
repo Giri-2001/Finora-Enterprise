@@ -2070,3 +2070,69 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   }
 
 }
+
+
+/* =======================================================
+   FINORA_P1_758J_EXACT_MOBILE_CONNECTION_LAYOUT
+   Scoped to the actual FINORA server connection panel.
+   ======================================================= */
+
+@media (max-width: 600px) {
+
+  /*
+   * DISCONNECTED / SETUP / ERROR:
+   * Direct input exists only when not connected.
+   * Place all three controls on separate full-width rows.
+   */
+  section[aria-label="FINORA Production Server Connection"]
+    .finora-cc-p756j-connection-actions:has(> input) {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    align-items: stretch !important;
+  }
+
+  section[aria-label="FINORA Production Server Connection"]
+    .finora-cc-p756j-connection-actions:has(> input) > input,
+  section[aria-label="FINORA Production Server Connection"]
+    .finora-cc-p756j-connection-actions:has(> input) > button {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 50px !important;
+    margin: 0 !important;
+    padding: 10px 12px !important;
+    box-sizing: border-box !important;
+    text-align: center !important;
+  }
+
+  /*
+   * CONNECTED:
+   * No credential input exists.
+   * Verify and Disconnect share one equal-width row.
+   */
+  section[aria-label="FINORA Production Server Connection"]
+    .finora-cc-p756j-connection-actions:not(:has(> input)) {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  section[aria-label="FINORA Production Server Connection"]
+    .finora-cc-p756j-connection-actions:not(:has(> input)) > button {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 50px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    text-align: center !important;
+  }
+}

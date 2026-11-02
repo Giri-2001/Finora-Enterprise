@@ -34,7 +34,7 @@ public final class FinoraDeveloperControlCenterPlugin
         ADMIN_RECOVERY_FORMAT =
             "FINORA_CONTROL_CENTER_ADMIN_AUTHORITY_RECOVERY";
 
-    private boolean sessionUnlocked =
+    private volatile boolean sessionUnlocked =
         false;
 
     private int sessionFailedAttempts =
@@ -2114,4 +2114,552 @@ public final class FinoraDeveloperControlCenterPlugin
         }
     }
 
+
+    // ============================================================
+    // FINORA_P1_758O_SECURE_ADMIN_NATIVE_WIRING
+    //
+    // Only accessible through Developer Control Center plugin.
+    // Existing Developer Security Unlock is mandatory.
+    // HTTPS is executed off the UI thread.
+    // Never return the administrator credential to JavaScript.
+    // ============================================================
+
+    private FinoraDeveloperServerAdminClient
+    secureAdminClient() {
+        return new FinoraDeveloperServerAdminClient(
+            getContext()
+        );
+    }
+
+    private boolean requireUnlockedAdmin(
+        PluginCall call
+    ) {
+        if (!sessionUnlocked) {
+            resolveFailure(
+                call,
+                "FINORA Developer Control Center is locked."
+            );
+            return false;
+        }
+        return true;
+    }
+
+    private interface AdminWork {
+        void run() throws Exception;
+    }
+
+    private void runAdminWork(
+        PluginCall call,
+        AdminWork work
+    ) {
+        if (!requireUnlockedAdmin(call)) {
+            return;
+        }
+
+        try {
+            Thread worker = new Thread(
+                () -> {
+                    if (!requireUnlockedAdmin(call)) {
+                        return;
+                    }
+
+                    try {
+                        work.run();
+                    } catch (SecurityException error) {
+                        resolveFailure(
+                            call,
+                            "FINORA_ADMIN_ACCESS_DENIED"
+                        );
+                    } catch (
+                        java.net.SocketTimeoutException error
+                    ) {
+                        resolveFailure(
+                            call,
+                            "FINORA_ADMIN_SERVER_TIMEOUT"
+                        );
+                    } catch (
+                        java.io.IOException error
+                    ) {
+                        resolveFailure(
+                            call,
+                            "FINORA_ADMIN_SERVER_UNAVAILABLE"
+                        );
+                    } catch (Exception error) {
+                        // Do not leak exception messages or secrets.
+                        resolveFailure(
+                            call,
+                            "FINORA_ADMIN_OPERATION_FAILED"
+                        );
+                    }
+                },
+                "finora-developer-admin-request"
+            );
+
+            worker.start();
+
+        } catch (Exception error) {
+            resolveFailure(
+                call,
+                "FINORA_ADMIN_WORKER_UNAVAILABLE"
+            );
+        }
+    }
+
+    @PluginMethod
+    public void hasServerAdminCredential(
+        PluginCall call
+    ) {
+        runAdminWork(
+            call,
+            () -> resolveSuccess(
+                call,
+                secureAdminClient().hasCredential()
+            )
+        );
+    }
+
+    @PluginMethod
+    public void configureServerAdminCredential(
+        PluginCall call
+    ) {
+        if (!requireUnlockedAdmin(call)) {
+            return;
+        }
+
+        final String adminKey =
+            call.getString("adminKey");
+
+        if (
+            adminKey == null ||
+            adminKey.trim().length() < 32 ||
+            adminKey.length() > 4096
+        ) {
+            resolveFailure(
+                call,
+                "ADMIN_CREDENTIAL_INVALID"
+            );
+            return;
+        }
+
+        runAdminWork(
+            call,
+            () -> resolveSuccess(
+                call,
+                secureAdminClient().configure(adminKey)
+            )
+        );
+    }
+
+    @PluginMethod
+    public void verifyServerAdminCredential(
+        PluginCall call
+    ) {
+        runAdminWork(
+            call,
+            () -> resolveSuccess(
+                call,
+                secureAdminClient().verifyStored()
+            )
+        );
+    }
+
+    @PluginMethod
+    public void disconnectServerAdminCredential(
+        PluginCall call
+    ) {
+        runAdminWork(
+            call,
+            () -> {
+                secureAdminClient().clearCredential();
+
+                resolveSuccess(
+                    call,
+                    true
+                );
+            }
+        );
+    }
+
+    @PluginMethod
+    public void getServerDashboard(
+        PluginCall call
+    ) {
+        if (!requireUnlockedAdmin(call)) {
+            return;
+        }
+
+        Integer pageValue =
+            call.getInt("page", 1);
+
+        Integer sizeValue =
+            call.getInt("size", 25);
+
+        String month =
+            call.getString("month");
+
+        if (
+            pageValue == null ||
+            sizeValue == null ||
+            pageValue < 1 ||
+            pageValue > 100000 ||
+            sizeValue < 1 ||
+            sizeValue > 100
+        ) {
+            resolveFailure(
+                call,
+                "DASHBOARD_PAGINATION_INVALID"
+            );
+            return;
+        }
+
+        final int page = pageValue;
+        final int size = sizeValue;
+
+        runAdminWork(
+            call,
+            () -> {
+                org.json.JSONObject dashboard =
+                    secureAdminClient().dashboard(
+                        page,
+                        size,
+                        month
+                    );
+
+                resolveSuccess(
+                    call,
+                    dashboard
+                );
+            }
+        );
+    }
+
+
+    // FINORA_P1_758V2_SERVER_READ_BRIDGE
+    // runAdminWork requires Developer Security Unlock.
+
+    // FINORA_C8_X42_DF_LIVE_SERVER_FOUR_PLAN_PRICING
+    // Android native client owns HTTPS and administrator credential.
+    // No offline pricing authority or renderer-visible admin key.
+
+    @PluginMethod
+    public void getServerFourPlanPricing(
+        PluginCall call
+    ) {
+        if (!requireUnlockedAdmin(call)) {
+            return;
+        }
+
+        final JSONObject input = call.getData();
+
+        if (input == null) {
+            resolveFailure(
+                call,
+                "FINORA_PRICING_REQUEST_INVALID"
+            );
+            return;
+        }
+
+        runAdminWork(
+            call,
+            () -> {
+                JSONObject result =
+                    secureAdminClient().serverFourPlanPricing(input);
+
+                resolveSuccess(call, result);
+            }
+        );
+    }
+
+    @PluginMethod
+    public void saveServerFourPlanPricing(
+        PluginCall call
+    ) {
+        if (!requireUnlockedAdmin(call)) {
+            return;
+        }
+
+        final JSONObject payload = call.getData();
+
+        if (payload == null) {
+            resolveFailure(
+                call,
+                "FINORA_PRICING_SAVE_PAYLOAD_INVALID"
+            );
+            return;
+        }
+
+        runAdminWork(
+            call,
+            () -> {
+                JSONObject result =
+                    secureAdminClient().saveServerFourPlanPricing(payload);
+
+                resolveSuccess(call, result);
+            }
+        );
+    }
+
+    @PluginMethod
+    public void getServerBranchDirectory(
+        PluginCall call
+    ) {
+        if (!requireUnlockedAdmin(call)) return;
+
+        Integer limit = call.getInt("limit", 10);
+        Integer offset = call.getInt("offset", 0);
+        String search = call.getString("search", "");
+
+        if (limit == null || offset == null) {
+            resolveFailure(call, "DIRECTORY_QUERY_INVALID");
+            return;
+        }
+
+        final int safeLimit = limit;
+        final int safeOffset = offset;
+        final String safeSearch = search;
+
+        runAdminWork(call, () -> {
+            resolveSuccess(
+                call,
+                secureAdminClient().serverBranchDirectory(
+                    safeSearch,
+                    safeLimit,
+                    safeOffset
+                )
+            );
+        });
+    }
+
+    @PluginMethod
+    public void getServerPendingRecharges(
+        PluginCall call
+    ) {
+        if (!requireUnlockedAdmin(call)) return;
+
+        Integer limit = call.getInt("limit", 50);
+        Integer offset = call.getInt("offset", 0);
+
+        if (limit == null || offset == null) {
+            resolveFailure(call, "PENDING_QUERY_INVALID");
+            return;
+        }
+
+        final int safeLimit = limit;
+        final int safeOffset = offset;
+
+        runAdminWork(call, () -> {
+            resolveSuccess(
+                call,
+                secureAdminClient().serverPendingRecharges(
+                    safeLimit,
+                    safeOffset
+                )
+            );
+        });
+    }
+
+    @PluginMethod
+    public void getServerRechargeHistory(
+        PluginCall call
+    ) {
+        if (!requireUnlockedAdmin(call)) return;
+
+        Integer limit = call.getInt("limit", 50);
+        Integer offset = call.getInt("offset", 0);
+        String status = call.getString("status", "ALL");
+
+        if (limit == null || offset == null) {
+            resolveFailure(call, "HISTORY_QUERY_INVALID");
+            return;
+        }
+
+        final int safeLimit = limit;
+        final int safeOffset = offset;
+        final String safeStatus = status;
+
+        runAdminWork(call, () -> {
+            resolveSuccess(
+                call,
+                secureAdminClient().serverRechargeHistory(
+                    safeLimit,
+                    safeOffset,
+                    safeStatus
+                )
+            );
+        });
+    }
+
+    // FINORA_P1_758AB_LIVE_WALLETS
+    @PluginMethod
+    public void getServerLiveWallets(
+        PluginCall call
+    ) {
+        if (!requireUnlockedAdmin(call)) return;
+
+        Integer limit = call.getInt("limit", 50);
+        Integer offset = call.getInt("offset", 0);
+
+        if (limit == null || offset == null) {
+            resolveFailure(
+                call,
+                "LIVE_WALLET_QUERY_INVALID"
+            );
+            return;
+        }
+
+        final int safeLimit = limit;
+        final int safeOffset = offset;
+
+        runAdminWork(call, () -> {
+            resolveSuccess(
+                call,
+                secureAdminClient().serverLiveWallets(
+                    safeLimit,
+                    safeOffset
+                )
+            );
+        });
+    }
+
+    // FINORA_P1_758AH_PRICING_GET
+    @PluginMethod
+    public void getFinoraIncomePricing(
+        PluginCall call
+    ) {
+        if (!requireUnlockedAdmin(call)) {
+            return;
+        }
+
+        runAdminWork(call, () -> {
+            resolveSuccess(
+                call,
+                secureAdminClient().serverGlobalPricing()
+            );
+        });
+    }
+
+    // FINORA_P1_758AI_PRICING_PUT
+    @PluginMethod
+    public void updateFinoraIncomePricing(
+        PluginCall call
+    ) {
+        if (!requireUnlockedAdmin(call)) {
+            return;
+        }
+
+        final org.json.JSONObject input =
+            call.getData();
+
+        runAdminWork(call, () -> {
+            resolveSuccess(
+                call,
+                secureAdminClient()
+                    .updateServerGlobalPricing(input)
+            );
+        });
+    }
+
+    // FINORA_P1_758AJ_OWNER_PROVISION
+    private final java.util.concurrent.atomic.AtomicBoolean
+        ownerProvisionBusy =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    @PluginMethod
+    public void provisionServerOwner(PluginCall call) {
+        if (!requireUnlockedAdmin(call)) return;
+
+        if (!ownerProvisionBusy.compareAndSet(false, true)) {
+            resolveFailure(
+                call,
+                "OWNER_PROVISION_ALREADY_IN_PROGRESS"
+            );
+            return;
+        }
+
+        final org.json.JSONObject payload = call.getData();
+
+        runAdminWork(call, () -> {
+            try {
+                resolveSuccess(
+                    call,
+                    secureAdminClient().provisionServerOwner(
+                        payload
+                    )
+                );
+            } catch (java.io.IOException error) {
+                resolveFailure(
+                    call,
+                    "OWNER_PROVISION_OUTCOME_UNKNOWN_CHECK_DIRECTORY"
+                );
+            } catch (IllegalStateException error) {
+                if (
+                    "OWNER_PROVISION_OUTCOME_UNKNOWN".equals(
+                        error.getMessage()
+                    )
+                ) {
+                    resolveFailure(
+                        call,
+                        "OWNER_PROVISION_OUTCOME_UNKNOWN_CHECK_DIRECTORY"
+                    );
+                } else {
+                    throw error;
+                }
+            } finally {
+                ownerProvisionBusy.set(false);
+            }
+        });
+    }
+
+    // FINORA_P1_758AL_RECHARGE_DECISION
+    private final java.util.concurrent.atomic.AtomicBoolean
+        rechargeDecisionBusy =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    @PluginMethod
+    public void decideServerWalletRecharge(
+        PluginCall call
+    ) {
+        if (!requireUnlockedAdmin(call)) {
+            return;
+        }
+
+        if (
+            !rechargeDecisionBusy.compareAndSet(
+                false, true
+            )
+        ) {
+            resolveFailure(
+                call,
+                "RECHARGE_DECISION_ALREADY_IN_PROGRESS"
+            );
+            return;
+        }
+
+        final org.json.JSONObject input = call.getData();
+
+        runAdminWork(call, () -> {
+            try {
+                resolveSuccess(
+                    call,
+                    secureAdminClient()
+                        .decideServerWalletRecharge(input)
+                );
+            } catch (IllegalStateException error) {
+                if (
+                    "RECHARGE_DECISION_OUTCOME_UNKNOWN".equals(
+                        error.getMessage()
+                    )
+                ) {
+                    resolveFailure(
+                        call,
+                        "RECHARGE_DECISION_OUTCOME_UNKNOWN_RETRY_SAME_REQUEST"
+                    );
+                } else {
+                    throw error;
+                }
+            } finally {
+                rechargeDecisionBusy.set(false);
+            }
+        });
+    }
 }

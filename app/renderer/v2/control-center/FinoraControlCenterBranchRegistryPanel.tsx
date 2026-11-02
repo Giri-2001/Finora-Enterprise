@@ -8,7 +8,7 @@ import {
 import {
   Trash2,
 } from "lucide-react";
-import FinoraControlCenterIncomePricingPanel from "./FinoraControlCenterIncomePricingPanel";
+import FinoraControlCenterPlanPricingWorkspace from "./FinoraControlCenterPlanPricingWorkspace";
 import FinoraControlCenterBranchPricingPanel from "./FinoraControlCenterBranchPricingPanel";
 import FinoraBranchCardLiveWallet from "./FinoraBranchCardLiveWallet";
 
@@ -2721,7 +2721,7 @@ export default function FinoraControlCenterBranchRegistryPanel({
   if (incomePricingOpen) {
 
     return (
-      <FinoraControlCenterIncomePricingPanel
+      <FinoraControlCenterPlanPricingWorkspace
         onClose={() => {
           setIncomePricingOpen(
             false,

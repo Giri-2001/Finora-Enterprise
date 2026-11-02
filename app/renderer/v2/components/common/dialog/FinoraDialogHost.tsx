@@ -270,7 +270,17 @@ export default function FinoraDialogHost() {
                   settle(false);
                 }}
               >
-                {activeRequest.cancelLabel}
+                <span
+
+              style={{ /* FINORA_R193_R4_CLOSE */
+                color:
+                  activeRequest.cancelLabel === "Close"
+                    ? "#DC2626"
+                    : "inherit",
+              }}
+            >
+              {activeRequest.cancelLabel}
+            </span>
               </button>
             )}
 

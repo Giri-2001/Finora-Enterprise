@@ -117,10 +117,7 @@ import { buildGoldLoanStorageAllocationRequest } from "../../../../../services/g
 
 import { allocatePersistedGoldStorage } from "../../../../../services/gold-loan/goldCustodyPersistenceService";
 
-import {
-  commitLoanDisbursementWalletCharge,
-  preflightLoanDisbursementWalletCharge,
-} from "../../../../../services/wallet/walletLoanDisbursementChargeService";
+
 
 import {
   getSession,
@@ -2371,43 +2368,7 @@ export function useLoanStudio({
     const loanTitle = getLoanTypeLabel(normalizedLoanTypeValue);
 
 
-    /* ========================================================
-       FINORA WALLET CHARGE PREFLIGHT
-
-       The Loan operation must not begin unless the active
-       scoped Wallet can cover the configured platform fee.
-
-       This preflight does not mutate Wallet state.
-    ======================================================== */
-
-    const walletScope = {
-      ownerId:
-        String(authenticatedSession?.ownerId ?? "").trim(),
-
-      businessId:
-        String(authenticatedSession?.businessId ?? "").trim(),
-
-      branchId:
-        String(authenticatedSession?.branchId ?? "").trim(),
-    };
-
-    const walletChargePreflight =
-      await preflightLoanDisbursementWalletCharge(
-        walletScope,
-      );
-
-    if (!walletChargePreflight.success) {
-      console.error(
-        "FINORA LOAN WALLET CHARGE PREFLIGHT ERROR:",
-        walletChargePreflight.error,
-      );
-
-      await finoraError(
-        walletChargePreflight.error,
-      );
-
-      return;
-    }
+    // Subscription-only: Loan Save has no Wallet preflight.
 
     setIsLoanProcessing(true);
 
@@ -2794,80 +2755,12 @@ export function useLoanStudio({
       }
     }
 
-    /* ========================================================
-       COMMIT FINORA WALLET LOAN PLATFORM FEE
-
-       Reaching this boundary means:
-       - Standard Loan persistence succeeded.
-       - Required Gold custody persistence also succeeded.
-
-       The generated Loan Number is the deterministic,
-       owner-facing Wallet transaction reference.
-    ======================================================== */
-
-    const finalizedLoanId =
-      String(
-        createResult.data?.id ??
-        loan.id ??
-        loanId,
-      ).trim();
-
-    const finalizedLoanNumber =
-      String(
-        createResult.data?.loanNumber ??
-        loan.loanNumber ??
-        authoritativeLoanNumber,
-      ).trim();
-
-    const walletChargeResult =
-      await commitLoanDisbursementWalletCharge({
-        walletId:
-          walletChargePreflight.data.walletId,
-
-        ownerId:
-          walletScope.ownerId,
-
-        businessId:
-          walletScope.businessId,
-
-        branchId:
-          walletScope.branchId,
-
-        loanId:
-          finalizedLoanId,
-
-        loanNumber:
-          finalizedLoanNumber,
-
-        expectedPricingQuote:
-          walletChargePreflight.data.pricingQuote,
-      });
-
-    if (!walletChargeResult.success) {
-      console.error(
-        "FINORA LOAN WALLET CHARGE COMMIT ERROR:",
-        walletChargeResult.error,
-      );
-
-      setDocuments(
-        persistedDocuments,
-      );
-
-      setLoanApproved(
-        true,
-      );
-
-      await refreshLoanStatistics();
-
-      await finoraError(
-        "Loan was created successfully, but the FINORA Wallet platform fee could not be completed. " +
-          walletChargeResult.error +
-          " Do not create another Loan until this charge is reviewed.",
-      );
-
-      return;
-    }
-
+    // Subscription-only: Loan created without Wallet debit.
+    const finalizedLoanNumber = String(
+      createResult.data?.loanNumber ??
+      loan.loanNumber ??
+      authoritativeLoanNumber,
+    ).trim();
     /* ========================================================
        FINALIZE SUCCESSFUL LOAN CREATION
     ======================================================== */
@@ -2896,19 +2789,12 @@ export function useLoanStudio({
             }`
           : "Loan Created Successfully";
 
-      const confirmation =
-        finoraSuccess(
-          `${loanSuccessMessage}
+      const confirmation = finoraSuccess(
+        `${loanSuccessMessage}
 
-Loan Number: ${finalizedLoanNumber}
-FINORA Wallet Fee: \u20B9${walletChargeResult.data.amount}
-Available Balance: \u20B9${walletChargeResult.data.availableBalance}`,
-          {
-            heading:
-              "Loan Created Successfully",
-          },
-        );
-
+Loan Number: ${finalizedLoanNumber}`,
+        { heading: "Loan Created Successfully" },
+      );
       /* ========================================================
          TERMINAL LOAN WORKSPACE CLEANUP
       ======================================================== */

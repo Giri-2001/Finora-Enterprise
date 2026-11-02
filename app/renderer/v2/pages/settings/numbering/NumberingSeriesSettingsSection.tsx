@@ -75,6 +75,38 @@ export default function NumberingSeriesSettingsSection() {
   const [serverNumbering, setServerNumbering] = useState<ServerNumberingSnapshot | null>(null);
   const [serverNumberingLoading, setServerNumberingLoading] = useState(true);
   const [serverNumberingError, setServerNumberingError] = useState<string | null>(null);
+  const [deviceNextPreview, setDeviceNextPreview] =
+    useState<CustomerNumberPreview | null>(null);
+
+  useEffect(() => {
+    if (!serverNumbering) return;
+    let active = true;
+
+    void (async () => {
+      const [localConfig, localPreview] = await Promise.all([
+        loadCustomerSeriesConfiguration(),
+        previewNextCustomerNumber(),
+      ]);
+
+      if (!active) return;
+
+      const config = localConfig.success ? localConfig.data : null;
+      const preview = localPreview.success ? localPreview.data : null;
+
+      const sameScope = !!config && !!preview &&
+        config.ownerId === serverNumbering.ownerId &&
+        config.businessId === serverNumbering.businessId &&
+        config.branchId === serverNumbering.branchId &&
+        config.businessCode === serverNumbering.businessCode &&
+        config.branchCode === serverNumbering.branchCode;
+
+      setDeviceNextPreview(sameScope ? preview : null);
+    })().catch(() => {
+      if (active) setDeviceNextPreview(null);
+    });
+
+    return () => { active = false; };
+  }, [serverNumbering]);
 
   useEffect(() => {
     let active = true;
@@ -217,6 +249,14 @@ export default function NumberingSeriesSettingsSection() {
 
   useEffect(
     () => {
+
+      // FINORA_F1_L_SERVER_AUTHORITY_ISOLATION
+      // PostgreSQL controls the displayed Customer Series.
+      // Do not load device-local legacy configuration in this mode.
+      // Preserve the migration safety gate and all reservation logic.
+      if (centralNumberingMigrationPending) {
+        return;
+      }
 
       let active =
         true;
@@ -740,7 +780,6 @@ export default function NumberingSeriesSettingsSection() {
           : ({
               customerId: formatCustomerId(serverNumbering.businessCode, serverNumbering.branchCode, serverNumbering.nextCustomerNumber),
             } as unknown as CustomerNumberPreview);
-
       return (
         <>
           <SettingsFeedback

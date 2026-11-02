@@ -49,8 +49,8 @@ import {
 } from "../../repositories/numbering/customerNumberingBindingRepository";
 
 import {
-  resolveFinoraNumberingScope,
-} from "./finoraNumberingScopeService";
+  loadActiveNumberingScope,
+} from "./customerNumberingBindingService";
 
 import {
   previewNextLoanNumber,
@@ -125,6 +125,79 @@ function parseCanonicalLoanNumber(
       error: "Loan Number is required.",
     };
   }
+  // Current FINORA canonical format:
+  // FIN-LOAN-{CUSTOMER_NUMBER}-{LOAN_SEQUENCE}
+  // Validate without reserving or changing any sequence.
+  const shortCanonicalParts = normalizedLoanNumber.split("-");
+
+  if (
+    shortCanonicalParts.length === 4 &&
+    shortCanonicalParts[0] === "FIN" &&
+    shortCanonicalParts[1] === "LOAN"
+  ) {
+    const customerText = shortCanonicalParts[2];
+    const sequenceText = shortCanonicalParts[3];
+
+    if (
+      !/^\d{6}$/.test(customerText) ||
+      !/^\d{3}$/.test(sequenceText)
+    ) {
+      return {
+        success: false,
+        error: "Invalid canonical FINORA Loan Number.",
+      };
+    }
+
+    const customerNumber = Number(customerText);
+    const loanSequence = Number(sequenceText);
+
+    if (
+      !Number.isSafeInteger(customerNumber) ||
+      customerNumber < CUSTOMER_NUMBER_MIN ||
+      customerNumber > CUSTOMER_NUMBER_MAX ||
+      !Number.isSafeInteger(loanSequence) ||
+      loanSequence < LOAN_SEQUENCE_MIN ||
+      loanSequence > LOAN_SEQUENCE_MAX
+    ) {
+      return {
+        success: false,
+        error: "Canonical Loan Number sequence is out of range.",
+      };
+    }
+
+    try {
+      const expectedLoanNumber = formatLoanNumber(
+        businessCode,
+        branchCode,
+        customerNumber,
+        loanSequence,
+      );
+
+      if (normalizedLoanNumber !== expectedLoanNumber) {
+        return {
+          success: false,
+          error: "Canonical Loan Number does not match the active scope.",
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to validate canonical Loan Number.",
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        customerNumber,
+        loanSequence,
+      },
+    };
+  }
+
 
   const parts =
     normalizedLoanNumber.split("-");
@@ -268,7 +341,13 @@ async function resolveInstallationScope(): Promise<
   >
 > {
 
-  return resolveFinoraNumberingScope();
+  // FINORA_AP03_R017_R2_USB_SCOPE
+
+  // Android: authorized locked USB numbering series.
+
+  // Windows: original signed numbering authority.
+
+  return loadActiveNumberingScope();
 }
 // ============================================================
 // STORED BINDING VALIDATION
@@ -383,6 +462,69 @@ async function resolveExistingCustomerNumber(
 
   const normalizedCustomerId =
     customerId.trim();
+  // Current canonical Customer ID: FIN-CUS-XXXXXX.
+  // This is validation only. No sequence is consumed.
+  const shortCustomerId = normalizedCustomerId.toUpperCase();
+  const shortCustomerSegments = shortCustomerId.split("-");
+
+  if (
+    shortCustomerSegments.length === 3 &&
+    shortCustomerSegments[0] === "FIN" &&
+    shortCustomerSegments[1] === "CUS"
+  ) {
+    const shortCustomerNumberText = shortCustomerSegments[2];
+
+    if (!/^\d{6}$/.test(shortCustomerNumberText)) {
+      return {
+        success: false,
+        error: "Invalid canonical Customer ID.",
+      };
+    }
+
+    const shortCustomerNumber = Number(shortCustomerNumberText);
+
+    if (
+      !Number.isSafeInteger(shortCustomerNumber) ||
+      shortCustomerNumber < CUSTOMER_NUMBER_MIN ||
+      shortCustomerNumber > CUSTOMER_NUMBER_MAX
+    ) {
+      return {
+        success: false,
+        error: "Canonical Customer Number is out of range.",
+      };
+    }
+
+    let expectedShortCustomerId: string;
+
+    try {
+      expectedShortCustomerId = formatCustomerId(
+        scope.businessCode,
+        scope.branchCode,
+        shortCustomerNumber,
+      );
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Cannot validate canonical Customer ID.",
+      };
+    }
+
+    if (shortCustomerId !== expectedShortCustomerId) {
+      return {
+        success: false,
+        error: "Canonical Customer ID does not match active scope.",
+      };
+    }
+
+    return {
+      success: true,
+      data: shortCustomerNumber,
+    };
+  }
+
 
   if (!normalizedCustomerId) {
     return {
@@ -637,6 +779,11 @@ async function resolveCanonicalLoan(
 function looksLikeCanonicalLoanNumber(
   loanNumber: string,
 ): boolean {
+  // Existing FINORA four-part Loan Number is canonical.
+  if (/^FIN-LOAN-\d{6}-\d{3}$/.test(loanNumber.trim().toUpperCase())) {
+    return true;
+  }
+
 
   const parts =
     loanNumber

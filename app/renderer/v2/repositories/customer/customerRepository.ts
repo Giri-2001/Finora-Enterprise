@@ -365,6 +365,30 @@ export class CustomerRepository {
 
       data:
         customer,
+
+      // FINORA HF28-CH45-C63
+      // Preserve optional native USB digest metadata.
+      ...(typeof result.usageRecordDigest === "string" &&
+      /^[a-f0-9]{64}$/.test(result.usageRecordDigest)
+        ? { usageRecordDigest: result.usageRecordDigest }
+        : {}),
+      // Native USB digest availability only.
+      // This is NOT server-verified Billing evidence.
+      ...(result.usageDigestStatus ===
+          "BILLING_DIGEST_UNAVAILABLE"
+        ? {
+            usageDigestStatus:
+              "BILLING_DIGEST_UNAVAILABLE" as const,
+          }
+        : result.usageDigestStatus ===
+            "LOCAL_USB_READBACK_DIGEST_READY" &&
+          typeof result.usageRecordDigest === "string" &&
+          /^[a-f0-9]{64}$/.test(result.usageRecordDigest)
+        ? {
+            usageDigestStatus:
+              "LOCAL_USB_READBACK_DIGEST_READY" as const,
+          }
+        : {}),
     };
   }
 

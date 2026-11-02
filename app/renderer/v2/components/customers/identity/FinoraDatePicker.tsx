@@ -76,6 +76,53 @@ function parseDateValue(value: string): Date | null {
     : null;
 }
 
+function parseTypedDob(input: string): Date | null {
+  const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(input);
+  if (!match) return null;
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+
+  if (year < 100 || month < 1 || month > 12 ||
+      day < 1 || day > 31) {
+    return null;
+  }
+
+  const date = new Date(year, month - 1, day);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  const now = new Date();
+  const today = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
+
+  if (date.getTime() > today.getTime()) {
+    return null;
+  }
+
+  return date;
+}
+
+function formatDobDigits(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) {
+    return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+  }
+
+  return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4)}`;
+}
 function formatDateValue(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -165,6 +212,14 @@ export default function FinoraDatePicker({
 
   const initialDate = parseDateValue(value) ?? new Date();
 
+  const [typedDob, setTypedDob] = useState(
+    () => {
+      const parsed = parseDateValue(value);
+      return parsed ? getDisplayDate(parsed) : "";
+    },
+  );
+  const [typedDobInvalid, setTypedDobInvalid] = useState(false);
+
   const [isOpen, setIsOpen] = useState(false);
   const [isMonthOpen, setIsMonthOpen] = useState(false);
   const [isYearOpen, setIsYearOpen] = useState(false);
@@ -195,9 +250,38 @@ export default function FinoraDatePicker({
 
   const years = useMemo(() => buildYears(), []);
 
-  const displayValue = selectedDate
-    ? getDisplayDate(selectedDate)
-    : "";
+  // Calendar selection and external form resets keep typing in sync.
+  useEffect(() => {
+    const parsed = parseDateValue(value);
+    setTypedDob(parsed ? getDisplayDate(parsed) : "");
+    setTypedDobInvalid(false);
+  }, [value]);
+
+  function handleTypedDob(input: string): void {
+    const formatted = formatDobDigits(input);
+    setTypedDob(formatted);
+
+    const validDate = parseTypedDob(formatted);
+
+    if (validDate) {
+      setTypedDobInvalid(false);
+      onChange(formatDateValue(validDate));
+      setVisibleMonth(getMonthStart(validDate));
+    } else {
+      setTypedDobInvalid(formatted.length === 10);
+      // Never retain a previously valid DOB after an invalid edit.
+      onChange("");
+    }
+  }
+
+  function validateTypedDobOnBlur(): void {
+    if (!typedDob) {
+      setTypedDobInvalid(false);
+      return;
+    }
+
+    setTypedDobInvalid(parseTypedDob(typedDob) === null);
+  }
 
       /* =========================================================
      FIXED POPUP POSITIONING
@@ -423,12 +507,22 @@ function clearDate() {
         <input
           className="finora-date-picker-input"
           type="text"
-          value={displayValue}
-          readOnly
+          value={typedDob}
           placeholder={placeholder}
+          inputMode="numeric"
+          maxLength={10}
+          autoComplete="off"
           aria-label={ariaLabel}
+          aria-invalid={typedDobInvalid}
+          title={
+            typedDobInvalid
+              ? "Enter a valid Date of Birth in DD-MM-YYYY format."
+              : "Type DD-MM-YYYY or select from the FINORA calendar."
+          }
           aria-haspopup="dialog"
           aria-expanded={isOpen}
+          onChange={(event) => handleTypedDob(event.target.value)}
+          onBlur={validateTypedDobOnBlur}
           onClick={toggleCalendar}
           onKeyDown={handleInputKeyDown}
         />

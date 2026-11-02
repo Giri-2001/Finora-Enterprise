@@ -580,8 +580,6 @@ export default function Step5Nominee({
             value,
 
 
-          relationship:
-            "",
 }),
       );
 
@@ -596,8 +594,6 @@ export default function Step5Nominee({
 
 
 
-        nomineeRelationship:
-          "",
 });
 
 
@@ -621,6 +617,10 @@ export default function Step5Nominee({
       "phoneNumber"
     ) {
 
+      // FINORA: Nominee phone accepts only 0-9, maximum 10 digits.
+      const normalizedPhone = value.replace(/\D/g, "").slice(0, 10);
+
+
       setNominee(
         (previous) => ({
 
@@ -629,12 +629,9 @@ export default function Step5Nominee({
           nomineeCustomerId:
             "",
 
-          phoneNumber:
-            value,
+          phoneNumber: normalizedPhone,
 
 
-          relationship:
-            "",
 }),
       );
 
@@ -644,13 +641,10 @@ export default function Step5Nominee({
         nomineeCustomerId:
           "",
 
-        nomineePhoneNumber:
-          value,
+        nomineePhoneNumber: normalizedPhone,
 
 
 
-        nomineeRelationship:
-          "",
 });
 
 

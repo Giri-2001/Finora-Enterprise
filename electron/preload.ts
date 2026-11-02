@@ -1,7 +1,163 @@
 import {
   contextBridge,
   ipcRenderer,
-} from "electron";
+} from "electron";// FINORA_C80_B5_SAVED_OWNER_LIST
+// Read-only saved Owner metadata. Never expose vault credentials.
+contextBridge.exposeInMainWorld(
+  "finoraSavedOwnerLogins",
+  Object.freeze({
+    // FINORA_C80_B11_REMOVE_OWNER
+    // UI must request explicit Owner confirmation before calling.
+    remove: (id: string) =>
+      ipcRenderer.invoke(
+        "finora:saved-owner-login:remove",
+        { id },
+      ) as Promise<
+        | {
+            success: true;
+            removed: boolean;
+          }
+        | {
+            success: false;
+            errorCode: string;
+          }
+      >,    // FINORA_C80_B10_SELECT_OWNER
+    // Must be called only after Owner selects a saved account.
+    // Do not log or persist returned password in renderer storage.
+    select: (id: string) =>
+      ipcRenderer.invoke(
+        "finora:saved-owner-login:select",
+        { id },
+      ) as Promise<
+        | {
+            success: true;
+            username: string;
+            password: string;
+            branchId: string;
+            ownerId: string;
+          }
+        | {
+            success: false;
+            errorCode: string;
+          }
+      >,    // FINORA_C80_B9_SAVE_BRIDGE
+    // Consent must come from explicit Owner UI action.
+    // Electron Main independently validates the committed Owner.
+    save: (request: {
+      consent: boolean;
+      sessionId: string;
+      username: string;
+      password: string;
+    }) =>
+      ipcRenderer.invoke(
+        "finora:saved-owner-login:save",
+        {
+          consent: request?.consent,
+          sessionId: request?.sessionId,
+          username: request?.username,
+          password: request?.password,
+        },
+      ) as Promise<
+        | {
+            success: true;
+            account: {
+              id: string;
+              branchId: string;
+              ownerId: string;
+              username: string;
+              branchLabel: string;
+              savedAt: string;
+            };
+          }
+        | {
+            success: false;
+            errorCode: string;
+          }
+      >,
+    list: () =>
+      ipcRenderer.invoke("finora:saved-owner-login:list") as Promise<
+        | {
+            success: true;
+            accounts: Array<{
+              id: string;
+              branchId: string;
+              ownerId: string;
+              username: string;
+              branchLabel: string;
+              savedAt: string;
+            }>;
+          }
+        | {
+            success: false;
+            errorCode: string;
+          }
+      >,
+  }),
+);
+
+// ============================================================
+// FINORA_AP04_R040_RECEIPT_PICTURES_PRELOAD
+// Narrow PNG-only Windows Pictures export.
+// No arbitrary paths or Node APIs exposed to the renderer.
+contextBridge.exposeInMainWorld(
+  "finoraReceiptPictures",
+  Object.freeze({
+    savePng: (request: {
+      receiptType: "loan" | "collection";
+      fileName: string;
+      dataBase64: string;
+    }): Promise<
+      | {
+          success: true;
+          saved: true;
+          album: string;
+          fileName: string;
+        }
+      | {
+          success: false;
+          errorCode: string;
+        }
+    > =>
+      ipcRenderer.invoke(
+        "finora:receipt:save-pictures-png",
+        {
+          receiptType: request?.receiptType,
+          fileName: request?.fileName,
+          dataBase64: request?.dataBase64,
+        },
+      ),
+  }),
+);
+// FINORA_C80_B31_C1_REPORT_PDF_BRIDGE
+// Explicit Owner report WhatsApp handoff on Windows.
+// Electron Main validates the renderer and PDF independently.
+// ============================================================
+
+contextBridge.exposeInMainWorld(
+  "finoraReportWhatsappPdf",
+  Object.freeze({
+    saveToDownloads: (request: {
+      fileName: string;
+      dataBase64: string;
+    }): Promise<
+      | {
+          success: true;
+          fileName: string;
+        }
+      | {
+          success: false;
+          errorCode: string;
+        }
+    > =>
+      ipcRenderer.invoke(
+        "finora:reports:save-whatsapp-pdf",
+        {
+          fileName: request?.fileName,
+          dataBase64: request?.dataBase64,
+        },
+      ),
+  }),
+);
 // FINORA_P1_730J_NUMBERING_RESERVATION
 // No authorization credentials are exposed to renderer.
 contextBridge.exposeInMainWorld(
@@ -127,9 +283,7 @@ contextBridge.exposeInMainWorld(
                                 [
                                   "CUSTOMER_CREATE",
                                   "LOAN_DISBURSEMENT",
-                                  "COLLECTION_BELOW_25000",
-                                  "COLLECTION_25000_TO_50000",
-                                  "COLLECTION_ABOVE_50000",
+                                  "COLLECTION",
                                 ].includes(key) &&
                                 typeof value === "string" &&
                                 /^(?:0|[1-9]\d{0,9})\.\d{2}$/.test(value)
@@ -4447,5 +4601,17 @@ contextBridge.exposeInMainWorld(
         businessDataAccess: false,
       };
     },
+  }),
+);
+
+// FINORA_R188_B_PRELOAD
+// Accepts receipt PNG data only; exposes no generic IPC.
+contextBridge.exposeInMainWorld(
+  "finoraReceiptClipboard",
+  Object.freeze({
+    copyPng: async (
+      dataUrl: string,
+    ): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke("finora:receipt:copy-png", dataUrl),
   }),
 );

@@ -394,6 +394,17 @@ export interface StorageResult<T = unknown> {
   data?: T;
 
   error?: string;
+
+  // FINORA HF28-CH45-C63
+  // Optional native USB record digest.
+  // Not a signature or a server-authorized billing receipt.
+  usageRecordDigest?: string;
+
+  // Native USB read-back digest availability only.
+  // NOT a server-authorized Billing receipt.
+  usageDigestStatus?:
+    | "LOCAL_USB_READBACK_DIGEST_READY"
+    | "BILLING_DIGEST_UNAVAILABLE";
 }
 
 

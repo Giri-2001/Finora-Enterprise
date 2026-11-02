@@ -1,8 +1,15 @@
 import ServerWalletLiveHistory from "../../components/wallet/ServerWalletLiveHistory";
+import {
+  startFinoraProcessing,
+  stopFinoraProcessing,
+} from "../../components/common/feedback/finoraProcessing.service";
 import { getFinoraAndroidPricing } from "../../services/wallet/finoraAndroidWalletReads";
 import {
   isFinoraAndroidWallet,
   getFinoraAndroidWalletBalance,
+  submitFinoraAndroidWalletRecharge,
+  getFinoraAndroidWalletRechargePending,
+  resumeFinoraAndroidWalletRecharge,
 } from "../../services/wallet/finoraAndroidWalletBridge";
 import { formatFinoraDateTime } from "../../../shared/finoraDateTimeDisplay";
 import { useEffect, useRef, useState } from "react";
@@ -307,6 +314,12 @@ export default function ServerWalletPage({
   const [hasIntent, setHasIntent] = useState(false);
   // FINORA_P1_722L_ANDROID_SAFETY
   const androidBalanceOnly = isFinoraAndroidWallet();
+  // FINORA_W9_J12_ANDROID_RECHARGE_UI
+  // Native encrypted pending verification is mandatory.
+  const [androidRechargeState, setAndroidRechargeState] = useState<
+    "CHECKING" | "NONE" | "PENDING" | "ERROR"
+  >(androidBalanceOnly ? "CHECKING" : "NONE");
+  const androidRechargeGuard = useRef(false);
   const rechargeIntent = useRef<{
     walletId: string;
     input: ServerWalletRechargeInput;
@@ -352,6 +365,31 @@ export default function ServerWalletPage({
           if (result.success && validBalance(result.data)) {
             setBalance(result.data);
             setFailed(false);
+
+            const savedRecharge =
+              await getFinoraAndroidWalletRechargePending();
+
+            if (!mounted.current || operation.current !== ticket) return;
+
+            if (!savedRecharge.success) {
+              setAndroidRechargeState("ERROR");
+              setRechargeFailed(true);
+              setRechargeMessage(
+                "Encrypted recharge status unavailable. New requests blocked."
+              );
+            } else if (savedRecharge.data.pending) {
+              setAndroidRechargeState("PENDING");
+              setAmount("");
+              setPaymentMethod("PHONEPE");
+              setRechargeMessage(
+                "Existing encrypted recharge found. Recover that request."
+              );
+            } else {
+              setAndroidRechargeState("NONE");
+              setRechargeFailed(false);
+              setRechargeMessage("");
+            }
+
             // FINORA_P1_723K_PRICING
             // Server-authenticated branch subscription only.
             setMessage("Verified PostgreSQL Wallet balance loaded.");
@@ -629,6 +667,30 @@ export default function ServerWalletPage({
         setAvailable(true);
         setBalance(result.data);
         setFailed(false);
+
+        const savedRecharge =
+          await getFinoraAndroidWalletRechargePending();
+
+        if (!current()) return;
+
+        if (!savedRecharge.success) {
+          setAndroidRechargeState("ERROR");
+          setRechargeFailed(true);
+          setRechargeMessage(
+            "Recharge recovery verification unavailable. New requests blocked."
+          );
+        } else if (savedRecharge.data.pending) {
+          setAndroidRechargeState("PENDING");
+          setAmount("");
+              setPaymentMethod("PHONEPE");
+          setRechargeMessage(
+            "An earlier recharge exists. Recover the original request."
+          );
+        } else {
+          setAndroidRechargeState("NONE");
+          setRechargeBalanceStale(false);
+        }
+
         setMessage("Verified PostgreSQL Wallet balance refreshed.");
         return;
       }
@@ -820,7 +882,10 @@ export default function ServerWalletPage({
           receipt.status !== "ACTIVE" ||
           !receipt.purchaseId ||
           !receipt.subscriptionId ||
-          !receipt.transactionId ||
+          !(receipt.amountInr === "0.00"
+             ? receipt.transactionId === null
+             : typeof receipt.transactionId === "string" &&
+               /^[0-9]{10,12}$/.test(receipt.transactionId)) ||
           !/^[0-9]+[.][0-9]{2}$/.test(receipt.amountInr) ||
           !Number.isFinite(Date.parse(receipt.startsAt)) ||
           !Number.isFinite(Date.parse(receipt.expiresAt))) {
@@ -952,7 +1017,10 @@ export default function ServerWalletPage({
           receipt.source !== "POSTGRESQL_SUBSCRIPTION_PURCHASE" ||
           receipt.status !== "ACTIVE" ||
           !receipt.purchaseId || !receipt.subscriptionId ||
-          !receipt.transactionId ||
+          !(receipt.amountInr === "0.00"
+             ? receipt.transactionId === null
+             : typeof receipt.transactionId === "string" &&
+               /^[0-9]{10,12}$/.test(receipt.transactionId)) ||
           !/^[0-9]+[.][0-9]{2}$/.test(receipt.amountInr) ||
           !Number.isFinite(Date.parse(receipt.startsAt)) ||
           !Number.isFinite(Date.parse(receipt.expiresAt))) {
@@ -998,9 +1066,181 @@ export default function ServerWalletPage({
       }
     }
   }
+  async function runAndroidRecharge(mode: "SUBMIT" | "RESUME") {
+    if (!androidBalanceOnly ||
+        running.current ||
+        androidRechargeGuard.current ||
+        busy ||
+        !available ||
+        !balance ||
+        !validBalance(balance)) return;
+
+    if (mode === "SUBMIT" &&
+        (androidRechargeState !== "NONE" ||
+         rechargeBalanceStale ||
+         receipt)) return;
+
+    if (mode === "RESUME" &&
+        androidRechargeState !== "PENDING") return;
+
+    androidRechargeGuard.current = true;
+    running.current = true;
+    // FINORA_W9_J71_RECHARGE_PROCESSING
+    const processingToken = startFinoraProcessing(
+      mode === "RESUME"
+        ? "Recovering recharge request..."
+        : "Submitting recharge request..."
+    );
+
+    const ticket = ++operation.current;
+    const current = () =>
+      mounted.current && operation.current === ticket;
+
+    setBusy(true);
+    setRechargeFailed(false);
+
+    try {
+      const pending =
+        await getFinoraAndroidWalletRechargePending();
+
+      if (!current()) return;
+
+      if (!pending.success) {
+        setAndroidRechargeState("ERROR");
+        setRechargeFailed(true);
+        setRechargeMessage(
+          "Encrypted recharge status unavailable. Submission blocked."
+        );
+        return;
+      }
+
+      if (mode === "SUBMIT" && pending.data.pending) {
+        setAndroidRechargeState("PENDING");
+        setAmount("");
+        setPaymentMethod("PHONEPE");
+        setRechargeFailed(true);
+        setRechargeMessage(
+          "Existing recharge found. Use Recover Existing Recharge."
+        );
+        return;
+      }
+
+      if (mode === "RESUME" && !pending.data.pending) {
+        setAndroidRechargeState("ERROR");
+        setRechargeFailed(true);
+        setRechargeMessage(
+          "No encrypted recharge found. Refresh Wallet before proceeding."
+        );
+        return;
+      }
+
+      if (mode === "SUBMIT" &&
+          (!/^[0-9]{2,4}$/.test(amount) ||
+           !Number.isSafeInteger(Number(amount)) ||
+           Number(amount) < 50 ||
+           Number(amount) > 2000)) {
+        setRechargeFailed(true);
+        setRechargeMessage(
+          "Enter a whole-rupee amount between INR 50 and INR 2000."
+        );
+        return;
+      }
+
+      const expectedAmount = mode === "RESUME"
+        ? pending.data.amountInr
+        : Number(amount);
+
+      const expectedMethod = mode === "RESUME"
+        ? pending.data.paymentMethod
+        : paymentMethod;
+
+      if (expectedAmount === null ||
+          expectedMethod === null) {
+        setAndroidRechargeState("ERROR");
+        setRechargeFailed(true);
+        setRechargeMessage("Recharge recovery metadata invalid.");
+        return;
+      }
+
+      const result = mode === "RESUME"
+        ? await resumeFinoraAndroidWalletRecharge({
+            walletId: balance.walletId,
+            amountInr: expectedAmount,
+            paymentMethod: expectedMethod,
+          })
+        : await submitFinoraAndroidWalletRecharge({
+            walletId: balance.walletId,
+            amountInr: expectedAmount,
+            paymentMethod: expectedMethod,
+            idempotencyKey: crypto.randomUUID(),
+          });
+
+      if (!current()) return;
+
+      const after =
+        await getFinoraAndroidWalletRechargePending();
+
+      if (!current()) return;
+
+      setAndroidRechargeState(
+        !after.success
+          ? "ERROR"
+          : after.data.pending
+            ? "PENDING"
+            : "NONE"
+      );
+
+      if (!result.success) {
+        setRechargeFailed(true);
+        setRechargeMessage(
+          "Recharge outcome unconfirmed [" + result.errorCode +
+          "]. Recover or verify the original request before retrying."
+        );
+        if (after.success && !after.data.pending) {
+          setRechargeBalanceStale(true);
+        }
+        return;
+      }
+
+      // Receipt confirmation never credits local wallet balance.
+      setReceipt(result.data);
+      // UI reset only; native encrypted pending state remains authoritative.
+      setAmount("");
+      setPaymentMethod("PHONEPE");
+      setRechargeFailed(false);
+      setRechargeMessage(
+        result.data.request.status === "PENDING"
+          ? "Recharge request received. Payment verification pending."
+          : result.data.request.status === "APPROVED"
+            ? "Existing request approved. Refresh server balance."
+            : "Existing request declined. No wallet credit added."
+      );
+
+      window.dispatchEvent(
+        new Event("finora:wallet-history-refresh")
+      );
+    } catch {
+      if (current()) {
+        setAndroidRechargeState("ERROR");
+        setRechargeFailed(true);
+        setRechargeMessage(
+          "Recharge outcome unknown. Refresh and recover before retry."
+        );
+      }
+    } finally {
+      stopFinoraProcessing(processingToken);
+      androidRechargeGuard.current = false;
+      running.current = false;
+      if (current()) setBusy(false);
+    }
+  }
+
   async function submitRecharge(event: FormEvent<HTMLFormElement>) {
-    if (androidBalanceOnly) return;
     event.preventDefault();
+    if (androidBalanceOnly) {
+      await runAndroidRecharge("SUBMIT");
+      return;
+    }
     if (running.current || !available || !balance || rechargeBalanceStale || receipt) return;
 
     const walletId = balance.walletId;
@@ -1040,6 +1280,10 @@ export default function ServerWalletPage({
     }
 
     running.current = true;
+    // FINORA_W9_J71_RECHARGE_PROCESSING
+    const processingToken = startFinoraProcessing(
+      "Submitting recharge request..."
+    );
     const ticket = ++operation.current;
     const current = () => mounted.current && operation.current === ticket;
     setBusy(true);
@@ -1091,6 +1335,9 @@ export default function ServerWalletPage({
         },
         replayed: result.data.replayed,
       });
+      // Confirmed request: clear only the visible form.
+      setAmount("");
+      setPaymentMethod("PHONEPE");
       // FINORA_P1_629B_KEEP_VERIFIED_BALANCE
       // A PENDING request never changes the Wallet balance.
       // Keep the last server-verified balance; do not add credit locally.
@@ -1112,6 +1359,7 @@ export default function ServerWalletPage({
         setRechargeMessage("Request outcome is unconfirmed. Refresh your wallet, then retry this same request.");
       }
     } finally {
+      stopFinoraProcessing(processingToken);
       running.current = false;
       if (current()) setBusy(false);
     }
@@ -1950,7 +2198,7 @@ export default function ServerWalletPage({
         <h2 style={{ marginTop: 0 }}>Request a recharge</h2>
 
         <form onSubmit={submitRecharge}>
-          <fieldset disabled={androidBalanceOnly || !available || busy || !balance || (hasIntent && !receipt)}
+          <fieldset disabled={!available || busy || !balance || (androidBalanceOnly ? androidRechargeState !== "NONE" || rechargeBalanceStale : (hasIntent && !receipt))}
             style={{ border: 0, padding: 0, margin: 0,
               display: "grid", gap: 16,
               gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))" }}>
@@ -2014,6 +2262,7 @@ export default function ServerWalletPage({
               onClick={receipt ? prepareAnotherRecharge : undefined}
               style={{ ...button, background: theme.components.button.primaryBackground, color: theme.components.button.primaryText }}
               disabled={!available || busy || !balance || rechargeBalanceStale ||
+                (androidBalanceOnly && androidRechargeState !== "NONE") ||
                 !/^[0-9]{2,4}$/.test(amount) ||
                 Number(amount) < 50 ||
                 Number(amount) > 2000 ||
@@ -2023,6 +2272,40 @@ export default function ServerWalletPage({
             </button>
           </div>
         </form>
+
+        {androidBalanceOnly && androidRechargeState === "PENDING" && (
+          <div style={{ marginTop: 12 }}>
+            <button
+              type="button"
+              disabled={busy || !available || !balance}
+              onClick={() => { void runAndroidRecharge("RESUME"); }}
+              style={{
+                ...button,
+                background: theme.components.button.primaryBackground,
+                color: theme.components.button.primaryText,
+              }}
+            >
+              Recover Existing Recharge
+            </button>
+            <p style={{
+              color: theme.colors.text.secondary,
+              fontSize: 13,
+            }}>
+              This retries the original encrypted request.
+              No new request ID is generated.
+            </p>
+          </div>
+        )}
+
+        {androidBalanceOnly && androidRechargeState === "ERROR" && (
+          <p role="alert" style={{
+            color: "#9f1239",
+            fontSize: 13,
+          }}>
+            Encrypted recharge recovery verification is unavailable.
+            Refresh Wallet before submitting another request.
+          </p>
+        )}
 
         {!balance && (
           <p style={{ color: theme.colors.text.secondary }}>
@@ -2852,45 +3135,7 @@ export default function ServerWalletPage({
     />
   </label>
 </div>
-<div className="finora-premium-benefits-heading">
-  <BadgeCheck size={15} aria-hidden="true" />
-  <span>USAGE CHARGES</span>
-</div>{/* FINORA_P564L_PLAN_FEES - Display-only preview; billing uses server prices */}
-<div style={{
-  display: "grid",
-  gap: 7,
-  padding: "12px 0",
-  borderTop: `1px solid ${theme.components.card.border}`,
-  fontSize: 15,
-}}>
-  {[
-    ["Customer creation", plan.fees?.CUSTOMER_CREATE ?? null],
-    ["Loan creation", plan.fees?.LOAN_DISBURSEMENT ?? null],
-    ["Collection below ₹25k", plan.fees?.COLLECTION_BELOW_25000 ?? null],
-    ["Collection ₹25k–₹50k", plan.fees?.COLLECTION_25000_TO_50000 ?? null],
-    ["Collection above ₹50k", plan.fees?.COLLECTION_ABOVE_50000 ?? null],
-  ].map(([label, amount]) => (
-    <div
-      key={String(label)}
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: 8,
-      }}
-    >
-      <span style={{ color: theme.colors.text.secondary }}>
-        {label}
-      </span>
-      <strong style={{
-        color: theme.colors.text.primary,
-        whiteSpace: "nowrap",
-      }}>
-        {amount === null ? "Unavailable" : `₹${Number(amount).toLocaleString("en-IN")}`}
-      </strong>
-    </div>
-  ))}
-</div>
+
                 <div style={{
                   marginTop: "auto", borderRadius: 10,
                   padding: "10px 12px", textAlign: "center",

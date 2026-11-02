@@ -1,4 +1,8 @@
 import { useState } from "react";
+import {
+  finoraConfirm,
+  finoraSuccess,
+} from "../components/common/dialog/finoraDialog.service";
 import type {
   FinoraServerPendingRechargeRecordView,
   FinoraServerRechargeDecisionInputView,
@@ -48,7 +52,7 @@ export default function FinoraRechargePaymentReview({
       paymentReference: normalized,
     };
 
-    const confirmed = window.confirm(
+    const confirmed = await finoraConfirm(
       `FINORA RECHARGE APPROVAL\n\n` +
       `Owner: ${request.ownerName}\n` +
       `Branch: ${request.branchName}\n` +
@@ -104,6 +108,16 @@ export default function FinoraRechargePaymentReview({
       }
 
       setCompleted(true);
+      await finoraSuccess(
+        "FINORA RECHARGE APPROVED\n\n" +
+        "Server confirmed approval.\n" +
+        "Amount: INR " + request.amountInr + "\n" +
+        "Wallet: " + request.walletId + "\n\n" +
+        "Press OK to refresh server requests."
+      );
+      window.dispatchEvent(
+        new Event("finora:control-center-recharge-decision-confirmed")
+      );
       onCompleted();
     } catch {
       setUncertain(true);
@@ -139,7 +153,7 @@ export default function FinoraRechargePaymentReview({
       return;
     }
 
-    const confirmed = window.confirm(
+    const confirmed = await finoraConfirm(
       `DECLINE FINORA RECHARGE\n\n` +
       `Owner: ${request.ownerName}\n` +
       `Branch: ${request.branchName}\n` +
@@ -190,6 +204,17 @@ export default function FinoraRechargePaymentReview({
 
       setCompleted(true);
       setDeclineOpen(false);
+      await finoraSuccess(
+        "FINORA RECHARGE DECLINED\n\n" +
+        "Server confirmed decline.\n" +
+        "Amount: INR " + request.amountInr + "\n" +
+        "Wallet: " + request.walletId + "\n\n" +
+        "No wallet credit was issued.\n" +
+        "Press OK to refresh server requests."
+      );
+      window.dispatchEvent(
+        new Event("finora:control-center-recharge-decision-confirmed")
+      );
       onCompleted();
     } catch {
       setUncertain(true);

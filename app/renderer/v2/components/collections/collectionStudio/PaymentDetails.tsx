@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTION STUDIO™
@@ -117,7 +117,6 @@ import {
 
 import {
   finoraError,
-  finoraSuccess,
   finoraWarning,
 } from "../../common/dialog/finoraDialog.service";
 
@@ -159,10 +158,7 @@ import {
   getBusinessContext,
 } from "../../../services/business/businessContextService";
 
-import {
-  commitCollectionProcessingWalletCharge,
-  preflightCollectionProcessingWalletCharge,
-} from "../../../services/wallet/walletCollectionProcessingChargeService";
+
 
 import {
   getCurrentLocalBusinessDate,
@@ -295,7 +291,7 @@ export default function PaymentDetails() {
   useEffect(() => {
     if (
       activeBusinessDate &&
-      reviewData.receiptDate !== activeBusinessDate
+      !reviewData.receiptDate
     ) {
       updateField(
         "receiptDate",
@@ -315,32 +311,46 @@ export default function PaymentDetails() {
 
   const responsiveBodyStyle = {
     ...collectionPaymentDetailsStyles.body,
-
     ...createPaymentDetailsBodyStyle(tokens, viewport),
+    display: "grid" as const,
+    gridTemplateColumns:
+      viewport === "mobile"
+        ? "minmax(0, 1fr)"
+        : viewport === "tablet"
+          ? "repeat(3, minmax(0, 1fr))"
+          : "repeat(4, minmax(0, 1fr))",
+    gap: "10px",
+    alignItems: "end",
   };
 
   const responsiveFieldStyle = {
     ...collectionPaymentDetailsStyles.field,
-
     ...createPaymentDetailsFieldStyle(viewport),
+    gridColumn: "auto",
+    gridRow: "auto",
+    minWidth: 0,
   };
 
   const responsiveRemarksStyle = {
     ...collectionPaymentDetailsStyles.remarksField,
-
     ...createPaymentDetailsRemarksStyle(viewport),
+    gridColumn: "auto",
+    gridRow: "auto",
+    minWidth: 0,
   };
 
   const responsiveTotalStyle = {
     ...collectionPaymentDetailsStyles.totalBar,
-
     ...createPaymentDetailsTotalStyle(viewport),
+    gridColumn: "auto",
+    gridRow: "auto",
+    minWidth: 0,
+    width: "100%",
   };
 
   const responsiveActionsStyle = {
     ...collectionPaymentDetailsStyles.actions,
-
-    ...createPaymentDetailsActionsStyle(tokens, viewport),
+    display: "contents" as const,
   };
 
   const responsiveInputStyle = {
@@ -356,15 +366,12 @@ export default function PaymentDetails() {
   };
 
   const responsiveSaveButtonStyle = {
-    ...collectionPaymentDetailsStyles.saveButton,
-
-    ...createPaymentDetailsButtonStyle(tokens, viewport),
-  };
-
-  const responsiveReceiptButtonStyle = {
     ...collectionPaymentDetailsStyles.receiptButton,
-
     ...createPaymentDetailsButtonStyle(tokens, viewport),
+    gridColumn: "auto",
+    gridRow: "auto",
+    width: "100%",
+    minWidth: 0,
   };
 
   // ==========================================================
@@ -372,6 +379,15 @@ export default function PaymentDetails() {
   // ==========================================================
 
   const [saving, setSaving] = useState(false);
+  const [savedCollectionPopup, setSavedCollectionPopup] = useState<{
+    amount: number;
+    penalty: number;
+    customer: string;
+    number: string;
+    paymentMode: string;
+    closed: boolean;
+  } | null>(null);
+
 
   // ==========================================================
   // COLLECTION DATE LEDGER BOUNDARY
@@ -1073,58 +1089,7 @@ export default function PaymentDetails() {
           numbering.receiptNumber,
         );
 
-      // ======================================================
-      // COLLECTION PROCESSING WALLET PREFLIGHT
-      //
-      // Slab basis is the authoritative Collection paymentAmount.
-      // Test configuration currently charges ₹10 in all 3 slabs.
-      // ======================================================
-
-      const collectionWalletScope = {
-        ownerId:
-          String(
-            authenticatedSession?.ownerId ??
-              "",
-          ).trim(),
-
-        businessId:
-          String(
-            authenticatedSession?.businessId ??
-              "",
-          ).trim(),
-
-        branchId:
-          String(
-            authenticatedSession?.branchId ??
-              "",
-          ).trim(),
-      };
-
-      if (
-        !collectionWalletScope.ownerId ||
-        !collectionWalletScope.businessId ||
-        !collectionWalletScope.branchId
-      ) {
-
-        throw new Error(
-          "Authenticated Owner, Business and Branch are required for the FINORA Collection Processing Wallet charge.",
-        );
-      }
-
-      const collectionChargePreflight =
-        await preflightCollectionProcessingWalletCharge({
-          ...collectionWalletScope,
-
-          collectionAmount:
-            saveData.paymentAmount,
-        });
-
-      if (!collectionChargePreflight.success) {
-
-        throw new Error(
-          collectionChargePreflight.error,
-        );
-      }
+      // Subscription-only: no Collection Wallet preflight.
 
       console.info("FINORA COLLECTION SAVE", {
         loanId: saveData.loanId,
@@ -1196,10 +1161,144 @@ export default function PaymentDetails() {
       // FINAL COLLECTION RECORD
       // ======================================================
 
+      // FINORA_R162_R4_IMMUTABLE_SNAPSHOT
+      // Capture the schedule returned by the authoritative Loan update.
+      // This data is frozen inside the Collection transaction.
+
+      const finoraSnapshotLoan =
+        updatedLoan as unknown as {
+          schedule?: unknown;
+        };
+
+      const finoraRawSchedule =
+        Array.isArray(finoraSnapshotLoan.schedule)
+          ? finoraSnapshotLoan.schedule
+          : null;
+
+      const finoraSnapshotRows: Array<{
+        number: number;
+        dueDate: string;
+        amount: number;
+        paidAmount: number;
+        waivedAmount: number;
+        penaltyAmount: number;
+        status: string;
+      }> = [];
+
+      let finoraSnapshotValid =
+        finoraRawSchedule !== null &&
+        finoraRawSchedule.length > 0;
+
+      if (finoraRawSchedule !== null) {
+        for (const raw of finoraRawSchedule) {
+          if (
+            raw === null ||
+            typeof raw !== "object" ||
+            Array.isArray(raw)
+          ) {
+            finoraSnapshotValid = false;
+            break;
+          }
+
+          const row = raw as Record<string, unknown>;
+
+          const number = Number(row.installmentNumber);
+          const dueDate =
+            typeof row.dueDate === "string"
+              ? row.dueDate.trim()
+              : "";
+
+          const status =
+            typeof row.status === "string"
+              ? row.status.trim()
+              : "";
+
+          const amount = Number(row.installmentAmount);
+          const paidAmount = Number(row.paidAmount ?? 0);
+          const waivedAmount = Number(row.waivedAmount ?? 0);
+          const penaltyAmount = Number(row.penaltyAmount ?? 0);
+
+          if (
+            !Number.isSafeInteger(number) ||
+            number <= 0 ||
+            !dueDate ||
+            !status ||
+            !Number.isFinite(amount) ||
+            amount < 0 ||
+            !Number.isFinite(paidAmount) ||
+            paidAmount < 0 ||
+            !Number.isFinite(waivedAmount) ||
+            waivedAmount < 0 ||
+            !Number.isFinite(penaltyAmount) ||
+            penaltyAmount < 0
+          ) {
+            finoraSnapshotValid = false;
+            break;
+          }
+
+          finoraSnapshotRows.push({
+            number,
+            dueDate,
+            amount,
+            paidAmount,
+            waivedAmount,
+            penaltyAmount,
+            status,
+          });
+        }
+      }
+
+      finoraSnapshotRows.sort(
+        (left, right) => left.number - right.number,
+      );
+
+      if (
+        new Set(finoraSnapshotRows.map((row) => row.number))
+          .size !== finoraSnapshotRows.length
+      ) {
+        finoraSnapshotValid = false;
+      }
+
+      const finoraPaidStatuses = new Set([
+        "paid",
+        "overdue paid",
+        "preclosed",
+      ]);
+
+      const receiptSnapshot = {
+        version: 1 as const,
+        capturedAt: new Date().toISOString(),
+        previousOutstanding: currentOutstanding,
+        amountReceived: safeNumber(saveData.paymentAmount),
+        penaltyReceived: safeNumber(saveData.penaltyAmount),
+        discountAmount: safeNumber(saveData.discountAmount),
+        remainingOutstanding: updatedOutstanding,
+        selectedEmiNumbers: [
+          ...(saveData.selectedEmiNumbers ?? []),
+        ],
+        scheduleAvailable: finoraSnapshotValid,
+        totalEmis: finoraSnapshotValid
+          ? finoraSnapshotRows.length
+          : null,
+        remainingEmis: finoraSnapshotValid
+          ? finoraSnapshotRows.filter(
+              (row) =>
+                !finoraPaidStatuses.has(
+                  row.status.toLowerCase(),
+                ),
+            ).length
+          : null,
+        installments: finoraSnapshotValid
+          ? finoraSnapshotRows
+          : [],
+      };
+
       const collectionSaveData = {
         ...saveData,
 
         outstandingBalance: updatedOutstanding,
+
+        receiptSnapshot,
       };
 
       // ======================================================
@@ -1212,39 +1311,7 @@ export default function PaymentDetails() {
           commercialWriteAuthorization,
         );
 
-      // ======================================================
-      // COLLECTION PROCESSING WALLET COMMIT
-      //
-      // The Collection itself is already persisted successfully.
-      // Debit is idempotent by Collection identity + charge code.
-      // ======================================================
-
-      const collectionChargeResult =
-        await commitCollectionProcessingWalletCharge({
-          ...collectionWalletScope,
-
-          walletId:
-            collectionChargePreflight.data.walletId,
-
-          collectionId:
-            saveData.collectionNumber,
-
-          collectionNumber:
-            saveData.collectionNumber,
-
-          collectionAmount:
-            saveData.paymentAmount,
-
-          expectedPricingQuote:
-            collectionChargePreflight.data.pricingQuote,
-        });
-
-      if (!collectionChargeResult.success) {
-
-        throw new Error(
-          collectionChargeResult.error,
-        );
-      }
+      // Subscription-only: Collection saved without Wallet debit.
 
       const savedCollectionDate =
         resolveOperationalDate(
@@ -1316,11 +1383,15 @@ export default function PaymentDetails() {
       const loanClosed = updatedOutstanding === 0;
 
       if (!printReceipt) {
-        void finoraSuccess(
-          loanClosed
-            ? "Collection saved successfully. Loan closed."
-            : "Collection saved successfully.",
-        );
+
+        setSavedCollectionPopup({
+          amount: safeNumber(savedCollection.paymentAmount),
+          penalty: safeNumber(savedCollection.penaltyAmount),
+          customer: String(saveData.customerName || "--"),
+          number: String(savedCollection.collectionNumber),
+          paymentMode: String(saveData.paymentMethod || "cash"),
+          closed: loanClosed,
+        });
       }
     } catch (error) {
       if (
@@ -1941,6 +2012,199 @@ export default function PaymentDetails() {
             ACTIONS
         ==================================================== */}
 
+                {savedCollectionPopup && (
+          <div
+            role="presentation"
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 2147483000,
+              background: "rgba(4, 12, 27, 0.75)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 16,
+            }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Collection Received Successfully"
+              style={{
+                width: "100%",
+                maxWidth: 410,
+                maxHeight: "calc(100vh - 32px)",
+                overflowY: "auto",
+                boxSizing: "border-box",
+                background: "#ffffff",
+                color: "#192334",
+                borderRadius: 20,
+                padding: 24,
+                boxShadow: "0 24px 80px rgba(0,0,0,0.35)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 13,
+              }}
+            >
+              <div style={{
+                color: "#b8860b",
+                fontSize: 13,
+                fontWeight: 750,
+                letterSpacing: 3,
+              }}>
+                FINORA
+              </div>
+
+              <div style={{
+                width: 48,
+                height: 2,
+                borderRadius: 2,
+                background: "#b8860b",
+              }} />
+
+              <div style={{
+                width: 68,
+                height: 68,
+                borderRadius: "50%",
+                border: "2px solid #16a34a",
+                color: "#16a34a",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 35,
+                fontWeight: 700,
+              }}>
+                {"\u2713"}
+              </div>
+
+              <h2 style={{
+                margin: 0,
+                fontSize: 21,
+                fontWeight: 700,
+                textAlign: "center",
+              }}>
+                Collection Received Successfully
+              </h2>
+
+              <div style={{
+                color: "#667085",
+                fontSize: 13,
+                textAlign: "center",
+              }}>
+                Payment recorded successfully
+              </div>
+
+              <div style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: 16,
+                borderRadius: 12,
+                background: "#f2f5f8",
+                textAlign: "center",
+              }}>
+                <div style={{
+                  color: "#667085",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: 1,
+                }}>
+                  AMOUNT RECEIVED
+                </div>
+
+                <div style={{
+                  color: "#16a34a",
+                  fontSize: 30,
+                  fontWeight: 750,
+                  marginTop: 5,
+                }}>
+                  {formatCurrency(savedCollectionPopup.amount)}
+                </div>
+
+                {savedCollectionPopup.penalty > 0 && (
+                  <div style={{
+                    color: "#667085",
+                    fontSize: 12,
+                    marginTop: 5,
+                  }}>
+                    Recorded Late Fee:{" "}
+                    {formatCurrency(savedCollectionPopup.penalty)}
+                  </div>
+                )}
+              </div>
+
+              <div style={{
+                display: "grid",
+                width: "100%",
+                gap: 12,
+                fontSize: 13,
+              }}>
+                <div style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}>
+                  <span style={{ color: "#667085" }}>Customer</span>
+                  <strong>{savedCollectionPopup.customer}</strong>
+                </div>
+
+                <div style={{
+                  display: "grid",
+                  gap: 4,
+                }}>
+                  <span style={{ color: "#667085" }}>
+                    Collection Number
+                  </span>
+                  <strong style={{ overflowWrap: "anywhere" }}>
+                    {savedCollectionPopup.number}
+                  </strong>
+                </div>
+
+                <div style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}>
+                  <span style={{ color: "#667085" }}>
+                    Payment Mode
+                  </span>
+                  <strong style={{ textTransform: "capitalize" }}>
+                    {savedCollectionPopup.paymentMode}
+                  </strong>
+                </div>
+              </div>
+
+              {savedCollectionPopup.closed && (
+                <div style={{
+                  fontSize: 12,
+                  color: "#15803d",
+                  fontWeight: 700,
+                }}>
+                  Loan Closed Successfully
+                </div>
+              )}
+
+              <button
+                type="button"
+                autoFocus
+                onClick={() => setSavedCollectionPopup(null)}
+                style={{
+                  width: "100%",
+                  minHeight: 46,
+                  border: 0,
+                  borderRadius: 11,
+                  background: "#b8860b",
+                  color: "#ffffff",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  fontWeight: 700,
+                }}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        )}
         <div style={responsiveActionsStyle}>
           <button
             type="button"
@@ -1949,15 +2213,6 @@ export default function PaymentDetails() {
             style={responsiveSaveButtonStyle}
           >
             {saving ? "SAVING..." : "SAVE COLLECTION"}
-          </button>
-
-          <button
-            type="button"
-            disabled={saving || !collectionDateLedgerReady}
-            onClick={() => void handleSaveCollection(true)}
-            style={responsiveReceiptButtonStyle}
-          >
-            {saving ? "SAVING..." : "SAVE & RECEIPT"}
           </button>
         </div>
       </div>

@@ -11,6 +11,7 @@
 export interface FinoraServerDirectoryBranch {
   owner_id: string;
   owner_name: string;
+  owner_mobile?: string | null;
   business_id: string;
   business_name: string;
   branch_id: string;
@@ -83,6 +84,14 @@ function validBranch(
   return (
     isId(value.owner_id) &&
     typeof value.owner_name === "string" &&
+    (
+      value.owner_mobile === undefined ||
+      value.owner_mobile === null ||
+      (
+        typeof value.owner_mobile === "string" &&
+        /^[6-9][0-9]{9}$/.test(value.owner_mobile)
+      )
+    ) &&
     isId(value.business_id) &&
     typeof value.business_name === "string" &&
     isId(value.branch_id) &&

@@ -505,6 +505,107 @@ export async function previewNextCustomerNumber():
       CustomerNumberPreview
     >
   > {
+    // FINORA_AP01_R023_ANDROID_USB_NUMBERING_PREVIEW
+  // Same USB NUMBERING_SERIES repository used by Customer Save.
+  // Read only. No PostgreSQL counter and no local fallback.
+  const { Capacitor } = await import("@capacitor/core");
+
+  if (
+    Capacitor.isNativePlatform() &&
+    Capacitor.getPlatform() === "android"
+  ) {
+    const { getSession } = await import("../../store/authStore");
+    const session = getSession();
+
+    if (
+      !session?.sessionId ||
+      session.role !== "OWNER" ||
+      !session.ownerId ||
+      !session.businessId ||
+      !session.branchId
+    ) {
+      return {
+        success: false,
+        error: "AUTHORIZED_NUMBERING_SCOPE_UNAVAILABLE",
+      };
+    }
+
+    const stored = await numberingSeriesRepository.findByBranch(
+      session.businessId,
+      session.branchId,
+    );
+
+    if (!stored.success) {
+      return {
+        success: false,
+        error: stored.error ?? "USB_NUMBERING_READ_FAILED",
+      };
+    }
+
+    const configuration = stored.data;
+
+    if (!configuration) {
+      return {
+        success: false,
+        error: "USB_NUMBERING_SERIES_NOT_FOUND",
+      };
+    }
+
+    if (
+      configuration.ownerId !== session.ownerId ||
+      configuration.businessId !== session.businessId ||
+      configuration.branchId !== session.branchId
+    ) {
+      return {
+        success: false,
+        error: "USB_NUMBERING_SCOPE_MISMATCH",
+      };
+    }
+
+    if (configuration.status !== "LOCKED") {
+      return {
+        success: false,
+        error: "USB_NUMBERING_SERIES_NOT_LOCKED",
+      };
+    }
+
+    const nextNumber =
+      configuration.lastIssuedCustomerNumber === null
+        ? configuration.startingCustomerNumber
+        : configuration.lastIssuedCustomerNumber + 1;
+
+    if (
+      !Number.isSafeInteger(nextNumber) ||
+      nextNumber < CUSTOMER_NUMBER_MIN ||
+      nextNumber > CUSTOMER_NUMBER_MAX
+    ) {
+      return {
+        success: false,
+        error: "USB_CUSTOMER_SEQUENCE_INVALID_OR_EXHAUSTED",
+      };
+    }
+
+    try {
+      return {
+        success: true,
+        data: {
+          customerNumber: nextNumber,
+          customerId: formatCustomerId(
+            configuration.businessCode,
+            configuration.branchCode,
+            nextNumber,
+          ),
+        },
+      };
+    } catch {
+      return {
+        success: false,
+        error: "USB_CUSTOMER_ID_FORMAT_INVALID",
+      };
+    }
+  }
+  // Original Windows/local preview continues unchanged.
+
   const configurationResult =
     await loadCustomerSeriesConfiguration();
 

@@ -55,9 +55,7 @@ import type {
   CustomerProfile,
 } from "../../../types/customers";
 
-import type {
-  FinoraProvisionedBusinessProfileV1,
-} from "../../../types/business/finoraBusinessProfileControl.types";
+
 
 import {
   notificationRepository,
@@ -116,6 +114,17 @@ export interface CustomerCreatedNotificationGeneratorScope {
   branchId: string;
 }
 
+/**
+ * Authenticated Business/Branch identity required for
+ * customer-created notification generation.
+ * No legacy profileId or installation-binding fields.
+ */
+export interface CustomerCreatedNotificationBusinessIdentity
+  extends CustomerCreatedNotificationGeneratorScope {
+  businessName: string;
+  branchName: string;
+}
+
 /* ============================================================
    INPUT
 ============================================================ */
@@ -127,10 +136,11 @@ export interface CustomerCreatedNotificationGeneratorInput {
   customer: CustomerProfile;
 
   /**
-   * Authoritative signed FINORA Business Profile resolved by the creation flow.
+   * Authenticated, scope-verified Business/Branch identity.
+   * The caller remains responsible for native/server authorization.
    */
   businessIdentity:
-    FinoraProvisionedBusinessProfileV1;
+    CustomerCreatedNotificationBusinessIdentity;
 
   /**
    * Notification generation metadata timestamp.
@@ -271,8 +281,8 @@ function normalizeString(
 
 function normalizeScope(
   identity:
-      FinoraProvisionedBusinessProfileV1,
-  ): CustomerCreatedNotificationGeneratorScope {
+    CustomerCreatedNotificationBusinessIdentity,
+): CustomerCreatedNotificationGeneratorScope {
   return {
     ownerId:
       normalizeString(

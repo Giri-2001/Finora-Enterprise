@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // RESPONSIVE LOGIN STYLES
@@ -683,7 +683,7 @@ export function getLoginStyles(
   // separate viewport-specific dimension.
   // ==========================================================
 
-  const logo:
+    const logo:
     CSSProperties = {
 
     display:
@@ -695,7 +695,13 @@ export function getLoginStyles(
     justifyContent:
       "center",
 
+    marginTop:
+      -8,
+
     marginBottom:
+      0,
+
+    paddingTop:
       0,
 
     fontSize:
@@ -704,25 +710,31 @@ export function getLoginStyles(
   };
 
 
-  const logoImage:
-  CSSProperties = {
+    const logoImage:
+    CSSProperties = {
 
-  display:
-    "block",
+    display:
+      "block",
 
-  width:
-    "4em",
+    width:
+      "4em",
 
-  height:
-    "4em",
+    height:
+      "4em",
 
-  maxWidth:
-    "100%",
+    maxWidth:
+      "100%",
 
-  objectFit:
-    "contain",
+    objectFit:
+      "contain",
 
-};
+    marginTop:
+      0,
+
+    marginBottom:
+      0,
+
+  };
 
   // ==========================================================
   // TITLE

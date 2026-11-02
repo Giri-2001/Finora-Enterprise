@@ -3,9 +3,7 @@
 export type ServerWalletServiceCode =
   | "CUSTOMER_CREATE"
   | "LOAN_DISBURSEMENT"
-  | "COLLECTION_BELOW_25000"
-  | "COLLECTION_25000_TO_50000"
-  | "COLLECTION_ABOVE_50000";
+  | "COLLECTION";
 
 export interface ServerWalletLivePlan {
   months: 1 | 3 | 6 | 12;
@@ -71,7 +69,7 @@ export interface ServerWalletSubscriptionPurchaseReceipt {
   replayed: boolean;
   purchaseId: string;
   subscriptionId: string;
-  transactionId: string;
+  transactionId: string | null;
   amountInr: string;
   balanceInr: string | null;
   startsAt: string;

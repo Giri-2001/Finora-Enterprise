@@ -1,5 +1,5 @@
 import { useState } from "react";
-import FinoraControlCenterIncomePricingPanel from "./FinoraControlCenterIncomePricingPanel";
+import FinoraControlCenterPlanPricingWorkspace from "./FinoraControlCenterPlanPricingWorkspace";
 
 export default function FinoraControlCenterHeaderPrices() {
   const [open, setOpen] = useState(false);
@@ -42,7 +42,7 @@ export default function FinoraControlCenterHeaderPrices() {
             background: "#0f172a",
           }}
         >
-          <FinoraControlCenterIncomePricingPanel
+          <FinoraControlCenterPlanPricingWorkspace
             onClose={() => setOpen(false)}
           />
         </div>

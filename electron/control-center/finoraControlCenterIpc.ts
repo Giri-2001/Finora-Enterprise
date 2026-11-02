@@ -3,6 +3,13 @@ import {
   createFinoraRechargeDecisionClient,
   type FinoraRechargeDecisionInput,
 } from "./finoraServerRechargeDecisionClient.js";
+import { FINORA_API_BASE_URL } from "./finoraServerAdminClient.js";
+import { loadFinoraFourPlanPricingFromServer } from "./finoraFourPlanPricingGetClient.js";
+import {
+  saveFinoraFourPlanPricingToServer,
+  type FinoraPricingSavePayload,
+} from "./finoraFourPlanPricingSaveClient.js";
+// FINORA_C8T2_PRICING_GET
 // FINORA_P567K - Read-only local-test pricing.
 import {
   loadFinoraServerEffectivePricing,
@@ -305,6 +312,11 @@ export const FINORA_CONTROL_CENTER_IPC_CHANNELS = {
     // FINORA_P1_594G2_DASHBOARD
   GET_SERVER_DASHBOARD:
     "finora:control-center:get-server-dashboard",
+GET_SERVER_FOUR_PLAN_PRICING:
+    "finora-control-center:get-server-four-plan-pricing",
+  SAVE_SERVER_FOUR_PLAN_PRICING:
+    "finora-control-center:save-server-four-plan-pricing",
+
 GET_SERVER_BRANCH_DIRECTORY:
     "finora:control-center:get-server-branch-directory",
 
@@ -1585,7 +1597,7 @@ try {
       const request = input as Record<string, unknown>;
       if (
         Object.keys(request).some(
-          key => key !== "limit" && key !== "offset" && key !== "status",
+          key => key !== "limit" && key !== "offset" && key !== "status" && key !== "search",
         )
       ) {
         return failure(
@@ -1596,6 +1608,7 @@ try {
       const limit = request.limit;
       const offset = request.offset;
       const status = request.status;
+      const search = request.search ?? "";
       if (
         typeof limit !== "number" ||
         typeof offset !== "number" ||
@@ -1619,6 +1632,14 @@ try {
         return failure("Invalid recharge history status.");
       }
 
+      if (
+        typeof search !== "string" ||
+        search.length > 100 ||
+        /[\u0000-\u001f\u007f]/.test(search)
+      ) {
+        return failure("Invalid recharge history search.");
+      }
+
       return executePrivileged(
         async () => {
           const adminApiKey =
@@ -1629,6 +1650,7 @@ try {
               limit,
               offset,
               status,
+              search,
             );
           } catch (error) {
             if (
@@ -2202,6 +2224,111 @@ registerFinoraDeveloperSecurityControlCenterHandler(
         } catch (error) {
           throw error;
         }
+      });
+    },
+  );
+  // FINORA_C8T2_PRICING_GET
+  // Read-only. Developer unlock and trusted renderer required.
+  // Admin Key stays exclusively inside Electron Main Process.
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.GET_SERVER_FOUR_PLAN_PRICING,
+    async (event, request: unknown) => {
+      if (!isTrustedFinoraControlCenterRenderer(event.senderFrame)) {
+        return failure(
+          "FINORA Pricing access requires the trusted Control Center renderer.",
+        );
+      }
+
+      if (
+        request === null ||
+        typeof request !== "object" ||
+        Array.isArray(request) ||
+        Object.getPrototypeOf(request) !== Object.prototype
+      ) {
+        return failure("Invalid FINORA Pricing request.");
+      }
+
+      const input = request as Record<string, unknown>;
+      const keys = Object.keys(input);
+
+      if (
+        keys.length !== 2 ||
+        !Object.prototype.hasOwnProperty.call(input, "scope") ||
+        !Object.prototype.hasOwnProperty.call(input, "branchId")
+      ) {
+        return failure("Invalid FINORA Pricing request fields.");
+      }
+
+      const scope = input.scope;
+      const branchId = input.branchId;
+
+      if (scope !== "GLOBAL" && scope !== "BRANCH") {
+        return failure("Invalid FINORA Pricing scope.");
+      }
+
+      if (
+        (scope === "GLOBAL" && branchId !== null) ||
+        (scope === "BRANCH" &&
+          (typeof branchId !== "string" ||
+            !/^[A-Za-z0-9_-]{1,128}$/.test(branchId)))
+      ) {
+        return failure("Invalid FINORA Pricing branch scope.");
+      }
+
+      return executePrivileged(async () => {
+        const adminApiKey =
+          await readFinoraServerAdminCredential();
+
+        return loadFinoraFourPlanPricingFromServer({
+          baseUrl: FINORA_API_BASE_URL,
+          adminKey: adminApiKey,
+          scope,
+          branchId: branchId as string | null,
+        });
+      });
+    },
+  );
+
+  // FINORA_C8_X42_AK_PROTECTED_PRICING_SAVE
+  // Developer-unlocked Control Center only.
+  // Admin credential remains in the privileged Main Process.
+  registerFinoraDeveloperProtectedControlCenterHandler(
+    FINORA_CONTROL_CENTER_IPC_CHANNELS.SAVE_SERVER_FOUR_PLAN_PRICING,
+    async (event, request: unknown) => {
+      if (!isTrustedFinoraControlCenterRenderer(event.senderFrame)) {
+        return failure("FINORA_PRICING_SAVE_RENDERER_NOT_TRUSTED");
+      }
+
+      if (
+        request === null ||
+        typeof request !== "object" ||
+        Array.isArray(request) ||
+        Object.getPrototypeOf(request) !== Object.prototype
+      ) {
+        return failure("FINORA_PRICING_SAVE_REQUEST_INVALID");
+      }
+
+      const input = request as Record<string, unknown>;
+
+      if (
+        Object.keys(input).length !== 2 ||
+        !Object.prototype.hasOwnProperty.call(input, "scope") ||
+        !Object.prototype.hasOwnProperty.call(input, "plans")
+      ) {
+        return failure("FINORA_PRICING_SAVE_FIELDS_INVALID");
+      }
+
+      // The dedicated Save Client validates all nested fields,
+      // exact plan order, money limits and branch scope before HTTP.
+      return executePrivileged(async () => {
+        const adminApiKey =
+          await readFinoraServerAdminCredential();
+
+        return saveFinoraFourPlanPricingToServer({
+          baseUrl: FINORA_API_BASE_URL,
+          adminKey: adminApiKey,
+          payload: input as FinoraPricingSavePayload,
+        });
       });
     },
   );

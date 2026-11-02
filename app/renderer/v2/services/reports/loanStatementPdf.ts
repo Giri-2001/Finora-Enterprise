@@ -50,6 +50,8 @@
 // ============================================================
 
 import { getBusinessContext } from "../business/businessContextService";
+import finoraLoanStatementLogoUrl from "../../app/assets/finoraenterprise.png";
+import { loadFinoraServerSettingsIdentity } from "../business/finoraServerSettingsIdentity";
 
 import type { jsPDF } from "jspdf";
 
@@ -64,6 +66,7 @@ import type {
 import {
   addFinoraPdfFooters,
   createFinoraPdf,
+  getReportGeneratedAt,
   downloadFinoraPdf,
   printFinoraPdf,
   shareFinoraPdf,
@@ -208,6 +211,10 @@ function drawSectionTitle(
   title: string,
 
   currentY: number,
+  options?: {
+    generatedAt?: string;
+    extraUnderlineGap?: number;
+  },
 ): number {
   const y = ensurePageSpace(document, currentY, 12);
 
@@ -217,15 +224,47 @@ function drawSectionTitle(
 
   document.setTextColor(0);
 
-  document.text(title, PAGE_MARGIN_X, y);
+  // FINORA_C80_B23_C2_C6_B2_R1_TYPED_SCOPE
+  if (options?.generatedAt) {
+    const maximumWidth = 105;
+    let visibleTitle = title;
+
+    while (
+      visibleTitle.length > 4 &&
+      document.getTextWidth(visibleTitle) > maximumWidth
+    ) {
+      visibleTitle = visibleTitle.slice(0, -1);
+    }
+
+    if (visibleTitle !== title) {
+      visibleTitle = `${visibleTitle.slice(0, -3)}...`;
+    }
+
+    document.text(visibleTitle, PAGE_MARGIN_X, y);
+
+    document.setFont("helvetica", "normal");
+    document.setFontSize(7);
+    document.setTextColor(85, 94, 108);
+
+    document.text(
+      `Generated: ${options.generatedAt}`,
+      document.internal.pageSize.getWidth() - PAGE_MARGIN_X,
+      y,
+      { align: "right" },
+    );
+
+    document.setTextColor(0);
+  } else {
+    document.text(title, PAGE_MARGIN_X, y);
+  }
 
   document.setLineWidth(0.25);
 
   document.line(
     PAGE_MARGIN_X,
-    y + 3,
+    y + 3 + (options?.extraUnderlineGap ?? 0),
     document.internal.pageSize.getWidth() - PAGE_MARGIN_X,
-    y + 3,
+    y + 3 + (options?.extraUnderlineGap ?? 0),
   );
 
   return y + 9;
@@ -383,8 +422,28 @@ function drawTableRow(
   currentY: number,
 
   rowHeight = 8,
+  rowTone: "default" | "pending" | "paid" = "default",
 ): number {
   let x = PAGE_MARGIN_X;
+
+  // FINORA_C80_B23_C2_C8_B_CONDITIONAL_COLORS
+  // FINORA_C80_B23_C2_C9_PAID_GREEN
+  // Status colors apply only when an EMI caller passes a row tone.
+  if (rowTone === "pending" || rowTone === "paid") {
+    if (rowTone === "pending") {
+      document.setFillColor(255, 239, 240);
+    } else {
+      document.setFillColor(240, 250, 245);
+    }
+
+    document.rect(
+      PAGE_MARGIN_X,
+      currentY,
+      getPageContentWidth(document),
+      rowHeight,
+      "F",
+    );
+  }
 
   document.setDrawColor(225);
 
@@ -399,7 +458,13 @@ function drawTableRow(
 
   document.setFontSize(7);
 
-  document.setTextColor(35);
+  if (rowTone === "pending") {
+    document.setTextColor(145, 32, 43);
+  } else if (rowTone === "paid") {
+    document.setTextColor(35, 120, 80);
+  } else {
+    document.setTextColor(35);
+  }
 
   columns.forEach((column, index) => {
     const align = column.align ?? "left";
@@ -595,9 +660,12 @@ function drawEmiSchedule(
   // KEEP TITLE + HEADER + FIRST ROW TOGETHER
   // ==========================================================
 
-  let y = ensurePageSpace(document, currentY, schedule.length > 0 ? 29 : 20);
+  let y = ensurePageSpace(document, currentY, schedule.length > 0 ? 31 : 22);
 
   y = drawSectionTitle(document, "EMI SCHEDULE", y);
+
+  // Space below the title while keeping the first row with its header.
+  y += 2;
 
   if (schedule.length === 0) {
     document.setFont("helvetica", "normal");
@@ -637,6 +705,12 @@ function drawEmiSchedule(
         safeText(installment.receiptNumber),
       ],
       y,
+      8,
+      safeText(installment.status).toUpperCase() === "PENDING"
+        ? "pending"
+        : safeText(installment.status).toUpperCase() === "PAID"
+          ? "paid"
+          : "default",
     );
   }
 
@@ -800,9 +874,16 @@ function drawFinalBalance(
 
   const contentWidth = getPageContentWidth(document);
 
-  document.setDrawColor(40, 130, 90);
+  const hasPendingOutstanding = statement.currentOutstanding > 0;
 
-  document.setFillColor(240, 250, 245);
+  if (hasPendingOutstanding) {
+    document.setDrawColor(190, 55, 64);
+    document.setFillColor(255, 239, 240);
+  } else {
+    // Preserve the original FINORA green card exactly.
+    document.setDrawColor(40, 130, 90);
+    document.setFillColor(240, 250, 245);
+  }
 
   document.roundedRect(PAGE_MARGIN_X, y, contentWidth, 22, 2, 2, "FD");
 
@@ -810,7 +891,12 @@ function drawFinalBalance(
 
   document.setFontSize(8);
 
-  document.setTextColor(35, 120, 80);
+  if (hasPendingOutstanding) {
+    document.setTextColor(145, 32, 43);
+  } else {
+    // Original green text for a cleared balance.
+    document.setTextColor(35, 120, 80);
+  }
 
   document.text("CURRENT AUTHORITATIVE OUTSTANDING", PAGE_MARGIN_X + 4, y + 7);
 
@@ -834,6 +920,170 @@ function drawFinalBalance(
 // BUILD DOCUMENT
 // ============================================================
 
+/* FINORA_C80_B23_C2_C2_B_CENTER_LOGO
+ * Place the original FINORA PNG at the upper center of page one.
+ * Preserve the shared report header, title and financial layout.
+ */
+async function addFinoraLoanStatementCenterLogo(
+  document: jsPDF,
+): Promise<void> {
+  const image = new Image();
+  image.src = finoraLoanStatementLogoUrl;
+
+  try {
+    await image.decode();
+  } catch {
+    throw new Error("Unable to load FINORA Loan Statement logo.");
+  }
+
+  if (!image.naturalWidth || !image.naturalHeight) {
+    throw new Error("FINORA Loan Statement logo dimensions invalid.");
+  }
+
+  const canvas = window.document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("FINORA Loan Statement logo canvas unavailable.");
+  }
+
+  context.drawImage(image, 0, 0, 256, 256);
+
+  const png = canvas.toDataURL("image/png");
+  const pageWidth = document.internal.pageSize.getWidth();
+  // FINORA_C80_B23_C2_C3_PREMIUM_LOGO_SIZE
+  const logoSize = 30;
+
+  document.addImage(
+    png,
+    "PNG",
+    (pageWidth - logoSize) / 2,
+    5,
+    logoSize,
+    logoSize,
+    "FINORA_LOAN_STATEMENT_CENTER_LOGO",
+    "FAST",
+  );
+}
+async function drawLoanStatementBusinessIdentity(
+  document: jsPDF,
+  statement: LoanReportStatement,
+): Promise<void> {
+  const context = getBusinessContext();
+
+  const scope =
+    context?.ownerId?.trim() &&
+    context.businessId?.trim() &&
+    context.branchId?.trim()
+      ? {
+          ownerId: context.ownerId.trim(),
+          businessId: context.businessId.trim(),
+          branchId: context.branchId.trim(),
+        }
+      : null;
+
+  // Older Loan type definitions do not declare these optional fields.
+  // Read them without altering the authoritative Loan interface.
+  const loanRecord =
+    statement.loan as unknown as Record<string, unknown>;
+
+  const loanBusinessId =
+    typeof loanRecord.businessId === "string"
+      ? loanRecord.businessId.trim()
+      : "";
+
+  const loanBranchId =
+    typeof loanRecord.branchId === "string"
+      ? loanRecord.branchId.trim()
+      : "";
+
+  const matchingScope = Boolean(
+    scope &&
+      (!loanBusinessId || loanBusinessId === scope.businessId) &&
+      (!loanBranchId || loanBranchId === scope.branchId),
+  );
+
+  let businessName = "Not recorded";
+  let branchName = "Not recorded";
+
+  if (scope && matchingScope) {
+    const serverIdentity =
+      await loadFinoraServerSettingsIdentity(scope);
+
+    if (serverIdentity.success) {
+      businessName = serverIdentity.data.businessName.trim();
+      branchName = serverIdentity.data.branchName.trim();
+    } else {
+      const profile = context?.businessProfile;
+
+      if (
+        profile &&
+        profile.ownerId === scope.ownerId &&
+        profile.businessId === scope.businessId &&
+        profile.branchId === scope.branchId &&
+        profile.businessName.trim() &&
+        profile.branchName.trim()
+      ) {
+        businessName = profile.businessName.trim();
+        branchName = profile.branchName.trim();
+      }
+    }
+  }
+
+  const rightX =
+    document.internal.pageSize.getWidth() - PAGE_MARGIN_X;
+
+  // Clear only the old upper-right Generated Date.
+  // The center PNG occupies a separate horizontal region.
+  document.setFillColor(255, 255, 255);
+  document.rect(135, 9, rightX - 135 + 1, 23, "F");
+
+  const renderRightName = (
+    original: string,
+    y: number,
+    baseSize: number,
+  ): void => {
+    let size = baseSize;
+    document.setFont("helvetica", "bold");
+    document.setFontSize(size);
+
+    while (
+      size > 7 &&
+      document.getTextWidth(original) > 58
+    ) {
+      size -= 0.5;
+      document.setFontSize(size);
+    }
+
+    let visible = original;
+
+    while (
+      visible.length > 4 &&
+      document.getTextWidth(visible) > 58
+    ) {
+      visible = visible.slice(0, -1);
+    }
+
+    if (visible !== original) {
+      visible = `${visible.slice(0, -3)}...`;
+    }
+
+    document.text(visible, rightX, y, {
+      align: "right",
+    });
+  };
+
+  document.setTextColor(22, 35, 52);
+  renderRightName(businessName, 17, 11);
+
+  document.setTextColor(92, 101, 113);
+  renderRightName(branchName, 25, 9);
+
+  document.setTextColor(0);
+}
 export async function buildLoanStatementPdf(loanId: string): Promise<jsPDF> {
   const statement = await buildLoanReportStatement(loanId);
 
@@ -841,21 +1091,31 @@ export async function buildLoanStatementPdf(loanId: string): Promise<jsPDF> {
     throw new Error("Unable to find the selected loan for the Loan Statement.");
   }
 
-  const customerName = statement.collections.find((collection) =>
-    Boolean(collection.customerName),
-  )?.customerName;
+  // FINORA_C80_B23_C2_C5_CUSTOMER_NAME_HEADING
+  // Prefer the authoritative selected Loan's customer name.
+  // Collection history may be empty for a newly disbursed Loan.
+  const customerName =
+    safeText(statement.loan.customerName, "") ||
+    safeText(
+      statement.collections.find((collection) =>
+        Boolean(collection.customerName),
+      )?.customerName,
+      "",
+    ) ||
+    "Unnamed Customer";
 
-  const subtitle = customerName
-    ? `${customerName} - ${statement.loanNumber}`
-    : statement.loanNumber;
+  const generatedAt = getReportGeneratedAt();
 
   const document = createFinoraPdf({
     fileName: `FINORA_Loan_Statement_${statement.loanNumber}.pdf`,
 
     title: resolveBusinessReportTitle("Loan Statement"),
 
-    subtitle,
+    generatedAt,
   });
+
+  await addFinoraLoanStatementCenterLogo(document);
+  await drawLoanStatementBusinessIdentity(document, statement);
 
   let y = CONTENT_START_Y;
 
@@ -863,7 +1123,15 @@ export async function buildLoanStatementPdf(loanId: string): Promise<jsPDF> {
   // LOAN INFORMATION
   // ==========================================================
 
-  y = drawSectionTitle(document, "LOAN INFORMATION", y);
+  y = drawSectionTitle(
+    document,
+    `LOAN INFORMATION - ${customerName}`,
+    y,
+    {
+      generatedAt,
+      extraUnderlineGap: 0.35,
+    },
+  );
 
   y = drawMetricGrid(document, getLoanMeta(statement), y, 2);
 
@@ -871,15 +1139,17 @@ export async function buildLoanStatementPdf(loanId: string): Promise<jsPDF> {
   // FINANCIAL SUMMARY
   // ==========================================================
 
-  y = drawSectionTitle(document, "FINANCIAL SUMMARY", y + 2);
+  // FINORA_C80_B23_C2_C7_B_SECTION_SPACING
+  // Add breathing room around the financial heading only.
+  y = drawSectionTitle(document, "FINANCIAL SUMMARY", y + 4);
 
-  y = drawMetricGrid(document, getFinancialMetrics(statement), y, 2);
+  y = drawMetricGrid(document, getFinancialMetrics(statement), y + 2, 2);
 
   // ==========================================================
   // EMI SCHEDULE
   // ==========================================================
 
-  y = drawEmiSchedule(document, statement.schedule, y + 2);
+  y = drawEmiSchedule(document, statement.schedule, y + 4);
 
   // ==========================================================
   // COLLECTION HISTORY

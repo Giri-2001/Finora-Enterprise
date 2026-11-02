@@ -111,10 +111,6 @@ import {
 import {
   customerService,
 } from "../../../../services/customer/customerService";
-import {
-  commitWalletPlatformCharge,
-  preflightWalletPlatformCharge,
-} from "../../../../services/wallet/walletPlatformChargeService";
 
 
 import {
@@ -133,6 +129,10 @@ import {
 import {
   requireBusinessContext,
 } from "../../../../services/business/businessContextService";
+
+import {
+  loadFinoraServerSettingsIdentity,
+} from "../../../../services/business/finoraServerSettingsIdentity";
 
 import {
   storageManager,
@@ -170,8 +170,8 @@ import type {
 } from "../../../../types/customers";
 
 import type {
-  FinoraProvisionedBusinessProfileV1,
-} from "../../../../types/business/finoraBusinessProfileControl.types";
+  FinoraServerSettingsIdentity,
+} from "../../../../services/business/finoraServerSettingsIdentity";
 
 
 import type {
@@ -540,7 +540,7 @@ export default function Step6Review({
     pendingNotificationBusinessIdentity,
     setPendingNotificationBusinessIdentity,
   ] = useState<
-    FinoraProvisionedBusinessProfileV1 | undefined
+    FinoraServerSettingsIdentity | undefined
   >(
     undefined,
   );
@@ -932,6 +932,14 @@ export default function Step6Review({
     return key;
   };
 
+  // Show Save validation directly in the Customer Review workspace.
+  const [customerValidationMessage, setCustomerValidationMessage] =
+    useState<string | null>(null);
+
+  const reportCustomerValidation = (message: string): void => {
+    setCustomerValidationMessage(message);
+    void finoraWarning(message);
+  };
   const handleSave =
     async (): Promise<void> => {
 
@@ -947,7 +955,7 @@ export default function Step6Review({
       if (savedCustomerRetryLockRef.current !== null) {
         await finoraError(
           `Customer ${savedCustomerRetryLockRef.current} was already saved. ` +
-          "Do NOT save again. Verify the Wallet charge and Customer record before recovery.",
+          "Do NOT save again. Verify the Customer record before recovery.",
         );
         return;
       }
@@ -969,7 +977,7 @@ export default function Step6Review({
             .filter(Boolean)
             .join(", ");
 
-        await finoraWarning(
+        reportCustomerValidation(
           `Complete required Customer fields before saving: ${missingIdentityFields}.`,
         );
 
@@ -978,10 +986,17 @@ export default function Step6Review({
       }
 
 
+      if (!/^[0-9]{10}$/.test(mobileNumber)) {
+        reportCustomerValidation(
+          "Step 1: Mobile Number must contain exactly 10 digits.",
+        );
+        return;
+      }
+
       if (!addressComplete) {
 
-        await finoraWarning(
-          "Complete the required Customer Address before saving.",
+        reportCustomerValidation(
+          "Step 2: Current Address is required before saving the Customer.",
         );
 
         return;
@@ -989,10 +1004,19 @@ export default function Step6Review({
       }
 
 
+      // FINORA C5-G: Aadhaar is visibly starred in Step 2.
+      // Optional address/KYC fields must not block Save.
+      if (!aadhaarProvided) {
+        reportCustomerValidation(
+          "Step 2: Aadhaar Number is required before saving the Customer.",
+        );
+        return;
+      }
+
       if (!nomineeAdded) {
 
-        await finoraWarning(
-          "Add or link Nominee information before saving the Customer.",
+        reportCustomerValidation(
+          "Step 3: Enter Nominee Name or link an existing Customer Number, then select Relationship.",
         );
 
         return;
@@ -1002,7 +1026,7 @@ export default function Step6Review({
 
       if (!nomineeRelationship) {
 
-        await finoraWarning(
+        reportCustomerValidation(
           "Select the Nominee Relationship before saving the Customer.",
         );
 
@@ -1011,6 +1035,19 @@ export default function Step6Review({
       }
 
 
+      if (
+        nomineePhoneNumber &&
+        !/^[0-9]{10}$/.test(nomineePhoneNumber)
+      ) {
+        reportCustomerValidation(
+          "Step 3: Nominee Phone Number must contain exactly 10 digits.",
+        );
+        return;
+      }
+
+      setCustomerValidationMessage(
+        "Checking Customer authorization...",
+      );
       setIsSaving(true);
 
       const processingId =
@@ -1587,7 +1624,7 @@ export default function Step6Review({
           "";
 
         let notificationBusinessIdentity:
-          FinoraProvisionedBusinessProfileV1 | null =
+          FinoraServerSettingsIdentity | null =
             null;
 
 
@@ -1631,54 +1668,46 @@ export default function Step6Review({
           }
 
 
-          const businessProfile =
-            businessContext.businessProfile;
+          // C5-N: Use the authenticated Server Reception identity.
+          // Never manufacture a legacy signed business profile.
+          const serverIdentityResult =
+            await loadFinoraServerSettingsIdentity({
+              ownerId: activeOwnerId,
+              businessId: activeBusinessId,
+              branchId: activeBranchId,
+            });
 
-
-          if (!businessProfile) {
+          if (!serverIdentityResult.success) {
             throw new Error(
-              "Signed FINORA Business Profile is unavailable.",
+              `Customer Save blocked: Server Business Identity verification failed (${serverIdentityResult.errorCode}).`,
             );
           }
 
+          const verifiedIdentity = serverIdentityResult.data;
 
           if (
-            businessProfile.ownerId !==
-              activeOwnerId ||
-            businessProfile.businessId !==
-              activeBusinessId ||
-            businessProfile.branchId !==
-              activeBranchId
+            verifiedIdentity.ownerId !== activeOwnerId ||
+            verifiedIdentity.businessId !== activeBusinessId ||
+            verifiedIdentity.branchId !== activeBranchId
           ) {
             throw new Error(
-              "Signed FINORA Business Profile does not match the active Business scope.",
+              "Customer Save blocked: Server Business Identity scope mismatch.",
             );
           }
-
 
           activeBusinessName =
-            businessProfile.businessName.trim();
+            verifiedIdentity.businessName.trim();
 
           const activeBranchName =
-            businessProfile.branchName.trim();
+            verifiedIdentity.branchName.trim();
 
-
-          if (!activeBusinessName) {
+          if (!activeBusinessName || !activeBranchName) {
             throw new Error(
-              "Registered Business Name is unavailable in the signed FINORA Business Profile.",
+              "Customer Save blocked: Server Business/Branch names unavailable.",
             );
           }
 
-
-          if (!activeBranchName) {
-            throw new Error(
-              "Registered Branch Name is unavailable in the signed FINORA Business Profile.",
-            );
-          }
-
-
-          notificationBusinessIdentity =
-            businessProfile;
+          notificationBusinessIdentity = verifiedIdentity;
 
         } catch (error) {
 
@@ -1687,7 +1716,11 @@ export default function Step6Review({
             error,
           );
 
-          return;
+          throw error instanceof Error
+            ? error
+            : new Error(
+                "Customer Save blocked: Signed Business Profile could not be verified.",
+              );
 
         }
 
@@ -1699,7 +1732,9 @@ export default function Step6Review({
             "Authoritative Business Identity snapshot could not be resolved.",
           );
 
-          return;
+          throw new Error(
+            "Customer Save blocked: Authoritative Business Identity is unavailable.",
+          );
 
         }
 
@@ -1739,37 +1774,7 @@ export default function Step6Review({
         }
 
 
-        // ==================================================
-        // CUSTOMER CREATE WALLET CHARGE PREFLIGHT
-        //
-        // Price is resolved by the FINORA pricing authority.
-        // New-customer flow only. Customer edits are not billed.
-        // ==================================================
-
-        const customerChargePreflight =
-          await preflightWalletPlatformCharge({
-            ownerId:
-              notificationBusinessIdentity.ownerId,
-
-            businessId:
-              notificationBusinessIdentity.businessId,
-
-            branchId:
-              notificationBusinessIdentity.branchId,
-
-            chargeCode:
-              "CUSTOMER_NUMBER_GENERATION",
-          });
-
-        if (!customerChargePreflight.success) {
-
-          await finoraError(
-            customerChargePreflight.error,
-          );
-
-          return;
-        }
-
+        // Subscription-only: no Customer Wallet preflight.
 
         // FINORA_P1_732E_CONCURRENT_CREATE_GUARD
         // Acquire synchronously BEFORE any numbering API/USB call.
@@ -2380,9 +2385,33 @@ export default function Step6Review({
         // An uncertain result requires reconciliation, not retry.
         savedCustomerRetryLockRef.current = finalCustomerId;
 
+        // FINORA HF28-CH45-C56
+        // Forward the existing authenticated business scope
+        // to the USB persistence layer.
+        const customerStorageScope = {
+          ownerId:
+            String(notificationBusinessIdentity.ownerId ?? "").trim(),
+          businessId:
+            String(notificationBusinessIdentity.businessId ?? "").trim(),
+          branchId:
+            String(notificationBusinessIdentity.branchId ?? "").trim(),
+        };
+
+        if (
+          !customerStorageScope.ownerId ||
+          !customerStorageScope.businessId ||
+          !customerStorageScope.branchId
+        ) {
+          throw new Error(
+            "FINORA_CUSTOMER_SAVE_SCOPE_MISSING: " +
+            "Authenticated branch scope is required.",
+          );
+        }
+
         const result =
           await customerService.create(
             newCustomer,
+            customerStorageScope,
           );
 
 
@@ -2435,60 +2464,8 @@ export default function Step6Review({
           }
         }
 
-        const customerChargeResult =
-          await commitWalletPlatformCharge({
-            walletId:
-              customerChargePreflight.data.walletId,
-
-            ownerId:
-              notificationBusinessIdentity.ownerId,
-
-            businessId:
-              notificationBusinessIdentity.businessId,
-
-            branchId:
-              notificationBusinessIdentity.branchId,
-
-            chargeCode:
-              "CUSTOMER_NUMBER_GENERATION",
-
-            sourceType:
-              "CUSTOMER",
-
-            sourceId:
-              finalCustomerId,
-
-            sourceReference:
-              finalCustomerId,
-
-            remarks:
-              `Customer created: ${finalCustomerId}`,
-
-            expectedPricingQuote:
-              customerChargePreflight.data.pricingQuote,
-          });
-
-        if (!customerChargeResult.success) {
-          // FINORA_P1_732A_SAVED_CUSTOMER_RECOVERY
-          // Customer persistence already succeeded.
-          // Wallet result may be uncertain: never create another
-          // customer or issue another debit automatically.
-          const walletFailureCode =
-            String(customerChargeResult.errorCode ?? "UNKNOWN_WALLET_RESULT");
-
-          console.error("FINORA SAVED CUSTOMER WALLET RECONCILIATION REQUIRED", {
-            customerId: finalCustomerId,
-            walletFailureCode,
-          });
-
-          throw new Error(
-            `Customer ${finalCustomerId} was saved, but Wallet charge is not confirmed. ` +
-            `Status: ${walletFailureCode}. ` +
-            "Do NOT create this customer again or repeat the Wallet charge. " +
-            "Verify the customer record and canonical Wallet ledger before recovery.",
-          );
-        }
-
+        // Subscription-only: Customer persistence completed without Wallet debit.
+        // Legacy CHARGED journal status retained for compatibility; no debit occurs.
         if (finoraCentralCustomerSaveReady) {
           const journalCharged = await advanceFinoraCustomerRetryJournal(
             {
@@ -2504,7 +2481,7 @@ export default function Step6Review({
           );
           if (!journalCharged.success) {
             throw new Error(
-              "Wallet charge succeeded, but Journal completion is unconfirmed. Reconcile before retry; do not charge again.",
+              "Customer saved, but Journal completion is unconfirmed. Reconcile before retry; do not save again.",
             );
           }
         }
@@ -2549,12 +2526,12 @@ export default function Step6Review({
         
 
 
+        setCustomerValidationMessage(null);
+
         await finoraSuccess(
           `Customer Created Successfully
 
-Customer ID: ${finalCustomerId}
-FINORA Wallet Fee: ?${customerChargeResult.data.amount}
-Available Balance: ?${customerChargeResult.data.availableBalance}`,
+Customer ID: ${finalCustomerId}`,
         );
 
       } catch (error) {
@@ -2562,6 +2539,12 @@ Available Balance: ?${customerChargeResult.data.availableBalance}`,
         console.error(
           "FINORA CUSTOMER SAVE ERROR:",
           error,
+        );
+
+        setCustomerValidationMessage(
+          error instanceof Error
+            ? error.message
+            : "Customer Save failed. Verify the Customer record before retrying.",
         );
 
         await finoraError(
@@ -2697,11 +2680,42 @@ Available Balance: ?${customerChargeResult.data.availableBalance}`,
             }
           >
 
-            <ReviewActions
+            {customerValidationMessage && (
+            <div
+              role="alert"
+              aria-live="assertive"
+              style={{
+                padding: "12px 14px",
+                marginBottom: 12,
+                borderRadius: 10,
+                border: "1px solid var(--finora-theme-border-default, currentColor)",
+                background: "var(--finora-theme-surface-muted, transparent)",
+                color: "var(--finora-theme-text-primary, inherit)",
+                fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+                fontSize: 13,
+                fontWeight: 600,
+                lineHeight: 1.5,
+              }}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  color: "var(--finora-theme-danger, #DC2626)",
+                  marginRight: 8,
+                  fontWeight: 700,
+                }}
+              >
+                *
+              </span>
+              {customerValidationMessage}
+            </div>
+          )}
+          <ReviewActions
 
               onSave={
                 handleSave
               }
+              isSaving={isSaving}
 
               onEdit={
                 handleEdit

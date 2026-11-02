@@ -246,6 +246,18 @@ function Field({
         }
       >
         {label}
+        {label === "Current Address" && (
+          <span
+            aria-hidden="true"
+            style={{
+              color: "var(--finora-theme-danger, #DC2626)",
+              marginLeft: 4,
+              fontWeight: 700,
+            }}
+          >
+            *
+          </span>
+        )}
       </label>
 
 

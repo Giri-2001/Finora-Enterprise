@@ -62,7 +62,7 @@ const FINORA_MAIN_SESSION_TOUCH_THROTTLE_MS =
   30_000;
 
 const FINORA_MAIN_SESSION_VALIDATE_INTERVAL_MS =
-  60_000;
+  600_000;
 
 // ============================================================
 // COMPONENT
@@ -75,16 +75,26 @@ export default function SessionGuard({
   const [serverTemporarilyUnavailable, setServerTemporarilyUnavailable] =
     useState(false);
 
+  // A rejected session locks the UI without automatic logout/reload.
+  const [sessionSecurityLocked, setSessionSecurityLocked] =
+    useState(false);
+
   // ==========================================================
   // SESSION ACTIVITY / EXPIRATION MONITOR
   // ==========================================================
 
   useEffect(() => {
     const activityEvents = [
+      // FINORA_R195_C3_R1_ACTIVITY
       "click",
       "keydown",
       "mousemove",
       "scroll",
+      "pointerdown",
+      "touchstart",
+      "input",
+      "change",
+      "wheel",
     ];
 
     let lastMainTouchAt =
@@ -144,12 +154,10 @@ export default function SessionGuard({
 
       // FINORA_P1_709Q_GUARD_TRACE
       console.warn("[FINORA SESSION GUARD REJECTION]", reason);
-      window.alert(
-        "FINORA SESSION GUARD REJECTED THE RECEPTION SESSION." +
-        "\nReason: " + reason
-      );
-      invalidateSession();
-      window.location.reload();
+      // Preserve the window and login view; do not automatically
+      // navigate or reload after a rejected security session.
+      // Protected children stay unmounted until user reauthenticates.
+      setSessionSecurityLocked(true);
     }
 
     // --------------------------------------------------------
@@ -267,10 +275,10 @@ export default function SessionGuard({
     // --------------------------------------------------------
     // AUTHORITATIVE PERIODIC VALIDATION
     //
-    // Every 60 seconds main process:
+    // Every 10 minutes authoritative session validation:
     //
     // - verifies the opaque session still exists
-    // - enforces monotonic 30-minute idle expiry
+    // - enforces authoritative 60-minute idle expiry
     // - re-reads protected credential state
     // - re-evaluates Branch Access / activation / entitlement
     //
@@ -513,7 +521,57 @@ export default function SessionGuard({
   // RENDER
   // ==========================================================
 
-  return serverTemporarilyUnavailable ? (
+  return sessionSecurityLocked ? (
+    <div
+      role="alert"
+      aria-live="assertive"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 2147483647,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        gap: 16,
+        background: "#101827",
+        color: "#ffffff",
+        textAlign: "center",
+        padding: 24,
+        fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+      }}
+    >
+      <strong>FINORA - Session verification required</strong>
+      <span>
+        The active session could not be authorized.
+        Protected operations are locked.
+      </span>
+      <span>
+        FINORA will not automatically log out or reload this window.
+      </span>
+      <button
+        type="button"
+        onClick={() => {
+          // Explicit user action, never an automatic guard exit.
+          invalidateSession();
+          window.location.reload();
+        }}
+        style={{
+          border: "1px solid #64748b",
+          borderRadius: 10,
+          background: "#ffffff",
+          color: "#101827",
+          padding: "10px 18px",
+          fontFamily: "inherit",
+          fontSize: 14,
+          fontWeight: 650,
+          cursor: "pointer",
+        }}
+      >
+        Sign Out and Log In Again
+      </button>
+    </div>
+  ) : serverTemporarilyUnavailable ? (
     <div
       role="alert"
       aria-live="assertive"

@@ -541,6 +541,21 @@ export default function FinoraControlCenterWalletHistoryPanel({
       [],
     );
 
+  // FINORA_W9C1_CONFIRMED_RECHARGE_REFRESH
+  useEffect(() => {
+    const refreshConfirmedRecharge = () => {
+      void loadHistory();
+    };
+    window.addEventListener(
+      "finora:control-center-recharge-decision-confirmed",
+      refreshConfirmedRecharge
+    );
+    return () => window.removeEventListener(
+      "finora:control-center-recharge-decision-confirmed",
+      refreshConfirmedRecharge
+    );
+  }, [loadHistory]);
+
   useEffect(
     () => {
       void loadHistory();

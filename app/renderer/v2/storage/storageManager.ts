@@ -781,6 +781,29 @@ export class StorageManager {
       success: true,
 
       data: result.data as T,
+
+      // FINORA HF28-CH45-C63
+      // Forward only a well-formed optional digest.
+      ...(typeof result.usageRecordDigest === "string" &&
+      /^[a-f0-9]{64}$/.test(result.usageRecordDigest)
+        ? { usageRecordDigest: result.usageRecordDigest }
+        : {}),
+      // Native-only digest availability; not a Billing receipt.
+      ...(result.usageDigestStatus ===
+          "BILLING_DIGEST_UNAVAILABLE"
+        ? {
+            usageDigestStatus:
+              "BILLING_DIGEST_UNAVAILABLE" as const,
+          }
+        : result.usageDigestStatus ===
+            "LOCAL_USB_READBACK_DIGEST_READY" &&
+          typeof result.usageRecordDigest === "string" &&
+          /^[a-f0-9]{64}$/.test(result.usageRecordDigest)
+        ? {
+            usageDigestStatus:
+              "LOCAL_USB_READBACK_DIGEST_READY" as const,
+          }
+        : {}),
     };
   }
 

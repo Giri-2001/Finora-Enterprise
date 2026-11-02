@@ -25,9 +25,11 @@ type Entry = {
   committed: boolean;
 };
 
-// FINORA_P1_726P_VERIFIED_SLIDING
-// Maximum time since the last successful server authorization.
-const SERVER_VERIFICATION_GRACE_MS = 30 * 60 * 1000;
+// FINORA_C80_B29_B1_ACTUAL_USER_IDLE
+// Reception idle expiry is based on the last successful
+// authenticated USER ACTIVITY touch, not periodic validation.
+// Server verification and revocation remain mandatory.
+const SERVER_VERIFICATION_GRACE_MS = 60 * 60 * 1000;
 
 const sessions = new WeakMap<object, Entry>();
 
@@ -165,6 +167,24 @@ export async function validateFinoraServerReceptionSession(
     entry.sessionId !== sessionId ||
     entry.businessSessionId !== expectedBusinessSessionId
   ) {
+    const reason = !entry
+      ? "NO_RECEPTION_RECORD"
+      : !validId(sessionId)
+        ? "INVALID_REQUESTED_ID"
+        : !validId(expectedBusinessSessionId)
+          ? "INVALID_BUSINESS_ID"
+          : entry.sessionId !== sessionId
+            ? "RECEPTION_ID_MISMATCH"
+            : "BUSINESS_ID_MISMATCH";
+
+    console.warn("[FINORA R204 SESSION DIAG]", {
+      reason,
+      hasReceptionRecord: Boolean(entry),
+      requestedIdValid: validId(sessionId),
+      businessIdValid: validId(expectedBusinessSessionId),
+      receptionIdMatches: Boolean(entry && entry.sessionId === sessionId),
+      businessIdMatches: Boolean(entry && entry.businessSessionId === expectedBusinessSessionId),
+    });
     return { success: false as const, errorCode: "SESSION_NOT_FOUND" };
   }
 
@@ -230,11 +250,9 @@ export async function validateFinoraServerReceptionSession(
     };
   }
 
-  // FINORA_P1_726P_VERIFIED_REFRESH
-  // Refresh local lifetime ONLY after a successful server check.
-  // Do not renew when the server rejects authorization.
-  entry.lastActivity = Date.now();
-
+  // FINORA_C80_B29_B1_VALIDATE_NO_IDLE_RENEW
+  // A periodic security validation must NEVER count as user activity.
+  // The authenticated activity-touch path alone renews idle time.
   return {
     success: true as const,
     sessionId: entry.sessionId,
@@ -248,8 +266,10 @@ export async function touchFinoraServerReceptionSession(
   sender: object,
   sessionId: string,
   verifyServer: VerifyServer,
+  touchServer: VerifyServer,
   expectedBusinessSessionId: string,
 ) {
+  // Read-only validation must not renew server or local idle time.
   const result = await validateFinoraServerReceptionSession(
     sender,
     sessionId,
@@ -261,23 +281,63 @@ export async function touchFinoraServerReceptionSession(
 
   const entry = sessions.get(sender);
 
-  if (!entry || entry.sessionId !== sessionId) {
+  if (
+    !entry ||
+    entry.sessionId !== sessionId ||
+    entry.businessSessionId !== expectedBusinessSessionId
+  ) {
     return { success: false as const, errorCode: "SESSION_CHANGED" };
+  }
+
+  // A real authenticated activity must renew server authority.
+  // A failed renewal must never extend local idle time.
+  let renewed: Verification;
+
+  try {
+    renewed = await touchServer(entry.businessSessionId);
+  } catch {
+    return { success: false as const, errorCode: "SERVER_UNAVAILABLE" };
+  }
+
+  if (sessions.get(sender) !== entry || !live(entry)) {
+    return { success: false as const, errorCode: "SESSION_CHANGED" };
+  }
+
+  if (!renewed.success) {
+    if (
+      renewed.errorCode === "SERVER_UNAVAILABLE" ||
+      renewed.errorCode === "INVALID_SERVER_RESPONSE"
+    ) {
+      return { success: false as const, errorCode: "SERVER_UNAVAILABLE" };
+    }
+
+    sessions.delete(sender);
+    return {
+      success: false as const,
+      errorCode: typeof renewed.errorCode === "string"
+        ? renewed.errorCode
+        : "SERVER_REVALIDATION_DENIED",
+    };
+  }
+
+  if (!samePrincipal(renewed.principal, entry.principal)) {
+    sessions.delete(sender);
+    return {
+      success: false as const,
+      errorCode: "SERVER_IDENTITY_MISMATCH",
+    };
   }
 
   entry.lastActivity = Date.now();
 
-  // FINORA_P1_704Y_TOUCH_RESULT
-  // Return only the already server-validated session authority.
   return {
     success: true as const,
     sessionId,
-    principal: result.principal,
-    createdAt: result.createdAt,
+    principal: entry.principal,
+    createdAt: entry.createdAt,
     lastActivity: entry.lastActivity,
   };
 }
-
 // FINORA_P1_708M_COMMIT_AUTHORITY
 // Operational approval must be supplied by trusted Electron Main.
 // Renderer cannot approve its own Reception access.
@@ -327,6 +387,30 @@ export async function commitFinoraServerReceptionSession(
   };
 }
 
+// FINORA_C80_B7_COMMITTED_PRINCIPAL
+// Main-process-only identity accessor for future secure Login vault IPC.
+// This is not a substitute for fresh server/session revalidation.
+export function getFinoraCommittedReceptionPrincipal(
+  sender: object,
+  sessionId: string,
+): Readonly<Principal> | null {
+  if (!validId(sessionId)) {
+    return null;
+  }
+
+  const entry = sessions.get(sender);
+
+  if (
+    !entry ||
+    entry.sessionId !== sessionId ||
+    entry.committed !== true ||
+    !live(entry)
+  ) {
+    return null;
+  }
+
+  return entry.principal;
+}
 export function invalidateFinoraServerReceptionSession(
   sender: object,
   sessionId?: string,

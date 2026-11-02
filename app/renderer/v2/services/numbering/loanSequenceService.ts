@@ -51,6 +51,7 @@ import {
 } from "./finoraNumberingScopeService";
 
 import {
+  loadActiveNumberingScope,
   previewCustomerNumberingRoot,
   resolveOrCreateCustomerNumberingRoot,
 } from "./customerNumberingBindingService";
@@ -120,7 +121,7 @@ function parseCanonicalCustomerNumber(
     normalizedCustomerId.split("-");
 
   if (
-    parts.length !== 4 ||
+    (parts.length !== 3 && parts.length !== 4) ||
     parts[0] !== "FIN" ||
     parts[1] !== "CUS"
   ) {
@@ -133,7 +134,7 @@ function parseCanonicalCustomerNumber(
   }
 
   const customerNumberText =
-    parts[3];
+    parts.length === 3 ? parts[2] : parts[3];
 
   if (!/^\d{6}$/.test(customerNumberText)) {
     return {
@@ -214,7 +215,7 @@ async function resolveLoanCustomerScope(
 > {
 
   const scopeResult =
-    await resolveFinoraNumberingScope();
+    await loadActiveNumberingScope();
 
   if (
     !scopeResult.success ||

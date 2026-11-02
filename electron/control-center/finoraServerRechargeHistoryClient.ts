@@ -15,6 +15,7 @@ export interface FinoraRechargeHistoryRecord {
   decidedAt: string;
   decidedByActor: string | null;
   declineReason: string | null;
+  verifiedPaymentReference: string | null;
   walletId: string;
   balanceInr: string;
   walletStatus: string;
@@ -25,6 +26,7 @@ export interface FinoraRechargeHistoryRecord {
   businessName: string;
   ownerId: string;
   ownerName: string;
+  ownerMobile: string | null;
 }
 
 export interface FinoraRechargeHistoryPage {
@@ -35,6 +37,7 @@ export interface FinoraRechargeHistoryPage {
   limit: number;
   offset: number;
   hasMore: boolean;
+  totalCount?: number;
 }
 
 type FetchTransport = typeof fetch;
@@ -68,7 +71,10 @@ function validRow(value: unknown): value is FinoraRechargeHistoryRecord {
     }
   }
 
-  return validMoney(row.amountInr) &&
+  return (row.ownerMobile === null ||
+      (typeof row.ownerMobile === "string" &&
+       row.ownerMobile.length <= 32)) &&
+    validMoney(row.amountInr) &&
     validMoney(row.balanceInr) &&
     Number.isFinite(Date.parse(row.createdAt as string)) &&
     Number.isFinite(Date.parse(row.decidedAt as string)) &&
@@ -77,7 +83,13 @@ function validRow(value: unknown): value is FinoraRechargeHistoryRecord {
        row.decidedByActor.length <= 512)) &&
     (row.declineReason === null ||
       (typeof row.declineReason === "string" &&
-       row.declineReason.length <= 1000))
+       row.declineReason.length <= 1000)) &&
+        (row.verifiedPaymentReference === null ||
+          (typeof row.verifiedPaymentReference === "string" &&
+           row.verifiedPaymentReference.length > 0 &&
+           row.verifiedPaymentReference.length <= 256)) &&
+        (row.status !== "DECLINED" ||
+          row.verifiedPaymentReference === null)
 }
 
 // Injected transport is used only by isolated tests / trusted main-process code.
@@ -93,6 +105,7 @@ export function createFinoraServerRechargeHistoryClient(
     limit = 50,
     offset = 0,
     status: "ALL" | "APPROVED" | "DECLINED" = "ALL",
+    search = "",
   ): Promise<FinoraRechargeHistoryPage> {
     if (typeof adminApiKey !== "string" ||
         !adminApiKey.trim() ||
@@ -111,10 +124,20 @@ export function createFinoraServerRechargeHistoryClient(
       throw new Error("INVALID_RECHARGE_HISTORY_STATUS");
     }
 
+    if (
+      typeof search !== "string" ||
+      search.length > 100 ||
+      /[\u0000-\u001f\u007f]/.test(search)
+    ) {
+      throw new Error("INVALID_RECHARGE_HISTORY_SEARCH");
+    }
+
+    const searchQuery = search.trim();
+
     let response: Response;
     try {
       response = await transport(
-        `${API_BASE}/admin/wallet/recharges/history?limit=${limit}&offset=${offset}&status=${status}`,
+        `${API_BASE}/admin/wallet/recharges/history?limit=${limit}&offset=${offset}&status=${status}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}`,
         {
           method: "GET",
           headers: { "x-finora-admin-key": adminApiKey },
@@ -141,6 +164,25 @@ export function createFinoraServerRechargeHistoryClient(
     }
 
     const page = object(raw);
+
+    // FINORA_HF28_CH23_LEGACY_HISTORY_RESPONSE
+    // Old deployed API lacks these two fields.
+    // Normalize only absent fields; never replace existing values.
+    if (page && Array.isArray(page.requests)) {
+      page.requests = page.requests.map(value => {
+        const row = object(value);
+        if (!row) return value;
+        return {
+          ...row,
+          ownerMobile:
+            row.ownerMobile === undefined ? null : row.ownerMobile,
+          verifiedPaymentReference:
+            row.verifiedPaymentReference === undefined
+              ? null
+              : row.verifiedPaymentReference,
+        };
+      });
+    }
     if (!page ||
         page.ok !== true ||
         page.source !== "POSTGRESQL_RECHARGE_REQUESTS" ||
@@ -148,6 +190,10 @@ export function createFinoraServerRechargeHistoryClient(
         page.limit !== limit ||
         page.offset !== offset ||
         typeof page.hasMore !== "boolean" ||
+        (page.totalCount !== undefined &&
+          (typeof page.totalCount !== "number" ||
+           !Number.isSafeInteger(page.totalCount) ||
+           page.totalCount < 0)) ||
         !Array.isArray(page.requests) ||
         page.requests.length > limit ||
         !page.requests.every(validRow)) {

@@ -175,3 +175,103 @@ export async function verifyFinoraServerBusinessSession(
     };
   }
 }
+
+// FINORA_C80_AUTH_R28_SERVER_TOUCH_CLIENT
+// Only authenticated activity may call this function.
+// Periodic verification must continue using the read-only /verify endpoint.
+const FINORA_BUSINESS_TOUCH_URL =
+  "https://api.finoraenterprise.com/owner/business/session/touch";
+
+export async function touchFinoraServerBusinessSession(
+  sessionId: string,
+): Promise<FinoraServerBusinessVerification> {
+  if (
+    typeof sessionId !== "string" ||
+    !/^[a-f0-9]{64}$/.test(sessionId)
+  ) {
+    return {
+      success: false,
+      errorCode: "INVALID_BUSINESS_SESSION",
+    };
+  }
+
+  try {
+    const response = await fetch(FINORA_BUSINESS_TOUCH_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sessionId}`,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(10000),
+    });
+
+    // FINORA_C80_AUTH_R104_HTTP_DIAG
+    // Status only: never log Authorization, session IDs, URLs or bodies.
+    console.warn("[FINORA C80 TOUCH HTTP]", {
+      status: response.status,
+      ok: response.ok,
+    });
+
+    if (!response.ok) {
+      if (
+        response.status === 408 ||
+        response.status === 429 ||
+        response.status >= 500
+      ) {
+        return {
+          success: false,
+          errorCode: "SERVER_UNAVAILABLE",
+        };
+      }
+
+      return {
+        success: false,
+        errorCode: "BUSINESS_SESSION_REJECTED",
+      };
+    }
+
+    const raw: unknown = await response.json();
+
+    if (
+      !raw ||
+      typeof raw !== "object" ||
+      Array.isArray(raw)
+    ) {
+      return {
+        success: false,
+        errorCode: "INVALID_SERVER_RESPONSE",
+      };
+    }
+
+    const data = raw as Record<string, unknown>;
+
+    if (
+      data.ok !== true ||
+      data.renewed !== true ||
+      data.sessionType !== "BUSINESS_RECEPTION" ||
+      typeof data.expiresAt !== "string" ||
+      !Number.isFinite(Date.parse(data.expiresAt)) ||
+      Date.parse(data.expiresAt) <= Date.now()
+    ) {
+      return {
+        success: false,
+        errorCode: "INVALID_SERVER_RESPONSE",
+      };
+    }
+
+    // Successful renewal is not sufficient by itself.
+    // Confirm the currently authorized server principal
+    // using the existing strict verification contract.
+    return await verifyFinoraServerBusinessSession(sessionId);
+  } catch (error: unknown) {
+    // FINORA_C80_AUTH_R104_TRANSPORT_DIAG
+    // Error type only, no message/stack or credentials.
+    console.warn("[FINORA C80 TOUCH TRANSPORT]", {
+      kind: error instanceof Error ? error.name : "UNKNOWN",
+    });
+    return {
+      success: false,
+      errorCode: "SERVER_UNAVAILABLE",
+    };
+  }
+}

@@ -1,4 +1,4 @@
-﻿/* ==========================================================
+/* ==========================================================
    FINORA ENTERPRISE OS™
 
    LOAN STUDIO — STEP 3
@@ -499,7 +499,12 @@ export default function DocumentsStudio({
       ====================================================== */}
 
       <div style={categoryGridStyle}>
-        {CATEGORIES.map((category) => (
+        {CATEGORIES.filter((category) =>
+            category.id === "loan" ||
+            category.id === "other" ||
+            category.id === "vehicle" ||
+            category.id === "collateral"
+          ).map((category) => (
           <CategoryCard
             key={category.id}
             category={category}

@@ -646,6 +646,113 @@ public final class FinoraUsbStorage {
     }
 
     // ========================================================
+    // FINORA HF28-CH45-C47-R2: JSON READ-BACK COMPARISON
+    // ========================================================
+
+    private static boolean finoraUsageReadBackEqual(
+        Object expected,
+        Object actual
+    ) {
+        if (expected == actual) {
+            return true;
+        }
+
+        if (expected == null || actual == null) {
+            return false;
+        }
+
+        if (
+            expected == JSONObject.NULL ||
+            actual == JSONObject.NULL
+        ) {
+            return expected == JSONObject.NULL &&
+                actual == JSONObject.NULL;
+        }
+
+        if (
+            expected instanceof JSONObject &&
+            actual instanceof JSONObject
+        ) {
+            JSONObject left = (JSONObject) expected;
+            JSONObject right = (JSONObject) actual;
+
+            if (left.length() != right.length()) {
+                return false;
+            }
+
+            java.util.Iterator<String> keys = left.keys();
+
+            while (keys.hasNext()) {
+                String key = keys.next();
+
+                if (
+                    !right.has(key) ||
+                    !finoraUsageReadBackEqual(
+                        left.opt(key),
+                        right.opt(key)
+                    )
+                ) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        if (
+            expected instanceof JSONArray &&
+            actual instanceof JSONArray
+        ) {
+            JSONArray left = (JSONArray) expected;
+            JSONArray right = (JSONArray) actual;
+
+            if (left.length() != right.length()) {
+                return false;
+            }
+
+            for (int index = 0; index < left.length(); index++) {
+                if (
+                    !finoraUsageReadBackEqual(
+                        left.opt(index),
+                        right.opt(index)
+                    )
+                ) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        if (
+            expected instanceof JSONObject ||
+            actual instanceof JSONObject ||
+            expected instanceof JSONArray ||
+            actual instanceof JSONArray
+        ) {
+            return false;
+        }
+
+        if (
+            expected instanceof Number &&
+            actual instanceof Number
+        ) {
+            try {
+                return new java.math.BigDecimal(
+                    expected.toString()
+                ).compareTo(
+                    new java.math.BigDecimal(actual.toString())
+                ) == 0;
+            } catch (NumberFormatException error) {
+                return false;
+            }
+        }
+
+        return expected.getClass().equals(actual.getClass()) &&
+            expected.equals(actual);
+    }
+
+    // ========================================================
     // CRUD: SAVE
     // ========================================================
 
@@ -717,6 +824,20 @@ public final class FinoraUsbStorage {
                 getOptionalString(
                     options,
                     "ownerId"
+                );
+
+            // FINORA HF28-CH45-C50-R1
+            // Preserve native USB owner/business/branch scope.
+            String businessId =
+                getOptionalString(
+                    options,
+                    "businessId"
+                );
+
+            String branchId =
+                getOptionalString(
+                    options,
+                    "branchId"
                 );
 
             String demoId =
@@ -821,6 +942,18 @@ public final class FinoraUsbStorage {
 
             putOptionalString(
                 persistedRecord,
+                "businessId",
+                businessId
+            );
+
+            putOptionalString(
+                persistedRecord,
+                "branchId",
+                branchId
+            );
+
+            putOptionalString(
+                persistedRecord,
                 "demoId",
                 demoId
             );
@@ -833,6 +966,67 @@ public final class FinoraUsbStorage {
                 target,
                 storagePackage
             );
+
+            // FINORA HF28-CH45-C47-R2
+            // Read back the published record before reporting success.
+            // A failed read-back is an uncertain write outcome.
+            JSONObject verifiedPackage =
+                readStoragePackage(target);
+
+            JSONArray verifiedRecords =
+                verifiedPackage.getJSONArray("records");
+
+            int matchCount = 0;
+            JSONObject verifiedRecord = null;
+
+            for (int index = 0; index < verifiedRecords.length(); index++) {
+                JSONObject candidate =
+                    verifiedRecords.optJSONObject(index);
+
+                if (candidate == null) {
+                    throw new IllegalStateException(
+                        "FINORA_USB_SAVE_READBACK_UNCERTAIN"
+                    );
+                }
+
+                if (
+                    id.equals(getOptionalString(candidate, "id")) &&
+                    entity.equals(getOptionalString(candidate, "entity")) &&
+                    nullableEquals(
+                        ownerId,
+                        getOptionalString(candidate, "ownerId")
+                    ) &&
+                    nullableEquals(
+                        businessId,
+                        getOptionalString(candidate, "businessId")
+                    ) &&
+                    nullableEquals(
+                        branchId,
+                        getOptionalString(candidate, "branchId")
+                    ) &&
+                    nullableEquals(
+                        demoId,
+                        getOptionalString(candidate, "demoId")
+                    )
+                ) {
+                    matchCount++;
+                    verifiedRecord = candidate;
+                }
+            }
+
+            if (
+                matchCount != 1 ||
+                verifiedRecord == null ||
+                !finoraUsageReadBackEqual(
+                    persistedRecord,
+                    verifiedRecord
+                )
+            ) {
+                throw new IllegalStateException(
+                    "FINORA_USB_SAVE_READBACK_UNCERTAIN: " +
+                    "Reconcile existing USB record before retry."
+                );
+            }
 
             return success(
                 persistedRecord.get(

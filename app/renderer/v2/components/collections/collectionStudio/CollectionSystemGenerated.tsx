@@ -113,6 +113,7 @@
 // IMPORTS
 // ============================================================
 
+import { Capacitor } from "@capacitor/core";
 import { useEffect, useState } from "react";
 
 import { LockKeyhole } from "lucide-react";
@@ -583,6 +584,17 @@ export default function CollectionSystemGenerated() {
     ...collectionSystemGeneratedStyles.financialList,
 
     ...createCollectionSystemFinancialListStyle(viewport),
+
+    // FINORA_AP03_R005_ANDROID_MOBILE_FINANCIAL_GRID
+    // Android phone: eight cards in four rows, two per row.
+    // Windows and tablet geometry remains unchanged.
+    ...(Capacitor.isNativePlatform() &&
+    Capacitor.getPlatform() === "android" &&
+    viewport === "mobile"
+      ? {
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+        }
+      : {}),
   };
 
   // ==========================================================

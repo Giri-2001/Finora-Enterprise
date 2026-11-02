@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTION STUDIO™
@@ -58,6 +58,7 @@
 // IMPORTS
 // ============================================================
 
+import { Capacitor } from "@capacitor/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ReactNode } from "react";
@@ -429,6 +430,13 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
 
   const [emiDropdownOpen, setEmiDropdownOpen] = useState(false);
 
+  // FINORA_AP03_R014_EMI_HEADER_WIDTH
+  // Header and EMI rows share the same Android scroll width.
+  const isAndroidMobileEmi =
+    Capacitor.isNativePlatform() &&
+    Capacitor.getPlatform() === "android" &&
+    viewport === "mobile";
+
   // ==========================================================
   // SELECT ALL CHECKBOX REF
   // ==========================================================
@@ -486,7 +494,7 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
           );
 
         const collectionBusinessDate =
-          getCollectionBusinessDate();
+          reviewData.receiptDate || getCollectionBusinessDate();
 
 
         const rawSchedule = Array.isArray(
@@ -659,7 +667,7 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
         setLoading(false);
       }
     },
-    [loanId],
+    [loanId, reviewData.receiptDate],
   );
 
   // ==========================================================
@@ -1120,7 +1128,18 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                       : {}),
                   }}
                 >
-                  <div style={collectionEntryStyles.emiDropdownHeader}>
+                  <div
+                    style={{
+                      ...collectionEntryStyles.emiDropdownHeader,
+                      ...(isAndroidMobileEmi
+                        ? {
+                            width: "430px",
+                            minWidth: "430px",
+                            maxWidth: "none",
+                          }
+                        : {}),
+                    }}
+                  >
                     <span style={collectionEntryStyles.scheduleHeader}>
                       EMI SCHEDULE
                     </span>
@@ -1150,12 +1169,18 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                       style={{
                         ...collectionEntryStyles.emiDropdownList,
 
-                        ...(viewport === "mobile"
+                        ...(isAndroidMobileEmi
                           ? {
-                              width: "max-content",
+                              width: "430px",
                               minWidth: "430px",
+                              maxWidth: "none",
                             }
-                          : {}),
+                          : viewport === "mobile"
+                            ? {
+                                width: "max-content",
+                                minWidth: "430px",
+                              }
+                            : {}),
                       }}
                     >
                       {emiSchedule.map((installment) => {

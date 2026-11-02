@@ -20,9 +20,7 @@ const MONTHS = [1, 3, 6, 12] as const;
 const SERVICE_CODES = [
   "CUSTOMER_CREATE",
   "LOAN_DISBURSEMENT",
-  "COLLECTION_BELOW_25000",
-  "COLLECTION_25000_TO_50000",
-  "COLLECTION_ABOVE_50000",
+  "COLLECTION",
 ] as const;
 
 type ServiceCode = typeof SERVICE_CODES[number];

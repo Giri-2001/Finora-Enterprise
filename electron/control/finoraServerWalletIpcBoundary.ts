@@ -224,9 +224,7 @@ export function createFinoraServerWalletIpcBoundary(options: {
       const serviceCodes = [
         "CUSTOMER_CREATE",
         "LOAN_DISBURSEMENT",
-        "COLLECTION_BELOW_25000",
-        "COLLECTION_25000_TO_50000",
-        "COLLECTION_ABOVE_50000",
+        "COLLECTION",
       ];
 
       const money = (value: unknown): value is string =>

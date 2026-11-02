@@ -157,7 +157,18 @@ export async function readFinoraServerNumbering(
       const result = await native.getServerCustomerNumbering();
 
       if (result?.success !== true) {
-        return failure("ANDROID_NUMBERING_READ_UNAVAILABLE");
+        // FINORA_F1_T_NATIVE_NUMBERING_ERROR_PROPAGATION
+        // Preserve safe native failure codes, never credentials or raw errors.
+        const rawCode =
+          (result as { errorCode?: unknown } | null)?.errorCode;
+
+        const safeCode =
+          typeof rawCode === "string" &&
+          /^[A-Z][A-Z0-9_]{2,79}$/.test(rawCode)
+            ? rawCode
+            : "ANDROID_NUMBERING_READ_UNAVAILABLE";
+
+        return failure(safeCode);
       }
 
       return validate(result.data, expectedScope);

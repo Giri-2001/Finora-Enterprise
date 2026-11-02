@@ -52,6 +52,8 @@ import { formatFinoraDate } from "../../../shared/finoraDateTimeDisplay";
 // ============================================================
 
 import { getBusinessContext } from "../business/businessContextService";
+import { loadFinoraServerSettingsIdentity } from "../business/finoraServerSettingsIdentity";
+import finoraCustomerStatementLogoUrl from "../../app/assets/finoraenterprise.png";
 
 import type { jsPDF } from "jspdf";
 
@@ -66,6 +68,7 @@ import type {
 import {
   addFinoraPdfFooters,
   createFinoraPdf,
+  getReportGeneratedAt,
   downloadFinoraPdf,
   printFinoraPdf,
   shareFinoraPdf,
@@ -199,6 +202,7 @@ function drawSectionTitle(
   title: string,
 
   currentY: number,
+  generatedAt?: string,
 ): number {
   const y = ensurePageSpace(document, currentY, 12);
 
@@ -208,15 +212,31 @@ function drawSectionTitle(
 
   document.setTextColor(0);
 
+  // FINORA_C80_B23_D2_B_PREMIUM_CUSTOMER_HEADER
   document.text(title, PAGE_MARGIN_X, y);
+
+  if (generatedAt) {
+    document.setFont("helvetica", "normal");
+    document.setFontSize(7);
+    document.setTextColor(85, 94, 108);
+
+    document.text(
+      `Generated: ${generatedAt}`,
+      document.internal.pageSize.getWidth() - PAGE_MARGIN_X,
+      y,
+      { align: "right" },
+    );
+
+    document.setTextColor(0);
+  }
 
   document.setLineWidth(0.25);
 
   document.line(
     PAGE_MARGIN_X,
-    y + 3,
+    y + 3 + (generatedAt ? 0.35 : 0),
     document.internal.pageSize.getWidth() - PAGE_MARGIN_X,
-    y + 3,
+    y + 3 + (generatedAt ? 0.35 : 0),
   );
 
   return y + 9;
@@ -230,6 +250,8 @@ interface PdfMetric {
   label: string;
 
   value: string;
+
+  outstandingTone?: "due" | "clear";
 }
 
 // ============================================================
@@ -263,9 +285,17 @@ function drawMetricGrid(
     row.forEach((metric, columnIndex) => {
       const x = PAGE_MARGIN_X + columnIndex * (columnWidth + gap);
 
-      document.setDrawColor(210);
-
-      document.setFillColor(248, 249, 251);
+      // FINORA_C80_B23_D5_B_PREMIUM_OUTSTANDING
+      if (metric.outstandingTone === "due") {
+        document.setDrawColor(190, 55, 64);
+        document.setFillColor(255, 239, 240);
+      } else if (metric.outstandingTone === "clear") {
+        document.setDrawColor(40, 130, 90);
+        document.setFillColor(240, 250, 245);
+      } else {
+        document.setDrawColor(210);
+        document.setFillColor(248, 249, 251);
+      }
 
       document.roundedRect(x, y, columnWidth, rowHeight, 2, 2, "FD");
 
@@ -273,7 +303,23 @@ function drawMetricGrid(
 
       document.setFontSize(7);
 
-      document.setTextColor(100);
+      document.setTextColor(
+        metric.outstandingTone === "due"
+          ? 145
+          : metric.outstandingTone === "clear"
+            ? 35
+            : 100,
+        metric.outstandingTone === "due"
+          ? 32
+          : metric.outstandingTone === "clear"
+            ? 120
+            : 100,
+        metric.outstandingTone === "due"
+          ? 43
+          : metric.outstandingTone === "clear"
+            ? 80
+            : 100,
+      );
 
       document.text(metric.label, x + 3, y + 5);
 
@@ -281,7 +327,13 @@ function drawMetricGrid(
 
       document.setFontSize(9);
 
-      document.setTextColor(20);
+      if (metric.outstandingTone === "due") {
+        document.setTextColor(145, 32, 43);
+      } else if (metric.outstandingTone === "clear") {
+        document.setTextColor(35, 120, 80);
+      } else {
+        document.setTextColor(20);
+      }
 
       const valueLines = document.splitTextToSize(
         metric.value,
@@ -408,6 +460,8 @@ function drawTableRow(
   currentY: number,
 
   rowHeight = 8,
+
+  outstandingValue?: number,
 ): number {
   let x = PAGE_MARGIN_X;
 
@@ -430,6 +484,37 @@ function drawTableRow(
     const align = column.align ?? "left";
 
     const rawValue = values[index] ?? "--";
+
+    const isOutstandingCell =
+      outstandingValue !== undefined &&
+      index === columns.length - 1;
+
+    if (isOutstandingCell) {
+      if (outstandingValue > 0) {
+        document.setFillColor(255, 239, 240);
+      } else {
+        document.setFillColor(240, 250, 245);
+      }
+
+      document.rect(
+        x,
+        currentY,
+        column.width,
+        rowHeight - 0.2,
+        "F",
+      );
+
+      document.setFont("helvetica", "bold");
+
+      if (outstandingValue > 0) {
+        document.setTextColor(145, 32, 43);
+      } else {
+        document.setTextColor(35, 120, 80);
+      }
+    } else {
+      document.setFont("helvetica", "normal");
+      document.setTextColor(35);
+    }
 
     const fitted = fitTableText(document, rawValue, column.width - 4);
 
@@ -494,11 +579,6 @@ function getCustomerMetrics(statement: CustomerReportStatement): PdfMetric[] {
       value: safeText(statement.fatherName),
     },
 
-    {
-      label: "Branch ID",
-
-      value: safeText(statement.branchId),
-    },
 
     {
       label: "Customer Since",
@@ -530,11 +610,6 @@ function getCustomerMetrics(statement: CustomerReportStatement): PdfMetric[] {
       value: safeText(statement.email),
     },
 
-    {
-      label: "Business",
-
-      value: safeText(statement.businessName),
-    },
   ];
 }
 
@@ -602,6 +677,8 @@ function getFinancialMetrics(statement: CustomerReportStatement): PdfMetric[] {
       label: "Current Outstanding",
 
       value: formatMoney(statement.currentOutstanding),
+
+      outstandingTone: statement.currentOutstanding > 0 ? "due" : "clear",
     },
   ];
 }
@@ -813,6 +890,8 @@ function drawLoanStatement(
         formatMoney(loan.currentOutstanding),
       ],
       y,
+      8,
+      loan.currentOutstanding,
     );
   }
 
@@ -997,9 +1076,16 @@ function drawFinalOutstanding(
 
   const contentWidth = getPageContentWidth(document);
 
-  document.setDrawColor(40, 130, 90);
+  const hasOutstanding = statement.currentOutstanding > 0;
 
-  document.setFillColor(240, 250, 245);
+  if (hasOutstanding) {
+    document.setDrawColor(190, 55, 64);
+    document.setFillColor(255, 239, 240);
+  } else {
+    // Exact original FINORA cleared-balance green.
+    document.setDrawColor(40, 130, 90);
+    document.setFillColor(240, 250, 245);
+  }
 
   document.roundedRect(PAGE_MARGIN_X, y, contentWidth, 22, 2, 2, "FD");
 
@@ -1007,7 +1093,12 @@ function drawFinalOutstanding(
 
   document.setFontSize(8);
 
-  document.setTextColor(35, 120, 80);
+  if (hasOutstanding) {
+    document.setTextColor(145, 32, 43);
+  } else {
+    // Exact original FINORA cleared-balance text.
+    document.setTextColor(35, 120, 80);
+  }
 
   document.text(
     "CURRENT AUTHORITATIVE CUSTOMER OUTSTANDING",
@@ -1035,6 +1126,162 @@ function drawFinalOutstanding(
 // BUILD DOCUMENT
 // ============================================================
 
+async function addFinoraCustomerStatementCenterLogo(
+  document: jsPDF,
+): Promise<void> {
+  const image = new Image();
+  image.src = finoraCustomerStatementLogoUrl;
+
+  try {
+    await image.decode();
+  } catch {
+    throw new Error("Unable to load FINORA Customer Statement logo.");
+  }
+
+  if (!image.naturalWidth || !image.naturalHeight) {
+    throw new Error("Invalid FINORA Customer Statement logo.");
+  }
+
+  const canvas = window.document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("FINORA Customer Statement logo canvas unavailable.");
+  }
+
+  context.drawImage(image, 0, 0, 256, 256);
+
+  const logoSize = 30;
+  const pageWidth = document.internal.pageSize.getWidth();
+
+  document.addImage(
+    canvas.toDataURL("image/png"),
+    "PNG",
+    (pageWidth - logoSize) / 2,
+    5,
+    logoSize,
+    logoSize,
+    "FINORA_CUSTOMER_STATEMENT_CENTER_LOGO",
+    "FAST",
+  );
+}
+
+async function drawCustomerStatementBusinessIdentity(
+  document: jsPDF,
+  statement: CustomerReportStatement,
+): Promise<void> {
+  const context = getBusinessContext();
+
+  const scope =
+    context?.ownerId?.trim() &&
+    context.businessId?.trim() &&
+    context.branchId?.trim()
+      ? {
+          ownerId: context.ownerId.trim(),
+          businessId: context.businessId.trim(),
+          branchId: context.branchId.trim(),
+        }
+      : null;
+
+  const matchingScope = Boolean(
+    scope &&
+    (!statement.branchId ||
+      statement.branchId.trim() === scope.branchId),
+  );
+
+  let businessName = "Not recorded";
+  let branchName = "Not recorded";
+
+  if (scope && matchingScope) {
+    const serverIdentity =
+      await loadFinoraServerSettingsIdentity(scope);
+
+    if (serverIdentity.success) {
+      businessName = serverIdentity.data.businessName.trim();
+      branchName = serverIdentity.data.branchName.trim();
+    } else {
+      const profile = context?.businessProfile;
+
+      if (
+        profile &&
+        profile.ownerId === scope.ownerId &&
+        profile.businessId === scope.businessId &&
+        profile.branchId === scope.branchId &&
+        profile.businessName.trim() &&
+        profile.branchName.trim()
+      ) {
+        businessName = profile.businessName.trim();
+        branchName = profile.branchName.trim();
+      }
+    }
+  }
+
+  const rightX =
+    document.internal.pageSize.getWidth() - PAGE_MARGIN_X;
+
+  // Clear only the shared header's old Generated Date.
+  // The original center logo and left-side title remain intact.
+  document.setFillColor(255, 255, 255);
+  document.rect(135, 9, rightX - 135 + 1, 23, "F");
+
+  const drawRightName = (
+    value: string,
+    y: number,
+    baseSize: number,
+  ): void => {
+    document.setFont("helvetica", "bold");
+    document.setFontSize(baseSize);
+
+    let visible = value;
+
+    while (
+      visible.length > 4 &&
+      document.getTextWidth(visible) > 58
+    ) {
+      visible = visible.slice(0, -1);
+    }
+
+    if (visible !== value) {
+      visible = `${visible.slice(0, -3)}...`;
+    }
+
+    document.text(visible, rightX, y, {
+      align: "right",
+    });
+  };
+
+  document.setTextColor(22, 35, 52);
+  drawRightName(businessName, 17, 11);
+
+  document.setTextColor(92, 101, 113);
+  drawRightName(branchName, 25, 9);
+
+  document.setTextColor(0);
+}
+// FINORA_C80_B25_B1_CUSTOMER_FILENAME
+function buildFinoraCustomerStatementFileName(
+  customerName: string,
+  customerId: string,
+): string {
+  const safeName = String(customerName ?? "")
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, "")
+    .slice(0, 60) || "Customer";
+
+  const safeId = String(customerId ?? "")
+    .trim()
+    .replace(/[^a-zA-Z0-9-]+/g, "")
+    .slice(0, 80);
+
+  if (!safeId) {
+    throw new Error("Customer ID is required for PDF filename.");
+  }
+
+  return `Finora_${safeName}_Customer_Statement_${safeId}.pdf`;
+}
 export async function buildCustomerStatementPdf(
   customerId: string,
 ): Promise<jsPDF> {
@@ -1046,15 +1293,18 @@ export async function buildCustomerStatementPdf(
     );
   }
 
-  const subtitle = `${statement.customerName} - ${statement.customerId}`;
+  const generatedAt = getReportGeneratedAt();
 
   const document = createFinoraPdf({
-    fileName: `FINORA_Customer_Statement_${statement.customerId}.pdf`,
+    fileName: buildFinoraCustomerStatementFileName(statement.customerName, statement.customerId),
 
-    title: resolveBusinessReportTitle("Customer Statement"),
+    title: "Customer Statement",
 
-    subtitle,
+    generatedAt,
   });
+
+  await addFinoraCustomerStatementCenterLogo(document);
+  await drawCustomerStatementBusinessIdentity(document, statement);
 
   let y = CONTENT_START_Y;
 
@@ -1062,7 +1312,7 @@ export async function buildCustomerStatementPdf(
   // CUSTOMER INFORMATION
   // ==========================================================
 
-  y = drawSectionTitle(document, "CUSTOMER INFORMATION", y);
+  y = drawSectionTitle(document, "CUSTOMER INFORMATION", y, generatedAt);
 
   y = drawMetricGrid(document, getCustomerMetrics(statement), y, 3);
 
@@ -1080,13 +1330,15 @@ export async function buildCustomerStatementPdf(
 
   const financialRows = Math.ceil(financialMetrics.length / 2);
 
-  const financialSectionHeight = 12 + financialRows * 19;
+  // FINORA_C80_B23_D4_CUSTOMER_OUTSTANDING
+  // Reserve the additional bottom gap to preserve page breaks.
+  const financialSectionHeight = 14 + financialRows * 19;
 
-  y = ensurePageSpace(document, y + 2, financialSectionHeight);
+  y = ensurePageSpace(document, y + 4, financialSectionHeight);
 
   y = drawSectionTitle(document, "FINANCIAL SUMMARY", y);
 
-  y = drawMetricGrid(document, financialMetrics, y, 2);
+  y = drawMetricGrid(document, financialMetrics, y + 2, 2);
 
   // ==========================================================
   // LOAN-WISE STATEMENT
@@ -1122,7 +1374,7 @@ async function getCustomerStatementFileName(
     throw new Error("Unable to find the selected customer.");
   }
 
-  return `FINORA_Customer_Statement_${statement.customerId}.pdf`;
+  return buildFinoraCustomerStatementFileName(statement.customerName, statement.customerId);
 }
 
 // ============================================================
@@ -1177,7 +1429,7 @@ export async function shareCustomerStatementPdf(
   await shareFinoraPdf(
     document,
 
-    `FINORA_Customer_Statement_${statement.customerId}.pdf`,
+    buildFinoraCustomerStatementFileName(statement.customerName, statement.customerId),
 
     {
       title: "FINORA Customer Statement",

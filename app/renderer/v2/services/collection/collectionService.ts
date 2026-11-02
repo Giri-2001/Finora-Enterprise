@@ -1,4 +1,4 @@
-﻿// ============================================================
+﻿﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTIONS ENGINE™
@@ -243,6 +243,11 @@ function buildPersistedCollection(
 
     selectedEmiAmount:
       normalizedReviewData.selectedEmiAmount,
+
+    receiptSnapshot:
+
+      normalizedReviewData.receiptSnapshot,
+
 
     receiptNumber:
       normalizedReviewData.receiptNumber,

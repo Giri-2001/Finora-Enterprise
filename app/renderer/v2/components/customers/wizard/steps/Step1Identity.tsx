@@ -64,6 +64,10 @@ import {
   requireBusinessContext,
 } from "../../../../services/business/businessContextService";
 
+import {
+  loadFinoraServerSettingsIdentity,
+} from "../../../../services/business/finoraServerSettingsIdentity";
+
 
 /* ===========================================================
    PRESENTATION STYLES
@@ -330,7 +334,7 @@ export default function Step1Identity({
 
 
   /* =========================================================
-     ACTIVE SIGNED BUSINESS PROFILE SYNC
+     ACTIVE SERVER BUSINESS IDENTITY SYNC
 
      Business and Branch display values come from the
      authoritative signed FINORA Business Profile.
@@ -341,104 +345,92 @@ export default function Step1Identity({
   ========================================================= */
 
   useEffect(() => {
+    let active = true;
 
-    try {
+    async function hydrateServerIdentity(): Promise<void> {
+      // Clear presentation values until the current scope
+      // is verified against the same server source as Settings.
+      setState((previous) => ({
+        ...previous,
+        businessName: "",
+        branchName: "",
+      }));
 
-      const businessContext =
-        requireBusinessContext();
+      try {
+        const context = requireBusinessContext();
 
-      const profile =
-        businessContext.businessProfile;
+        const ownerId = context.ownerId?.trim() ?? "";
+        const businessId = context.businessId?.trim() ?? "";
+        const branchId = context.branchId?.trim() ?? "";
 
-      const activeOwnerId =
-        businessContext.ownerId?.trim() ??
-        "";
+        if (!ownerId || !businessId || !branchId) {
+          console.error(
+            "[FINORA CUSTOMER] Active business scope unavailable."
+          );
+          return;
+        }
 
-      const activeBusinessId =
-        businessContext.businessId?.trim() ??
-        "";
+        const result = await loadFinoraServerSettingsIdentity({
+          ownerId,
+          businessId,
+          branchId,
+        });
 
-      const activeBranchId =
-        businessContext.branchId?.trim() ??
-        "";
+        if (!active) {
+          return;
+        }
 
-      if (
-        !activeOwnerId ||
-        !activeBusinessId ||
-        !activeBranchId
-      ) {
+        if (!result.success) {
+          console.error(
+            "[FINORA CUSTOMER] Server Business Identity unavailable:",
+            result.errorCode
+          );
+          return;
+        }
 
-        console.error(
-          "[FINORA CUSTOMER] Active FINORA scope is unavailable for Step 1 identity display.",
-        );
+        const identity = result.data;
 
-        return;
-      }
+        if (
+          identity.ownerId !== ownerId ||
+          identity.businessId !== businessId ||
+          identity.branchId !== branchId
+        ) {
+          console.error(
+            "[FINORA CUSTOMER] Server Business Identity scope mismatch."
+          );
+          return;
+        }
 
-      if (!profile) {
+        const businessName = identity.businessName.trim();
+        const branchName = identity.branchName.trim();
 
-        console.error(
-          "[FINORA CUSTOMER] Signed Business Profile is unavailable for Step 1 identity display.",
-        );
+        if (!businessName || !branchName) {
+          console.error(
+            "[FINORA CUSTOMER] Business/Branch names unavailable."
+          );
+          return;
+        }
 
-        return;
-      }
-
-      if (
-        profile.ownerId !==
-          activeOwnerId ||
-        profile.businessId !==
-          activeBusinessId ||
-        profile.branchId !==
-          activeBranchId
-      ) {
-
-        console.error(
-          "[FINORA CUSTOMER] Signed Business Profile does not match the active FINORA scope for Step 1 identity display.",
-        );
-
-        return;
-      }
-
-      const businessName =
-        profile.businessName.trim();
-
-      const branchName =
-        profile.branchName.trim();
-
-      if (
-        !businessName ||
-        !branchName
-      ) {
-
-        console.error(
-          "[FINORA CUSTOMER] Signed Business / Branch name is unavailable for Step 1 identity display.",
-        );
-
-        return;
-      }
-
-      setState(
-        (previous) => ({
-
+        setState((previous) => ({
           ...previous,
-
           businessName,
-
           branchName,
-
-        }),
-      );
-
-    } catch (error) {
-
-      console.error(
-        "[FINORA CUSTOMER] Failed to resolve signed Business Profile for Step 1 display:",
-        error,
-      );
-
+        }));
+      } catch (error) {
+        if (active) {
+          console.error(
+            "[FINORA CUSTOMER] Server identity hydration failed:",
+            error
+          );
+        }
+      }
     }
 
+    void hydrateServerIdentity();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   /* =========================================================

@@ -282,29 +282,6 @@ export default function NumberingSeriesSettingsForm({
               }
             </span>
           </label>
-
-          <label className="finora-settings-form__field finora-settings-form__field--full">
-            <span className="finora-settings-form__label">
-              {
-                locked
-                  ? "Next Customer Preview"
-                  : "Customer ID Preview"
-              }
-            </span>
-
-            <input
-              className="finora-settings-form__input finora-settings-form__input--readonly"
-              type="text"
-              value={customerPreview}
-              readOnly
-              aria-readonly="true"
-              placeholder="Enter a valid starting Customer number to preview"
-            />
-
-            <span className="finora-settings-form__helper">
-              Previewing does not reserve or consume a Customer number.
-            </span>
-          </label>
         </div>
 
         {!locked && (

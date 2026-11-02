@@ -77,13 +77,100 @@ type ActiveNumberingScope =
 // Business Profile through the shared Numbering Scope service.
 // ============================================================
 
-async function loadActiveNumberingScope():
+export async function loadActiveNumberingScope():
   Promise<
     StorageResult<
       ActiveNumberingScope
     >
   > {
+  // FINORA_AP02_R006_ANDROID_USB_LOAN_ROOT
+  // Same locked USB numbering authority as Customer Save.
+  // Read-only. No server counter or LOCAL fallback.
+  const { Capacitor } = await import("@capacitor/core");
 
+  if (
+    Capacitor.isNativePlatform() &&
+    Capacitor.getPlatform() === "android"
+  ) {
+    const { getSession } = await import("../../store/authStore");
+    const session = getSession();
+
+    if (
+      !session?.sessionId ||
+      session.role !== "OWNER" ||
+      !session.ownerId ||
+      !session.businessId ||
+      !session.branchId
+    ) {
+      return {
+        success: false,
+        error: "AUTHORIZED_NUMBERING_SCOPE_UNAVAILABLE",
+      };
+    }
+
+    const { numberingSeriesRepository } = await import(
+      "../../repositories/numbering/numberingSeriesRepository"
+    );
+
+    const result = await numberingSeriesRepository.findByBranch(
+      session.businessId,
+      session.branchId,
+    );
+
+    if (!result.success || !result.data) {
+      return {
+        success: false,
+        error:
+          result.error ??
+          "USB_NUMBERING_SERIES_UNAVAILABLE",
+      };
+    }
+
+    const configuration = result.data;
+
+    if (
+      configuration.ownerId !== session.ownerId ||
+      configuration.businessId !== session.businessId ||
+      configuration.branchId !== session.branchId
+    ) {
+      return {
+        success: false,
+        error: "USB_NUMBERING_SCOPE_MISMATCH",
+      };
+    }
+
+    if (configuration.status !== "LOCKED") {
+      return {
+        success: false,
+        error: "USB_NUMBERING_SERIES_NOT_LOCKED",
+      };
+    }
+
+    if (
+      typeof configuration.businessCode !== "string" ||
+      !configuration.businessCode.trim() ||
+      typeof configuration.branchCode !== "string" ||
+      !configuration.branchCode.trim()
+    ) {
+      return {
+        success: false,
+        error: "USB_NUMBERING_CODES_INVALID",
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        ownerId: configuration.ownerId,
+        businessId: configuration.businessId,
+        branchId: configuration.branchId,
+        businessCode: configuration.businessCode,
+        branchCode: configuration.branchCode,
+      },
+    };
+  }
+
+  // Original Windows signed Business Profile authority.
   return resolveFinoraNumberingScope();
 }
 // ============================================================
@@ -126,6 +213,15 @@ function resolveCanonicalCustomerRoot(
     normalizedCustomerId.split("-");
 
   const canonicalShape =
+    parts.length === 3 &&
+    parts[0] === "FIN" &&
+    parts[1] === "CUS" &&
+    /^\d{6}$/.test(parts[2] ?? "") &&
+    normalizedCustomerId === formatCustomerId(
+      scope.businessCode, scope.branchCode, Number(parts[2]),
+    );
+
+  const previousCanonicalShape =
     parts.length === 4 &&
     parts[0] === "FIN" &&
     parts[1] === "CUS" &&
@@ -146,6 +242,7 @@ function resolveCanonicalCustomerRoot(
 
   if (
     !canonicalShape &&
+    !previousCanonicalShape &&
     !legacyCanonicalShape
   ) {
     return {
@@ -158,7 +255,7 @@ function resolveCanonicalCustomerRoot(
     Number(
       legacyCanonicalShape
         ? parts[4]
-        : parts[3],
+        : canonicalShape ? parts[2] : parts[3],
     );
 
   if (

@@ -307,6 +307,84 @@ async function writeNativePdf(
 // This avoids hard dependency on WhatsApp being installed.
 // ============================================================
 
+// ============================================================
+// FINORA_C80_B31_C2_B_WHATSAPP_DOWNLOADS
+// Explicit Windows Owner Report handoff.
+// PDF must be saved successfully before WhatsApp Web opens.
+// Never fall back to a Save As dialog or report data mutation.
+// ============================================================
+
+export async function saveFinoraWhatsappPdfToDownloads(
+  document: jsPDF,
+  fileName: string,
+): Promise<string> {
+  if (Capacitor.isNativePlatform()) {
+    throw new Error("Windows PDF handoff is unavailable on Android.");
+  }
+
+  const bridge = (
+    window as Window & {
+      finoraReportWhatsappPdf?: {
+        saveToDownloads: (request: {
+          fileName: string;
+          dataBase64: string;
+        }) => Promise<
+          | { success: true; fileName: string }
+          | { success: false; errorCode: string }
+        >;
+      };
+    }
+  ).finoraReportWhatsappPdf;
+
+  if (!bridge || typeof bridge.saveToDownloads !== "function") {
+    throw new Error(
+      "Secure Windows PDF Downloads service is unavailable.",
+    );
+  }
+
+  const safeFileName = sanitizeFileName(fileName);
+
+  const encoded = document.output("datauristring");
+  const separator = encoded.indexOf(",");
+
+  if (separator < 0) {
+    throw new Error("Unable to encode the report PDF.");
+  }
+
+  const dataBase64 = encoded.slice(separator + 1);
+
+  if (
+    !dataBase64 ||
+    !/^[A-Za-z0-9+/]+={0,2}$/.test(dataBase64)
+  ) {
+    throw new Error("Generated PDF encoding is invalid.");
+  }
+
+  const result = await bridge.saveToDownloads({
+    fileName: safeFileName,
+    dataBase64,
+  });
+
+  if (!result || !result.success) {
+    const code =
+      result && !result.success
+        ? result.errorCode
+        : "UNKNOWN";
+
+    throw new Error(
+      `Unable to save PDF to Downloads [${code}].`,
+    );
+  }
+
+  if (
+    typeof result.fileName !== "string" ||
+    !result.fileName.toLowerCase().endsWith(".pdf")
+  ) {
+    throw new Error("Downloads service returned an invalid PDF result.");
+  }
+
+  return result.fileName;
+}
 export async function shareFinoraPdf(
   document: jsPDF,
 
@@ -335,10 +413,79 @@ export async function shareFinoraPdf(
   }
 
   // ==========================================================
-  // WEB / DESKTOP FALLBACK
+  // FINORA_C80_B27_C2_WEB_FILE_SHARE
+  //
+  // Supported environments: hand the actual PDF File to the
+  // operating system share UI. A recipient is never selected
+  // or sent to automatically by FINORA.
+  //
+  // Unsupported Windows/Electron: download as before.
   // ==========================================================
 
-  downloadFinoraPdf(document, fileName);
+  // FINORA_C80_B31_C2_C_WINDOWS_WHATSAPP_HANDOFF
+  // The Main process verifies the PDF and saves it without a dialog.
+  // Never open WhatsApp Web if saving the PDF fails.
+  const windowsBridge = (
+    window as Window & {
+      finoraReportWhatsappPdf?: {
+        saveToDownloads: (request: {
+          fileName: string;
+          dataBase64: string;
+        }) => Promise<
+          | { success: true; fileName: string }
+          | { success: false; errorCode: string }
+        >;
+      };
+    }
+  ).finoraReportWhatsappPdf;
+
+  const electronRuntime =
+    /Electron/i.test(navigator.userAgent);
+
+  if (electronRuntime || windowsBridge) {
+    await saveFinoraWhatsappPdfToDownloads(document, fileName);
+    window.open("https://web.whatsapp.com/", "_blank");
+    return;
+  }
+  const safeFileName = sanitizeFileName(fileName);
+
+  const file = new File(
+    [document.output("blob")],
+    safeFileName,
+    { type: "application/pdf" },
+  );
+
+  if (
+    typeof navigator.share === "function" &&
+    typeof navigator.canShare === "function" &&
+    navigator.canShare({ files: [file] })
+  ) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: options.title ?? "FINORA Report",
+        text: options.text ?? "FINORA Enterprise PDF Report",
+      });
+
+      return;
+    } catch (shareError) {
+      if (
+        shareError instanceof Error &&
+        shareError.name === "AbortError"
+      ) {
+        // User explicitly cancelled. Do not download.
+        return;
+      }
+
+      console.warn(
+        "FINORA PDF native file sharing unavailable:",
+        shareError,
+      );
+    }
+  }
+
+  // Fail-safe desktop fallback; never claim attachment success.
+  downloadFinoraPdf(document, safeFileName);
 }
 
 // ============================================================

@@ -77,6 +77,11 @@ const CONTROL_CENTER_CHANNELS = {
     // FINORA_P1_594G2_DASHBOARD
   GET_SERVER_DASHBOARD:
     "finora:control-center:get-server-dashboard",
+  // FINORA_C8U2_FOUR_PLAN_GET
+  GET_SERVER_FOUR_PLAN_PRICING:
+    "finora-control-center:get-server-four-plan-pricing",
+  SAVE_SERVER_FOUR_PLAN_PRICING:
+    "finora-control-center:save-server-four-plan-pricing",
 GET_SERVER_BRANCH_DIRECTORY:
     "finora:control-center:get-server-branch-directory",
 
@@ -843,6 +848,7 @@ export interface FinoraServerRechargeHistoryRecordView {
   decidedAt: string;
   decidedByActor: string | null;
   declineReason: string | null;
+  verifiedPaymentReference: string | null;
   walletId: string;
   balanceInr: string;
   walletStatus: string;
@@ -853,6 +859,7 @@ export interface FinoraServerRechargeHistoryRecordView {
   businessName: string;
   ownerId: string;
   ownerName: string;
+  ownerMobile: string | null;
 }
 
 export interface FinoraServerRechargeHistoryPageView {
@@ -863,6 +870,7 @@ export interface FinoraServerRechargeHistoryPageView {
   limit: number;
   offset: number;
   hasMore: boolean;
+  totalCount?: number;
 }
 // FINORA_P1_591D_DECISION_PRELOAD
 export type FinoraServerRechargeDecisionInputView =
@@ -902,6 +910,8 @@ export interface FinoraServerProvisionOwnerInput {
   validFrom: string;
   validUntil: string;
   openingWalletBalance: number;
+  // FINORA_P1_758BN_OWNER_KEY
+  requestKey?: string;
 }
 
 export interface FinoraServerProvisionOwnerView {
@@ -1374,6 +1384,27 @@ export interface FinoraControlCenterBridge {
         import("./finoraServerDashboardClient").FinoraServerDashboardView
       >
     >;
+  // FINORA_C8U2_FOUR_PLAN_GET
+  // Optional until the Android native bridge is implemented.
+  getServerFourPlanPricing?:
+    (request: {
+      scope: "GLOBAL" | "BRANCH";
+      branchId: string | null;
+    }) => Promise<
+      FinoraControlCenterResult<
+        import("./finoraFourPlanPricingResponseContract.js").FinoraFourPlanPricingView
+      >
+    >;
+
+  // FINORA_C8_X42_AL_SAVE_PRELOAD
+  saveServerFourPlanPricing?:
+    (
+      payload: import("./finoraFourPlanPricingSaveClient.js").FinoraPricingSavePayload,
+    ) => Promise<
+      FinoraControlCenterResult<
+        import("./finoraFourPlanPricingSaveClient.js").FinoraPricingSaveResult
+      >
+    >;
 getServerBranchDirectory:
     (
       query?: FinoraServerDirectoryQuery,
@@ -1518,6 +1549,7 @@ getServerBranchDirectory:
       limit: number;
       offset: number;
       status: FinoraServerRechargeHistoryStatusView;
+      search?: string;
     }) =>
       Promise<
         FinoraControlCenterResult<FinoraServerRechargeHistoryPageView>
@@ -1963,6 +1995,29 @@ const controlCenterBridge:
       ) as Promise<
         FinoraControlCenterResult<
           import("./finoraServerDashboardClient").FinoraServerDashboardView
+        >
+      >,
+  // FINORA_C8U2_FOUR_PLAN_GET
+  getServerFourPlanPricing:
+    (request) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.GET_SERVER_FOUR_PLAN_PRICING,
+        request,
+      ) as Promise<
+        FinoraControlCenterResult<
+          import("./finoraFourPlanPricingResponseContract.js").FinoraFourPlanPricingView
+        >
+      >,
+
+  // FINORA_C8_X42_AL_SAVE_PRELOAD
+  saveServerFourPlanPricing:
+    (payload) =>
+      ipcRenderer.invoke(
+        CONTROL_CENTER_CHANNELS.SAVE_SERVER_FOUR_PLAN_PRICING,
+        payload,
+      ) as Promise<
+        FinoraControlCenterResult<
+          import("./finoraFourPlanPricingSaveClient.js").FinoraPricingSaveResult
         >
       >,
 getServerBranchDirectory:

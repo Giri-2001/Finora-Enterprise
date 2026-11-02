@@ -1,4 +1,5 @@
-﻿import React from "react";
+import React from "react";
+import FinoraDialogHost from "../components/common/dialog/FinoraDialogHost";
 import {
   createRoot,
 } from "react-dom/client";
@@ -53,5 +54,6 @@ createRoot(
 ).render(
   <React.StrictMode>
     <FinoraControlCenterShell />
+    <FinoraDialogHost />
   </React.StrictMode>,
 );

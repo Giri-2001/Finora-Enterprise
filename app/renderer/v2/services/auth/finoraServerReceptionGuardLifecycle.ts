@@ -197,6 +197,57 @@ export async function touchFinoraServerGuardSession(
     Capacitor.isNativePlatform() &&
     Capacitor.getPlatform() === "android"
   ) {
+    // FINORA_C80_AUTH_R60_ANDROID_SERVER_TOUCH
+    // Activity renews on the server; validation alone never renews.
+    // The renderer sends only its opaque Reception handle.
+    const native = finoraControlShared as {
+      touchAndroidReception?: (
+        request: { sessionId: string }
+      ) => Promise<{
+        success?: boolean;
+        renewed?: boolean;
+        sessionId?: string;
+        sessionType?: string;
+        errorCode?: string;
+      }>;
+    };
+
+    if (typeof native.touchAndroidReception !== "function") {
+      return {
+        success: false,
+        errorCode: "SERVER_GUARD_UNAVAILABLE",
+      };
+    }
+
+    let renewal: Awaited<
+      ReturnType<NonNullable<typeof native.touchAndroidReception>>
+    >;
+
+    try {
+      renewal = await native.touchAndroidReception({ sessionId });
+    } catch {
+      return {
+        success: false,
+        errorCode: "SERVER_UNAVAILABLE",
+      };
+    }
+
+    if (
+      renewal?.success !== true ||
+      renewal.renewed !== true ||
+      renewal.sessionId !== sessionId ||
+      renewal.sessionType !== "BUSINESS_RECEPTION"
+    ) {
+      return {
+        success: false,
+        errorCode:
+          renewal?.errorCode === "SERVER_UNAVAILABLE"
+            ? "SERVER_UNAVAILABLE"
+            : renewal?.errorCode === "RECEPTION_SESSION_NOT_FOUND"
+              ? "SESSION_NOT_FOUND"
+              : "SESSION_REVALIDATION_DENIED",
+      };
+    }
     const verified = await validateAndroidReception(sessionId);
 
     if (
@@ -220,7 +271,36 @@ export async function touchFinoraServerGuardSession(
   }
   try {
     const raw: unknown = await api.touch({ sessionId });
-    if (!record(raw) || raw.success !== true || raw.sessionId !== sessionId) {
+    // FINORA_C80_AUTH_R7_PRESERVE_TOUCH_FAILURE
+    if (!record(raw)) {
+      return { success: false, errorCode: "INVALID_SERVER_RESPONSE" };
+    }
+
+    if (raw.success !== true) {
+      const allowedErrorCodes = [
+        "SERVER_UNAVAILABLE",
+        "SESSION_EXPIRED",
+        "SESSION_NOT_FOUND",
+        "SESSION_CHANGED",
+        "LOGIN_CHANGED",
+        "SERVER_SESSION_REQUIRED",
+        "SERVER_SCOPE_DENIED",
+        "SERVER_IDENTITY_MISMATCH",
+        "SESSION_REVALIDATION_DENIED",
+        "INVALID_REQUEST",
+        "INVALID_SESSION",
+      ];
+
+      const reason =
+        typeof raw.errorCode === "string" &&
+        allowedErrorCodes.includes(raw.errorCode)
+          ? raw.errorCode
+          : "SERVER_TOUCH_DENIED";
+
+      return { success: false, errorCode: reason };
+    }
+
+    if (raw.sessionId !== sessionId) {
       return { success: false, errorCode: "SERVER_TOUCH_DENIED" };
     }
     return { success: true, sessionId };

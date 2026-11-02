@@ -18,7 +18,7 @@ export type FinoraSubscriptionPurchaseResult =
         replayed: boolean;
         purchaseId: string;
         subscriptionId: string;
-        transactionId: string;
+        transactionId: string | null;
         amountInr: string;
         balanceInr: string | null;
         startsAt: string;
@@ -64,11 +64,14 @@ function validReceipt(value: unknown): value is Extract<
     UUID.test(v.purchaseId) &&
     typeof v.subscriptionId === "string" &&
     /^[0-9]{10,12}$/.test(v.subscriptionId) &&
-    typeof v.transactionId === "string" &&
-    /^[0-9]{10,12}$/.test(v.transactionId) &&
     typeof v.amountInr === "string" &&
     MONEY.test(v.amountInr) &&
-    Number(v.amountInr) > 0 &&
+    (
+      v.amountInr === "0.00"
+        ? v.transactionId === null
+        : typeof v.transactionId === "string" &&
+          /^[0-9]{10,12}$/.test(v.transactionId)
+    ) &&
     (v.balanceInr === null ||
       (typeof v.balanceInr === "string" &&
        MONEY.test(v.balanceInr))) &&

@@ -444,13 +444,28 @@ function applyPaymentToInstallment(
   // ALREADY COMPLETE
   // ==========================================================
 
+  // FINORA_C80_B23_C2_C10_D_OVERDUE_PAYMENT_STATUS
+  // Preserve payment history: a fully paid late EMI is Overdue Paid.
+  const dueDate = String(installment.dueDate ?? "").trim().slice(0, 10);
+  const paymentDate = String(paidDate ?? "").trim().slice(0, 10);
+
+  const validDate = /^\d{4}-\d{2}-\d{2}$/;
+
+  const wasOverdueAtPayment =
+    status === "overdue" ||
+    (
+      validDate.test(dueDate) &&
+      validDate.test(paymentDate) &&
+      dueDate < paymentDate
+    );
+
   if (remainingInstallmentAmount <= 0) {
     const completedInstallment: LoanScheduleInstallment = {
       ...installment,
 
       paidAmount: installmentAmount,
 
-      status: "Paid",
+      status: wasOverdueAtPayment ? "Overdue Paid" : "Paid",
     };
 
     if (typeof installment.outstandingBalance === "number") {
@@ -504,7 +519,12 @@ function applyPaymentToInstallment(
   // NEW STATUS
   // ==========================================================
 
-  const newStatus = newPaidAmount >= installmentAmount ? "Paid" : "Partial";
+  const newStatus =
+    newPaidAmount >= installmentAmount
+      ? wasOverdueAtPayment
+        ? "Overdue Paid"
+        : "Paid"
+      : "Partial";
 
   // ==========================================================
   // UPDATED INSTALLMENT

@@ -126,6 +126,30 @@ export interface CollectionReviewData {
    */
   selectedEmiNumbers?: number[];
 
+  // FINORA_R162_R4_IMMUTABLE_SNAPSHOT
+  receiptSnapshot?: {
+    version: 1;
+    capturedAt: string;
+    previousOutstanding: number;
+    amountReceived: number;
+    penaltyReceived: number;
+    discountAmount: number;
+    remainingOutstanding: number;
+    selectedEmiNumbers: number[];
+    scheduleAvailable: boolean;
+    totalEmis: number | null;
+    remainingEmis: number | null;
+    installments: Array<{
+      number: number;
+      dueDate: string;
+      amount: number;
+      paidAmount: number;
+      waivedAmount: number;
+      penaltyAmount: number;
+      status: string;
+    }>;
+  };
+
   /**
    * Total amount represented by the selected EMI rows.
    *

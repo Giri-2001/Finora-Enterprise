@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    FINORA ENTERPRISE OS™
 
    FINORA WALLET™
@@ -99,7 +99,22 @@ export default function WalletTransactionRow({
     subtitleParts.join(" • ");
 
   return (
-    <article style={styles.row}>
+    <article
+      style={{
+        ...styles.row,
+        ...(transaction.status === "SUCCESS"
+          ? transaction.direction === "CREDIT"
+            ? {
+                background: "rgba(16,185,129,0.12)",
+                borderLeft: "3px solid #34d399",
+              }
+            : {
+                background: "rgba(239,68,68,0.12)",
+                borderLeft: "3px solid #f87171",
+              }
+          : {}),
+      }}
+    >
       <div style={styles.main}>
         <div style={styles.identity}>
           <p style={styles.title}>

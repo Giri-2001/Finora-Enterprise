@@ -3433,6 +3433,21 @@ function AuthenticatedV2Application({
       return;
     }
 
+    // FINORA_R190_C_NAVIGATION_CLEANUP
+    // Clear temporary receipt workspace selection on department change.
+    window.sessionStorage.removeItem("finora:receipt-page:loans");
+    window.sessionStorage.removeItem("finora:receipt-page:collections");
+
+    // FINORA_C82_A6_LOANS_OFFICE_LANDING
+    // A fresh department entry must open Loans Office.
+    // Preserve all saved Standard/Gold Loan drafts.
+    if (nextPage === "loans" && navigation.page !== "loans") {
+      window.sessionStorage.setItem(
+        "FINORA_LOANS_ACTIVE_WORKSPACE",
+        "LOANS_OFFICE",
+      );
+    }
+
     setLoanStudioOpen(false);
 
     setCollectionStudioOpen(false);
@@ -3459,6 +3474,46 @@ function AuthenticatedV2Application({
   // ==========================================================
 
   function handleBack(): void {
+    // FINORA_R191_B_RECEIPT_BACK
+    // Receipt workspaces are subpages of their Office.
+    // Handle them BEFORE generic navigation history.
+    // Clearing the workspace key + remounting the current
+    // page returns to its parent Office without navigating
+    // through Reception.
+
+    if (
+      page === "loans" &&
+      window.sessionStorage.getItem(
+        "finora:receipt-page:loans",
+      ) === "1"
+    ) {
+      window.sessionStorage.removeItem(
+        "finora:receipt-page:loans",
+      );
+
+      setPageRefreshKey(
+        (currentKey) => currentKey + 1,
+      );
+
+      return;
+    }
+
+    if (
+      page === "collections" &&
+      window.sessionStorage.getItem(
+        "finora:receipt-page:collections",
+      ) === "1"
+    ) {
+      window.sessionStorage.removeItem(
+        "finora:receipt-page:collections",
+      );
+
+      setPageRefreshKey(
+        (currentKey) => currentKey + 1,
+      );
+
+      return;
+    }
     // ========================================================
     // LOAN STUDIO FIRST
     // ========================================================

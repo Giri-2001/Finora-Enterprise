@@ -42,8 +42,24 @@ final class FinoraNativeWalletSession {
         return result;
     }
 
+    // FINORA_C80_AUTH_R155_VERIFIED_LOGIN_USERNAME
+    // Native-memory only. Never written to USB or WebView.
+    private static String authenticatedLoginUsername = null;
+
+    static synchronized boolean matchesAuthenticatedLoginUsername(
+        String requested
+    ) {
+        return authenticatedLoginUsername != null &&
+            requested != null &&
+            !requested.trim().isEmpty() &&
+            authenticatedLoginUsername.equalsIgnoreCase(
+                requested.trim()
+            );
+    }
+
     static synchronized void clear() {
         bearerToken = null;
+        authenticatedLoginUsername = null;
         verifiedBusinessSessionId = null;
         receptionHandle = null;
         verifiedWalletPrincipal = null;
@@ -118,6 +134,13 @@ final class FinoraNativeWalletSession {
             clear();
             return failure("NATIVE_RESPONSE_INVALID");
         }
+
+        // Username is accepted only after server-authenticated
+        // Account Login and verified Business Session.
+        authenticatedLoginUsername =
+            result.optBoolean("businessSessionVerified", false)
+                ? username.trim()
+                : null;
 
         return result;
     }
@@ -431,6 +454,128 @@ final class FinoraNativeWalletSession {
             return failure("BUSINESS_REVALIDATION_FAILED");
         }
     }
+    // FINORA_C80_AUTH_R57_ANDROID_NATIVE_RENEWAL
+    // Only a matching native Reception handle can request renewal.
+    // The PostgreSQL session credential never crosses to JavaScript.
+    static synchronized JSONObject touchAndroidReception(String handle) {
+        if (handle == null ||
+            receptionHandle == null ||
+            !java.security.MessageDigest.isEqual(
+                handle.getBytes(StandardCharsets.UTF_8),
+                receptionHandle.getBytes(StandardCharsets.UTF_8))) {
+            return failure("RECEPTION_SESSION_NOT_FOUND");
+        }
+
+        if (verifiedBusinessSessionId == null ||
+            !verifiedBusinessSessionId.matches("^[a-f0-9]{64}$") ||
+            verifiedWalletPrincipal == null ||
+            verifiedBusinessPrincipal == null) {
+            return failure("BUSINESS_SESSION_REQUIRED");
+        }
+
+        HttpsURLConnection connection = null;
+
+        try {
+            connection = (HttpsURLConnection) new URL(
+                "https://api.finoraenterprise.com/owner/business/session/touch"
+            ).openConnection();
+
+            connection.setRequestMethod("POST");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(10000);
+            connection.setInstanceFollowRedirects(false);
+            connection.setUseCaches(false);
+            connection.setDoOutput(true);
+
+            connection.setRequestProperty(
+                "Authorization", "Bearer " + verifiedBusinessSessionId);
+            connection.setRequestProperty(
+                "Content-Type", "application/json");
+            connection.setRequestProperty(
+                "Cache-Control", "no-store");
+
+            try (java.io.OutputStream out =
+                     connection.getOutputStream()) {
+                out.write("{}".getBytes(StandardCharsets.UTF_8));
+            }
+
+            int status = connection.getResponseCode();
+
+            if (status == 408 || status == 429 || status >= 500) {
+                return failure("SERVER_UNAVAILABLE");
+            }
+
+            if (status == 401 || status == 403) {
+                return failure("BUSINESS_SESSION_NOT_AUTHORIZED");
+            }
+
+            if (status != 200) {
+                return failure("BUSINESS_RENEWAL_REJECTED");
+            }
+
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+            try (InputStream input = connection.getInputStream()) {
+                byte[] buffer = new byte[4096];
+                int count;
+
+                while ((count = input.read(buffer)) != -1) {
+                    if (output.size() + count > 16384) {
+                        return failure("BUSINESS_RENEWAL_RESPONSE_INVALID");
+                    }
+                    output.write(buffer, 0, count);
+                }
+            }
+
+            JSONObject response = new JSONObject(
+                new String(output.toByteArray(), StandardCharsets.UTF_8)
+            );
+
+            if (!response.optBoolean("ok", false) ||
+                !response.optBoolean("renewed", false) ||
+                !"BUSINESS_RECEPTION".equals(
+                    response.optString("sessionType", ""))) {
+                return failure("BUSINESS_RENEWAL_RESPONSE_INVALID");
+            }
+
+            String expiry = response.optString("expiresAt", "");
+            java.time.Instant expiresAt =
+                java.time.Instant.parse(expiry);
+
+            if (!expiresAt.isAfter(java.time.Instant.now())) {
+                return failure("BUSINESS_RENEWAL_EXPIRY_INVALID");
+            }
+
+            // Renewal is not authorization. Verify the original
+            // server-issued principal again before reporting success.
+            JSONObject authority = verifiedBusinessAuthority();
+
+            if (!authority.optBoolean("success", false) ||
+                !authority.optBoolean("businessDataAccess", false) ||
+                !"BUSINESS_RECEPTION".equals(
+                    authority.optString("sessionType", ""))) {
+                if ("SERVER_UNAVAILABLE".equals(
+                    authority.optString("errorCode", ""))) {
+                    return failure("SERVER_UNAVAILABLE");
+                }
+                return failure("BUSINESS_SESSION_NOT_AUTHORIZED");
+            }
+
+            JSONObject result = new JSONObject();
+            result.put("success", true);
+            result.put("sessionId", receptionHandle);
+            result.put("renewed", true);
+            result.put("sessionType", "BUSINESS_RECEPTION");
+            return result;
+
+        } catch (java.io.IOException networkFailure) {
+            return failure("SERVER_UNAVAILABLE");
+        } catch (Exception ignored) {
+            return failure("BUSINESS_RENEWAL_FAILED");
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
+    }
     // FINORA_P1_720Z2_NATIVE_RECEPTION
     static synchronized JSONObject issueAndroidReception() {
         JSONObject authority = verifiedBusinessAuthority();
@@ -736,6 +881,332 @@ final class FinoraNativeWalletSession {
             "/owner/wallet/recharges",
             "POSTGRESQL_RECHARGE_REQUESTS"
         );
+    }
+    // FINORA_W9_J7_OWNER_RECHARGE_POST
+    // FINORA account bearer stays exclusively in the native process.
+    // Persist the original request before the first network write.
+    // A successful request receipt never authorizes wallet credit.
+    static synchronized JSONObject submitOwnerRecharge(
+        android.content.Context context,
+        String walletId,
+        int amountInr,
+        String paymentMethod,
+        String idempotencyKey
+    ) {
+        HttpsURLConnection connection = null;
+
+        if (context == null ||
+            walletId == null ||
+            !walletId.matches("[0-9]{8,12}") ||
+            amountInr < 50 || amountInr > 2000 ||
+            (!"PHONEPE".equals(paymentMethod) &&
+             !"GOOGLE_PAY".equals(paymentMethod)) ||
+            idempotencyKey == null ||
+            !idempotencyKey.matches(
+                "(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+            )) {
+            return failure("INVALID_REQUEST");
+        }
+
+        if (bearerToken == null ||
+            !bearerToken.matches("(?i)[0-9a-f]{64}")) {
+            return failure("UNAUTHORIZED");
+        }
+
+        final FinoraOwnerRechargeIntentStore store;
+
+        try {
+            store = new FinoraOwnerRechargeIntentStore(context);
+        } catch (Exception ignored) {
+            return failure("RECHARGE_INTENT_STORAGE_UNAVAILABLE");
+        }
+
+        try {
+            JSONObject wallet = fetchBalance();
+
+            if (wallet == null ||
+                !walletId.equals(wallet.optString("walletId", ""))) {
+                return failure("WALLET_SESSION_NOT_AUTHORIZED");
+            }
+
+            FinoraOwnerRechargeIntentStore.Intent requested =
+                new FinoraOwnerRechargeIntentStore.Intent(
+                    walletId, amountInr, paymentMethod, idempotencyKey
+                );
+
+            // This operation is fail-closed if an earlier request exists.
+            // Never overwrite a previous unknown-outcome UUID.
+            FinoraOwnerRechargeIntentStore.Intent intent =
+                store.saveIfAbsent(requested);
+
+            if (!BALANCE_URL.endsWith("/owner/wallet/balance")) {
+                return failure("INVALID_SERVER_ROUTE");
+            }
+
+            String endpoint = BALANCE_URL.substring(
+                0,
+                BALANCE_URL.length() - "/owner/wallet/balance".length()
+            ) + "/owner/wallet/recharges";
+
+            connection = (HttpsURLConnection)
+                new URL(endpoint).openConnection();
+
+            connection.setRequestMethod("POST");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(15000);
+            connection.setInstanceFollowRedirects(false);
+            connection.setUseCaches(false);
+            connection.setDoOutput(true);
+            connection.setRequestProperty(
+                "Authorization", "Bearer " + bearerToken
+            );
+            connection.setRequestProperty(
+                "Accept", "application/json"
+            );
+            connection.setRequestProperty(
+                "Content-Type", "application/json"
+            );
+            connection.setRequestProperty(
+                "Cache-Control", "no-store"
+            );
+
+            JSONObject payload = new JSONObject();
+            payload.put("amountInr", intent.amountInr);
+            payload.put("paymentMethod", intent.paymentMethod);
+            payload.put("idempotencyKey", intent.idempotencyKey);
+
+            byte[] bytes = payload.toString().getBytes(
+                StandardCharsets.UTF_8
+            );
+
+            try (java.io.OutputStream output =
+                     connection.getOutputStream()) {
+                output.write(bytes);
+            }
+
+            int status = connection.getResponseCode();
+
+            if (status == 400) return failure("INVALID_REQUEST");
+            if (status == 401) return failure("UNAUTHORIZED");
+            if (status == 404) return failure("WALLET_NOT_AVAILABLE");
+            if (status == 409) {
+                return failure("SERVER_RECHARGE_IDEMPOTENCY_CONFLICT");
+            }
+            if (status == 429) return failure("RATE_LIMITED");
+
+            if (status != 200 && status != 201) {
+                return failure("SERVER_UNAVAILABLE");
+            }
+
+            String contentType = connection.getContentType();
+
+            if (contentType == null ||
+                !contentType.toLowerCase(java.util.Locale.ROOT)
+                    .split(";")[0].trim().equals("application/json")) {
+                return failure("INVALID_SERVER_RESPONSE");
+            }
+
+            ByteArrayOutputStream responseBytes =
+                new ByteArrayOutputStream();
+
+            try (InputStream input = connection.getInputStream()) {
+                byte[] buffer = new byte[2048];
+                int count;
+
+                while ((count = input.read(buffer)) != -1) {
+                    if (responseBytes.size() + count > 8192) {
+                        return failure("INVALID_SERVER_RESPONSE");
+                    }
+                    responseBytes.write(buffer, 0, count);
+                }
+            }
+
+            JSONObject response = new JSONObject(
+                new String(
+                    responseBytes.toByteArray(),
+                    StandardCharsets.UTF_8
+                )
+            );
+
+            JSONObject request = response.optJSONObject("request");
+
+            String expectedAmount =
+                Integer.toString(amountInr) + ".00";
+
+            if (!response.optBoolean("ok", false) ||
+                !"POSTGRESQL_RECHARGE_REQUESTS".equals(
+                    response.optString("source", "")
+                ) ||
+                !response.has("replayed") ||
+                !(response.opt("replayed") instanceof Boolean) ||
+                (status == 200) != response.optBoolean("replayed") ||
+                request == null ||
+                !request.optString("requestId", "").matches(
+                    "(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+                ) ||
+                !walletId.equals(request.optString("walletId", "")) ||
+                !expectedAmount.equals(request.optString("amountInr", "")) ||
+                !paymentMethod.equals(
+                    request.optString("paymentMethod", "")
+                ) ||
+                !("PENDING".equals(request.optString("status", "")) ||
+                  "APPROVED".equals(request.optString("status", "")) ||
+                  "DECLINED".equals(request.optString("status", ""))) ||
+                (status == 201 &&
+                 !"PENDING".equals(request.optString("status", ""))) ||
+                request.optString("createdAt", "").isEmpty() ||
+                request.optString("createdAt", "").length() > 40) {
+                return failure("INVALID_SERVER_RESPONSE");
+            }
+
+            try {
+                java.time.Instant.parse(
+                    request.getString("createdAt")
+                );
+            } catch (Exception ignored) {
+                return failure("INVALID_SERVER_RESPONSE");
+            }
+
+            // A valid server receipt is sufficient to settle the exact
+            // pending retry intent; it is not a wallet balance credit.
+            boolean cleared = false;
+            try {
+                cleared = store.clearIfMatches(
+                    walletId, intent.idempotencyKey
+                );
+            } catch (Exception ignored) {
+                // Keep receipt visible; later reconciliation is required.
+            }
+
+            JSONObject receipt = new JSONObject();
+            receipt.put(
+                "source", "POSTGRESQL_RECHARGE_REQUESTS"
+            );
+            receipt.put("request", request);
+            receipt.put("replayed", response.getBoolean("replayed"));
+
+            JSONObject result = new JSONObject();
+            result.put("success", true);
+            result.put("data", receipt);
+            result.put("intentCleared", cleared);
+            return result;
+
+        } catch (IllegalStateException error) {
+            if ("LOCAL_RECHARGE_INTENT_CONFLICT".equals(
+                    error.getMessage())) {
+                return failure("LOCAL_RECHARGE_INTENT_CONFLICT");
+            }
+            return failure("RECHARGE_INTENT_STORAGE_UNAVAILABLE");
+        } catch (Exception ignored) {
+            // Original encrypted intent remains for explicit recovery.
+            return failure("SERVER_UNAVAILABLE");
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+    // FINORA_W9_J9_NATIVE_RECOVERY
+    // Read-only metadata for the authenticated wallet.
+    // Never expose the persisted UUID or bearer to the WebView.
+    static synchronized JSONObject pendingOwnerRecharge(
+        android.content.Context context
+    ) {
+        try {
+            if (context == null || bearerToken == null) {
+                return failure("UNAUTHORIZED");
+            }
+
+            FinoraOwnerRechargeIntentStore store =
+                new FinoraOwnerRechargeIntentStore(context);
+
+            // Read encrypted state before any network call.
+            // Do not claim "no pending" if the store is corrupt.
+            FinoraOwnerRechargeIntentStore.Intent intent =
+                store.load();
+
+            JSONObject wallet = fetchBalance();
+
+            if (wallet == null) {
+                return failure("WALLET_SESSION_NOT_AUTHORIZED");
+            }
+
+            String walletId = wallet.optString("walletId", "");
+
+            if (!walletId.matches("[0-9]{8,12}")) {
+                return failure("INVALID_SERVER_RESPONSE");
+            }
+
+            if (intent != null &&
+                !walletId.equals(intent.walletId)) {
+                return failure("LOCAL_RECHARGE_INTENT_SCOPE_CONFLICT");
+            }
+
+            JSONObject data = new JSONObject();
+            data.put("pending", intent != null);
+
+            if (intent == null) {
+                data.put("amountInr", JSONObject.NULL);
+                data.put("paymentMethod", JSONObject.NULL);
+            } else {
+                data.put("amountInr", intent.amountInr);
+                data.put("paymentMethod", intent.paymentMethod);
+            }
+
+            JSONObject result = new JSONObject();
+            result.put("success", true);
+            result.put("data", data);
+            return result;
+
+        } catch (Exception ignored) {
+            return failure("RECHARGE_INTENT_STORAGE_UNAVAILABLE");
+        }
+    }
+
+    // Explicit retry: reload the same encrypted UUID.
+    // This method never generates a new idempotency key.
+    static synchronized JSONObject resumeOwnerRecharge(
+        android.content.Context context
+    ) {
+        try {
+            if (context == null || bearerToken == null) {
+                return failure("UNAUTHORIZED");
+            }
+
+            FinoraOwnerRechargeIntentStore store =
+                new FinoraOwnerRechargeIntentStore(context);
+
+            FinoraOwnerRechargeIntentStore.Intent intent =
+                store.load();
+
+            if (intent == null) {
+                return failure("NO_PENDING_RECHARGE_INTENT");
+            }
+
+            JSONObject wallet = fetchBalance();
+
+            if (wallet == null) {
+                return failure("WALLET_SESSION_NOT_AUTHORIZED");
+            }
+
+            if (!intent.walletId.equals(
+                    wallet.optString("walletId", ""))) {
+                return failure("LOCAL_RECHARGE_INTENT_SCOPE_CONFLICT");
+            }
+
+            // submitOwnerRecharge uses saveIfAbsent, so the
+            // original encrypted payload must match exactly.
+            return submitOwnerRecharge(
+                context,
+                intent.walletId,
+                intent.amountInr,
+                intent.paymentMethod,
+                intent.idempotencyKey
+            );
+
+        } catch (Exception ignored) {
+            return failure("RECHARGE_INTENT_STORAGE_UNAVAILABLE");
+        }
     }
     private static JSONObject fetchBalance() {
         if (bearerToken == null) return null;

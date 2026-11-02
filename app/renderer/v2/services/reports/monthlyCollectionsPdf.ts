@@ -48,6 +48,8 @@ import { formatFinoraDate } from "../../../shared/finoraDateTimeDisplay";
 // ============================================================
 
 import { getBusinessContext } from "../business/businessContextService";
+import { loadFinoraServerSettingsIdentity } from "../business/finoraServerSettingsIdentity";
+import finoraMonthlyLogoUrl from "../../app/assets/finoraenterprise.png";
 
 import type { jsPDF } from "jspdf";
 
@@ -79,6 +81,203 @@ const PAGE_TOP = 18;
 const PAGE_BOTTOM_RESERVED = 18;
 
 const CONTENT_START_Y = 47;
+
+// FINORA_C80_B28_B4_B_MONTHLY_IDENTITY
+// Original PNG is centered. Business identity stays right-aligned.
+// The shared header's upper-right generated date is covered only
+// inside the existing right-side header area.
+async function drawMonthlyBusinessIdentity(
+  document: jsPDF,
+): Promise<void> {
+  const context = getBusinessContext();
+
+  const scope =
+    context?.ownerId?.trim() &&
+    context.businessId?.trim() &&
+    context.branchId?.trim()
+      ? {
+          ownerId: context.ownerId.trim(),
+          businessId: context.businessId.trim(),
+          branchId: context.branchId.trim(),
+        }
+      : null;
+
+  let businessName = "Not recorded";
+  let branchName = "Not recorded";
+
+  if (scope) {
+    const serverIdentity =
+      await loadFinoraServerSettingsIdentity(scope);
+
+    if (serverIdentity.success) {
+      businessName = serverIdentity.data.businessName.trim();
+      branchName = serverIdentity.data.branchName.trim();
+    } else {
+      const profile = context?.businessProfile;
+
+      if (
+        profile &&
+        profile.ownerId === scope.ownerId &&
+        profile.businessId === scope.businessId &&
+        profile.branchId === scope.branchId &&
+        profile.businessName.trim() &&
+        profile.branchName.trim()
+      ) {
+        businessName = profile.businessName.trim();
+        branchName = profile.branchName.trim();
+      }
+    }
+  }
+
+  const rightX =
+    document.internal.pageSize.getWidth() - PAGE_MARGIN_X;
+
+  // Preserve left header and center FINORA logo.
+  // This rectangle touches only the existing right header.
+  document.setFillColor(255, 255, 255);
+  document.rect(135, 9, rightX - 135 + 1, 23, "F");
+
+  const drawName = (
+    original: string,
+    y: number,
+    fontSize: number,
+    fontWeight: "bold" | "normal",
+  ): void => {
+    document.setFont("helvetica", fontWeight);
+    document.setFontSize(fontSize);
+
+    let size = fontSize;
+
+    while (
+      size > 7 &&
+      document.getTextWidth(original) > 58
+    ) {
+      size -= 0.5;
+      document.setFontSize(size);
+    }
+
+    let visible = original;
+
+    while (
+      visible.length > 4 &&
+      document.getTextWidth(visible) > 58
+    ) {
+      visible = visible.slice(0, -1);
+    }
+
+    if (visible !== original) {
+      visible = `${visible.slice(0, -3)}...`;
+    }
+
+    document.text(visible, rightX, y, {
+      align: "right",
+    });
+  };
+
+  document.setTextColor(22, 35, 52);
+  drawName(businessName, 17, 11, "bold");
+
+  document.setTextColor(92, 101, 113);
+  drawName(branchName, 25, 9, "normal");
+
+  document.setTextColor(0);
+}
+// FINORA_C80_B28_B3_MONTHLY_RANGE_FILENAME
+function monthlyDateLabel(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+  if (!match) {
+    throw new Error("Invalid Monthly Collections report date.");
+  }
+
+  return `${match[3]}-${match[2]}-${match[1]}`;
+}
+
+function monthlyPdfFilename(monthKey: string): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(monthKey);
+
+  if (!match) {
+    throw new Error("Invalid Monthly Collections month key.");
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+
+  if (
+    year < 2000 ||
+    year > 9999 ||
+    month < 1 ||
+    month > 12
+  ) {
+    throw new Error("Invalid Monthly Collections year or month.");
+  }
+
+  const monthName = new Date(
+    Date.UTC(year, month - 1, 1),
+  ).toLocaleString("en-US", {
+    month: "long",
+    timeZone: "UTC",
+  });
+
+  // FINORA_C80_B28_B6_CLEAN_MONTHLY_FILENAME
+  // Filename reflects the selected report month and year only.
+  return `Finora_Monthly_Collections_${monthName}_${year}.pdf`;
+}
+// FINORA_C80_B28_B2_CENTER_LOGO
+// Center branding stays clear of left/right shared-header text.
+async function drawMonthlyCenterLogo(document: jsPDF): Promise<void> {
+  const image = new Image();
+  image.src = finoraMonthlyLogoUrl;
+
+  try {
+    await image.decode();
+  } catch {
+    throw new Error("Unable to load original FINORA Monthly PDF logo.");
+  }
+
+  if (!image.naturalWidth || !image.naturalHeight) {
+    throw new Error("Invalid FINORA Monthly PDF logo dimensions.");
+  }
+
+  const canvas = window.document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Unable to render FINORA Monthly PDF logo.");
+  }
+
+  // Preserve image proportions; avoid cropping or stretching.
+  const scale = Math.min(
+    canvas.width / image.naturalWidth,
+    canvas.height / image.naturalHeight,
+  );
+  const imageWidth = image.naturalWidth * scale;
+  const imageHeight = image.naturalHeight * scale;
+
+  context.drawImage(
+    image,
+    (canvas.width - imageWidth) / 2,
+    (canvas.height - imageHeight) / 2,
+    imageWidth,
+    imageHeight,
+  );
+
+  const logoSize = 28;
+  const pageWidth = document.internal.pageSize.getWidth();
+
+  document.addImage(
+    canvas.toDataURL("image/png"),
+    "PNG",
+    (pageWidth - logoSize) / 2,
+    6,
+    logoSize,
+    logoSize,
+    "FINORA_MONTHLY_ORIGINAL_CENTER_LOGO",
+    "FAST",
+  );
+}
 
 // ============================================================
 // MONEY
@@ -568,7 +767,11 @@ function drawPaymentModeSummary(
     paymentModes.length > 0 ? 29 : 20,
   );
 
+  // FINORA_C80_B28_B5_R1_PAYMENT_MODE_SPACING
+  // Add breathing room without changing payment totals.
+  y = ensurePageSpace(document, y + 4, 18);
   y = drawSectionTitle(document, "PAYMENT MODE SUMMARY", y);
+  y += 3;
 
   if (paymentModes.length === 0) {
     document.setFont("helvetica", "normal");
@@ -726,6 +929,47 @@ function drawCollectionHistory(
       ],
       y,
     );
+
+    // FINORA_C80_B28_B1_RECEIPT_DETAILS
+    // Preserve every collection, including INR 1 transactions.
+    // Additional details belong to the same receipt row.
+    const receiptDetails = [
+      `Customer ID: ${safeText(collection.customerId)}`,
+      `Phone: ${safeText(collection.customerPhone)}`,
+      `Collection Type: ${safeText(collection.collectionType)}`,
+      `Status: ${safeText(collection.status)}`,
+      `Payment Reference: ${safeText(collection.paymentReference)}`,
+      `Remarks: ${safeText(collection.remarks)}`,
+    ];
+
+    document.setFont("helvetica", "normal");
+    document.setFontSize(7);
+    document.setTextColor(91, 102, 117);
+
+    const detailText = receiptDetails.join("   |   ");
+    const detailLines = document.splitTextToSize(
+      detailText,
+      getPageContentWidth(document) - 6,
+    ) as string[];
+
+    for (const detailLine of detailLines) {
+      const pageHeight = document.internal.pageSize.getHeight();
+
+      if (y + 4.5 > pageHeight - PAGE_BOTTOM_RESERVED) {
+        y = addContinuationPage(document);
+
+        document.setFont("helvetica", "normal");
+        document.setFontSize(7);
+        document.setTextColor(91, 102, 117);
+      }
+
+      document.text(detailLine, PAGE_MARGIN_X + 3, y + 3.4);
+      y += 4.4;
+    }
+
+    y += 2;
+
+    document.setTextColor(0);
   }
 
   // ==========================================================
@@ -819,12 +1063,18 @@ export async function buildMonthlyCollectionsPdf(
   const report = await buildMonthlyCollectionsReport(monthKey);
 
   const document = createFinoraPdf({
-    fileName: `FINORA_Monthly_Collections_${report.monthKey}.pdf`,
+    fileName: monthlyPdfFilename(report.monthKey),
 
     title: resolveBusinessReportTitle("Monthly Collections"),
 
-    subtitle: report.monthLabel,
+    subtitle: "",
   });
+
+  // Keep the original FINORA PNG in its own clear center zone.
+  await drawMonthlyCenterLogo(document);
+
+  // Actual server-scoped Business/Branch identity occupies right zone.
+  await drawMonthlyBusinessIdentity(document);
 
   let y = CONTENT_START_Y;
 
@@ -840,9 +1090,20 @@ export async function buildMonthlyCollectionsPdf(
 
   y = ensurePageSpace(document, y, summaryHeight);
 
-  y = drawSectionTitle(document, "MONTHLY SUMMARY", y);
+  y = drawSectionTitle(document, `MONTHLY SUMMARY - ${report.monthLabel}`, y);
 
-  y = drawMetricGrid(document, summaryMetrics, y, 2);
+  // Show the exact selected month, not the PDF generation month.
+  document.setFont("helvetica", "normal");
+  document.setFontSize(8);
+  document.setTextColor(82, 95, 111);
+  document.text(
+    `Reporting Period: ${monthlyDateLabel(report.fromDate)} to ${monthlyDateLabel(report.toDate)}`,
+    PAGE_MARGIN_X,
+    y,
+  );
+  document.setTextColor(0);
+
+  y = drawMetricGrid(document, summaryMetrics, y + 5, 2);
 
   // ==========================================================
   // PAYMENT MODE SUMMARY
@@ -874,7 +1135,7 @@ async function getMonthlyCollectionsFileName(
 ): Promise<string> {
   const report = await buildMonthlyCollectionsReport(monthKey);
 
-  return `FINORA_Monthly_Collections_${report.monthKey}.pdf`;
+  return monthlyPdfFilename(report.monthKey);
 }
 
 // ============================================================
@@ -925,7 +1186,7 @@ export async function shareMonthlyCollectionsPdf(
   await shareFinoraPdf(
     document,
 
-    `FINORA_Monthly_Collections_${report.monthKey}.pdf`,
+    monthlyPdfFilename(report.monthKey),
 
     {
       title: "FINORA Monthly Collections",

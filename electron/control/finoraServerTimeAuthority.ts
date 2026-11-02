@@ -189,15 +189,31 @@ export async function observeFinoraServerTimeAuthority():
       localTimeMs -
       serverTimeMs;
 
-    if (
-      Math.abs(
-        clockSkewMs,
-      ) >
-      FINORA_LOGIN_CLOCK_TOLERANCE_MS
-    ) {
+    // FINORA_C81_A4_SERVER_DATE_ONLY
+    // Both instants are compared in the FINORA India calendar.
+    // The device cannot extend a subscription by changing its date.
+    // Subscription expiry remains server-authoritative.
+    const finoraIndiaDate = (instantMs: number): string => {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(new Date(instantMs));
+
+      const part = (name: string): string =>
+        parts.find((item) => item.type === name)?.value ?? "";
+
+      return `${part("year")}-${part("month")}-${part("day")}`;
+    };
+
+    const requiredDate = finoraIndiaDate(serverTimeMs);
+    const deviceDate = finoraIndiaDate(localTimeMs);
+
+    if (requiredDate !== deviceDate) {
       return failure(
         "SYSTEM_CLOCK_INVALID",
-        "System date/time is incorrect. Correct it and try again.",
+        `Login blocked: Incorrect system date. FINORA Server Date: ${requiredDate}. Device Date: ${deviceDate}. Correct the device date and try again.`,
       );
     }
 

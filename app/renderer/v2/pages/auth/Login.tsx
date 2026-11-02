@@ -1,4 +1,60 @@
 import { finoraControlShared } from "../../services/finoraControlShared";
+import {
+  finoraAndroidSavedOwnerBridge,
+  isFinoraAndroidSavedOwnerAvailable,
+} from "../../services/auth/finoraAndroidSavedOwnerBridge";
+import FinoraSavedOwnerLoginPicker, {
+  type FinoraSavedOwnerAccount,
+} from "./FinoraSavedOwnerLoginPicker";
+
+type FinoraC80SavedOwnerBridge = {
+  list: () => Promise<
+    | { success: true; accounts: FinoraSavedOwnerAccount[] }
+    | { success: false; errorCode: string }
+  >;
+  select: (id: string) => Promise<
+    | {
+        success: true;
+        username: string;
+        password: string;
+        branchId: string;
+        ownerId: string;
+      }
+    | { success: false; errorCode: string }
+  >;
+  // FINORA_C80_B15_SAVE_BRIDGE_TYPE
+  save: (request: {
+    consent: boolean;
+    sessionId: string;
+    username: string;
+    password: string;
+  }) => Promise<
+    | { success: true; account: FinoraSavedOwnerAccount }
+    | { success: false; errorCode: string }
+  >;  remove: (id: string) => Promise<
+    | { success: true; removed: boolean }
+    | { success: false; errorCode: string }
+  >;
+};
+
+function getFinoraC80SavedOwnerBridge():
+  FinoraC80SavedOwnerBridge | null {
+  if (isFinoraAndroidSavedOwnerAvailable()) {
+    return finoraAndroidSavedOwnerBridge;
+  }
+
+  if (FinoraP1075Capacitor.isNativePlatform()) {
+    return null;
+  }
+
+  return (
+    window as Window & {
+      finoraSavedOwnerLogins?: FinoraC80SavedOwnerBridge;
+    }
+  ).finoraSavedOwnerLogins ?? null;
+}
+
+// FINORA_C80_B14_PICKER_WIRING
 import { getFinoraServerWalletBridge } from "../../services/wallet/finoraServerWalletBridge";
 import { getFinoraAndroidServerFirstV2Recovery } from "../../services/auth/loginSessionBridge";
 import { Capacitor as FinoraP1075Capacitor } from "@capacitor/core";
@@ -114,6 +170,8 @@ import useResponsive from "../../utils/responsive/useResponsive";
 import {
   useTheme,
 } from "../../themes/provider";
+// FINORA_C80_B19_C1_GLOBAL_SWATCH
+import { FINORA_THEMES } from "../../themes/definitions";
 
 import type {
   ThemeId,
@@ -278,6 +336,44 @@ export default function Login({
   // LOGIN THEME STATE
   // ==========================================================
 
+  // FINORA_C80_B15_SAVE_CONSENT
+  // Default OFF. Never persist consent as an automatic opt-in.
+  const [finoraSaveLoginOptIn, setFinoraSaveLoginOptIn] =
+    useState(false);
+  // FINORA_C80_B17_R1_POPUP_STATE
+  const [finoraSavedLoginsOpen, setFinoraSavedLoginsOpen] =
+    useState(false);
+  // FINORA_C80_B14_PICKER_STATE
+  const [savedOwnerAccounts, setSavedOwnerAccounts] =
+    useState<FinoraSavedOwnerAccount[]>([]);
+  const [savedOwnerBusy, setSavedOwnerBusy] = useState(false);
+  const [savedOwnerError, setSavedOwnerError] = useState("");
+
+  useEffect(() => {
+    const bridge = getFinoraC80SavedOwnerBridge();
+    if (!bridge) return;
+
+    let active = true;
+
+    void bridge.list()
+      .then((result) => {
+        if (!active) return;
+        if (result.success) {
+          setSavedOwnerAccounts(result.accounts);
+        } else {
+          setSavedOwnerError("Saved logins are unavailable.");
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setSavedOwnerError("Saved logins are unavailable.");
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
   const [
     loginThemeId,
     setLoginThemeId,
@@ -2401,7 +2497,123 @@ setError(
     let finoraReceptionCompleted = false;
 
     try {
-      // P1-684Y: Android uses its native HTTPS account authority.
+            // FINORA_C81_A6_CROSS_PLATFORM_DATE_GUARD
+      // Check each attempt before Account/Wallet authentication.
+      // This is a login UX guard, not server subscription authority.
+      {
+        let dateError = "";
+        let requiredDate = "";
+        let deviceDate = "";
+
+        const indiaDate = (timestamp: number): string => {
+          const parts = new Intl.DateTimeFormat("en-US", {
+            timeZone: "Asia/Kolkata",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          }).formatToParts(new Date(timestamp));
+
+          const getPart = (type: string): string =>
+            parts.find((part) => part.type === type)?.value ?? "";
+
+          return `${getPart("year")}-${getPart("month")}-${getPart("day")}`;
+        };
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+
+        try {
+          const response = await fetch(
+            "https://api.finoraenterprise.com/time",
+            {
+              method: "GET",
+              cache: "no-store",
+              headers: { Accept: "application/json" },
+              signal: controller.signal,
+            },
+          );
+
+          if (!response.ok) {
+            throw new Error("FINORA Server Date is unavailable.");
+          }
+
+          const payload: unknown = await response.json();
+
+          if (
+            !payload ||
+            typeof payload !== "object" ||
+            Array.isArray(payload) ||
+            !("ok" in payload) ||
+            payload.ok !== true ||
+            !("serverTime" in payload) ||
+            typeof payload.serverTime !== "string"
+          ) {
+            throw new Error("FINORA Server Date response is invalid.");
+          }
+
+          const serverMs = Date.parse(payload.serverTime);
+
+          if (!Number.isFinite(serverMs)) {
+            throw new Error("FINORA Server Date is invalid.");
+          }
+
+          requiredDate = indiaDate(serverMs);
+          deviceDate = indiaDate(Date.now());
+
+          if (requiredDate !== deviceDate) {
+            dateError =
+              "Incorrect system date.\n" +
+              `Required Date: ${((value: string) => value.replace(/^(\d{4})-(\d{2})-(\d{2})$/, "$3-$2-$1"))(requiredDate)}\n` +
+              `Device Date: ${((value: string) => value.replace(/^(\d{4})-(\d{2})-(\d{2})$/, "$3-$2-$1"))(deviceDate)}\n\n` +
+              "Correct your device date and try again.";
+          }
+        } catch (dateVerificationError: unknown) {
+          const failureName =
+            dateVerificationError instanceof Error
+              ? dateVerificationError.name
+              : "UnknownError";
+          const failureMessage =
+            dateVerificationError instanceof Error
+              ? dateVerificationError.message
+              : String(dateVerificationError);
+
+          console.warn("[FINORA C81 DATE CHECK FAILED]", {
+            name: failureName,
+            message: failureMessage,
+          });
+
+          dateError =
+            "FINORA could not verify today's server date.\n" +
+            "Check the internet connection and try again.\n" +
+            "Login remains blocked until verification succeeds.";
+        } finally {
+          clearTimeout(timeout);
+        }
+
+        if (dateError) {
+          finoraLoginStage = "SERVER_DATE_CHECK_FAILED";
+          finoraTrace("SERVER_DATE_CHECK_FAILED");
+          setError("");
+
+          const { showFinoraDialog } = await import(
+            "../../components/common/dialog/finoraDialog.service"
+          );
+
+          await showFinoraDialog({
+            kind: "error",
+            heading: requiredDate
+              ? "Login Blocked — Incorrect System Date"
+              : "Login Blocked — Date Verification",
+            message: dateError,
+            confirmLabel: "Try Again",
+          });
+
+          return;
+        }
+
+        finoraTrace("SERVER_DATE_VERIFIED");
+      }
+// P1-684Y: Android uses its native HTTPS account authority.
       // Windows retains Electron's main-process account authority.
       const result =
         FinoraP1075Capacitor.isNativePlatform() &&
@@ -2431,11 +2643,73 @@ setError(
           errorCode: result.errorCode ?? "UNKNOWN",
           stage: "ACCOUNT_LOGIN_OR_BUSINESS_VERIFICATION",
         });
-        setError(
-          "Account Login failed [" +
-          (result.errorCode ?? "UNKNOWN") +
-          "].",
-        );
+                // FINORA_R198_B_LOGIN_ERROR
+        // Never disclose account identity or credentials.
+        // Only INVALID_CREDENTIALS receives this message.
+        if (result.errorCode === "INVALID_CREDENTIALS") {
+          if (
+            !FinoraP1075Capacitor.isNativePlatform() ||
+            FinoraP1075Capacitor.getPlatform() !== "android"
+          ) {
+            setError(
+              "Incorrect username or password. Please try again.",
+            );
+          } else {
+            setError("");
+          }
+
+          const { showFinoraDialog } = await import(
+            "../../components/common/dialog/finoraDialog.service"
+          );
+
+          await showFinoraDialog({
+            kind: "error",
+            heading: "Login Failed",
+            message:
+              "Incorrect username or password. Please check your details and try again.",
+            confirmLabel: "Try Again",
+          });
+
+          if (
+            FinoraP1075Capacitor.isNativePlatform() &&
+            FinoraP1075Capacitor.getPlatform() === "android"
+          ) {
+            setError("");
+          }
+        } else if (
+          FinoraP1075Capacitor.isNativePlatform() &&
+          FinoraP1075Capacitor.getPlatform() === "android" &&
+          result.errorCode === "SERVER_REJECTED_LOGIN"
+        ) {
+          // FINORA_C80_AUTH_R159_POPUP_ONLY
+          // Android uses the premium dialog, not inline errors.
+          setError("");
+
+          const { showFinoraDialog } = await import(
+            "../../components/common/dialog/finoraDialog.service"
+          );
+
+          await showFinoraDialog({
+            kind: "error",
+            heading: "Login Failed",
+            message:
+              "The server rejected this login. Please check " +
+              "your User ID and Password and try again.",
+            confirmLabel: "Try Again",
+          });
+
+          setError("");
+        } else {
+          // Preserve non-credential failure diagnostics.
+          // Storage, server and business verification errors
+          // must not be mislabeled as wrong passwords.
+          setError(
+            "Account Login failed [" +
+              (result.errorCode ?? "UNKNOWN") +
+              "].",
+          );
+        }
+
         return;
       }
 
@@ -2658,9 +2932,70 @@ setError(
           clearCustomerCache();
           setError("");
           setCredentialEnrollmentMessage("");
+          // FINORA_C80_AUTH_R156_AWAIT_SAVED_LOGIN
+          // Complete the optional save before Login unmounts.
+          // Saving never grants Reception authorization.
+          let savedLoginFailure = "";
+
+          if (finoraSaveLoginOptIn) {
+            const savedOwnerBridge =
+              getFinoraC80SavedOwnerBridge();
+
+            if (!savedOwnerBridge) {
+              savedLoginFailure = "SAVED_LOGIN_BRIDGE_UNAVAILABLE";
+            } else {
+              try {
+                const saved = await savedOwnerBridge.save({
+                  consent: true,
+                  sessionId: issued.sessionId,
+                  username: verifiedPrincipal.username!,
+                  password,
+                });
+
+                if (!saved.success) {
+                  savedLoginFailure = saved.errorCode;
+                } else {
+                  const listing = await savedOwnerBridge.list();
+
+                  if (!listing.success) {
+                    savedLoginFailure = listing.errorCode;
+                  } else if (
+                    !listing.accounts.some(
+                      account => account.id === saved.account.id
+                    )
+                  ) {
+                    savedLoginFailure = "SAVED_ACCOUNT_NOT_VISIBLE";
+                  } else {
+                    setSavedOwnerAccounts(listing.accounts);
+                  }
+                }
+              } catch {
+                savedLoginFailure = "SAVED_LOGIN_UNAVAILABLE";
+              }
+            }
+          }
+
           finoraReceptionCompleted = true;
           finoraLoginStage = "ANDROID_RECEPTION_NAVIGATION";
           onLogin();
+
+          if (savedLoginFailure) {
+            const errorCode = savedLoginFailure;
+
+            void import(
+              "../../components/common/dialog/finoraDialog.service"
+            ).then(({ showFinoraDialog }) =>
+              showFinoraDialog({
+                kind: "error",
+                heading: "Save Login Failed",
+                message:
+                  "Login succeeded, but credentials could not " +
+                  "be saved on this device. [" + errorCode + "]",
+                confirmLabel: "OK",
+              })
+            ).catch(() => undefined);
+          }
+
           return;
         } catch {
           storageManager.setAuthenticatedSessionId(undefined);
@@ -3112,7 +3447,18 @@ setError(
 
         if (!guardTouch.success || guardTouch.sessionId !== issued.sessionId) {
           storageManager.setAuthenticatedSessionId(undefined);
-          setError("LIVE GUARD DENIED: Server session touch failed.");
+          setError(
+            "LIVE GUARD DENIED: Server session touch failed (" +
+            (
+              "errorCode" in guardTouch &&
+              typeof guardTouch.errorCode === "string"
+                ? guardTouch.errorCode
+                : guardTouch.success === true
+                  ? "SESSION_ID_MISMATCH"
+                  : "UNKNOWN"
+            ) +
+            ")."
+          );
           return;
         }
 
@@ -3341,6 +3687,25 @@ setError(
           onLogin();
           finoraReceptionCompleted = true;
           finoraTrace("RECEPTION_CALLBACK_RETURNED");
+
+          // FINORA_C80_B15_SAVE_AFTER_SUCCESS
+          // Best-effort device-local saving after successful Login callback.
+          // Failed saving must never turn successful authentication into failure.
+          if (finoraSaveLoginOptIn) {
+            const savedOwnerBridge =
+              getFinoraC80SavedOwnerBridge();
+
+            if (savedOwnerBridge) {
+              void savedOwnerBridge.save({
+                consent: true,
+                sessionId: issued.sessionId,
+                username: serverPrincipal.username,
+                password,
+              }).catch(() => {
+                // Credential vault failure must not affect Owner access.
+              });
+            }
+          }
         } catch {
           storageManager.setAuthenticatedSessionId(undefined);
           await receptionBridge.invalidate({
@@ -3381,8 +3746,12 @@ setError(
       );
     } finally {
       if (!finoraReceptionCompleted) {
-        window.alert(
-          "FINORA LOGIN STOPPED AT: " + finoraLoginStage
+        // FINORA_R198_B_NO_NATIVE_ALERT
+        // Diagnostics remain in the developer console.
+        // Never interrupt an Owner with a technical alert.
+        console.info(
+          "[FINORA LOGIN] Workflow did not complete:",
+          finoraLoginStage,
         );
       }
       setLoginBusy(false);
@@ -4078,7 +4447,8 @@ if (
                   <span
                     style={
                       getLoginThemeSwatchStyle(
-                        option.swatch,
+                        FINORA_THEMES[option.id]?.selectorSwatch ??
+                          option.swatch,
                         isActive,
                         activeLoginTheme,
                       )
@@ -5289,7 +5659,20 @@ if (
               }
             >
 
-              <div
+              {/* FINORA_C80_B30_B5_USER_GRID */}
+<div style={{
+  display: "grid",
+  gridTemplateColumns:
+    credentialMode === "LOGIN"
+      ? "minmax(0, 7fr) minmax(0, 3fr)"
+      : "minmax(0, 1fr)",
+  alignItems: "center",
+  columnGap: 8,
+  width: "100%",
+  minWidth: 0,
+}}>
+  <div style={{ minWidth: 0 }}>
+<div
                 style={
                   loginStyles.inputWrapper
                 }
@@ -5326,6 +5709,8 @@ if (
                   }}
                   placeholder="User ID"
                   aria-label="User ID"
+                  id="finora-owner-login-username"
+                  name="username"
                   autoComplete="username"
                   autoFocus
                   disabled={
@@ -5341,9 +5726,232 @@ if (
                 />
 
               </div>
+  </div>
+  <div style={{
+    minWidth: 0,
+    display: credentialMode === "LOGIN" ? "block" : "none",
+  }}>
+{/* FINORA_C80_B17_R1_TRIGGER */}
+            {credentialMode === "LOGIN" &&
+              getFinoraC80SavedOwnerBridge() !== null && (
+                <div
+                  style={{
+                    position: "relative",
+                    width: "100%",
+                    marginBottom: 0,
+                    fontFamily:
+                      "Inter, ui-sans-serif, system-ui, sans-serif",
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      setFinoraSavedLoginsOpen(false);
+                    }
+                  }}
+                >
+                  <button
+                    type="button"
+                    aria-expanded={finoraSavedLoginsOpen}
+                    aria-controls="finora-saved-logins-popup"
+                    disabled={loginBusy || savedOwnerBusy}
+                    onClick={() =>
+                      setFinoraSavedLoginsOpen((current) => !current)
+                    }
+                    style={{
+  // FINORA_C80_B30_B1_COMPACT_SAVED_LOGINS
+  width: "100%",
+  minWidth: 0,
+  maxWidth: "100%",
+  height: "100%",
+  minHeight: 44,
+  boxSizing: "border-box",
+  padding: "7px 3px",
+  borderRadius: 10,
+  background: "rgba(148,163,184,0.10)",
+  border: "1px solid rgba(148,163,184,0.35)",
+  color: "inherit",
+  fontWeight: 600,
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontSize: 11,
+  lineHeight: 1.2,
+  cursor: loginBusy || savedOwnerBusy ? "not-allowed" : "pointer",
+}}
+                  >
+                    Saved Passwords
+
+                  </button>
+                  {finoraSavedLoginsOpen && (
+                    <>
+                      <div
+                        aria-hidden="true"
+                        onClick={() =>
+                          setFinoraSavedLoginsOpen(false)
+                        }
+                        style={{
+                          position: "fixed",
+                          inset: 0,
+                          zIndex: 10000,
+                          background: "rgba(8,15,28,0.58)",
+                          backdropFilter: "blur(3px)",
+                        }}
+                      />
+                    <div
+                      id="finora-saved-logins-popup"
+                      role="region"
+                      aria-label="Saved Logins popup"
+                      style={{
+                        // FINORA_C80_B17_R3_MODAL
+                        // FINORA_C80_B19_C2_R1_THEME
+                        position: "fixed",
+                        top: "50%",
+                        left: "50%",
+                        right: "auto",
+                        bottom: "auto",
+                        transform: "translate(-50%, -50%)",
+                        zIndex: 10001,
+                        /* FINORA_C80_B17_R4_WIDTH */
+                        width: "min(400px, calc(100vw - 48px))",
+                        maxHeight: "min(520px, calc(100vh - 48px))",
+                        overflowY: "auto",
+                        borderRadius: 20,
+                        background: activeLoginTheme.surface,
+                        color: activeLoginTheme.text,
+                        border:
+                          `1px solid ${activeLoginTheme.border}`,
+                        boxShadow:
+                          `0 24px 80px ${activeLoginTheme.shadow}`,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        aria-label="Close Saved Logins"
+                        onClick={() =>
+                          setFinoraSavedLoginsOpen(false)
+                        }
+                        style={{
+                          float: "right",
+                          margin: 6,
+                          padding: "4px 10px",
+                          border: "none",
+                          borderRadius: 8,
+                          background: "rgba(148,163,184,0.16)",
+                          color: "inherit",
+                          cursor: "pointer",
+                          fontSize: 18,
+                        }}
+                      >
+                        ×
+                      </button>
+            {/* FINORA_C80_B14_PICKER_RENDER */}
+            {credentialMode === "LOGIN" &&
+              finoraSavedLoginsOpen && savedOwnerAccounts.length > 0 && (
+                <FinoraSavedOwnerLoginPicker
+                  accounts={savedOwnerAccounts}
+                  busy={loginBusy || savedOwnerBusy}
+                  error={savedOwnerError}
+                  onSelect={async (id) => {
+                    const bridge = getFinoraC80SavedOwnerBridge();
+                    if (!bridge || loginBusy || savedOwnerBusy) return;
+
+                    setSavedOwnerBusy(true);
+                    setSavedOwnerError("");
+
+                    try {
+                      const account = savedOwnerAccounts.find(
+                        (item) => item.id === id
+                      );
+                      if (!account) return;
+
+                      const result = await bridge.select(id);
+
+                      if (
+                        !result.success ||
+                        result.username !== account.username ||
+                        result.branchId !== account.branchId ||
+                        result.ownerId !== account.ownerId
+                      ) {
+                        setSavedOwnerError(
+                          "Saved login could not be verified."
+                        );
+                        return;
+                      }
+
+                      setUsername(result.username);
+                      setPassword(result.password);
+                      setFinoraSavedLoginsOpen(false);
+                      setError("");
+                    } catch {
+                      setSavedOwnerError(
+                        "Unable to fill this saved login."
+                      );
+                    } finally {
+                      setSavedOwnerBusy(false);
+                    }
+                  }}
+                  onRemove={async (id) => {
+                    const bridge = getFinoraC80SavedOwnerBridge();
+                    if (!bridge || loginBusy || savedOwnerBusy) return;
+
+                    setSavedOwnerBusy(true);
+                    setSavedOwnerError("");
+
+                    try {
+                      const result = await bridge.remove(id);
+
+                      if (!result.success) {
+                        setSavedOwnerError(
+                          "Unable to remove saved login."
+                        );
+                        return;
+                      }
+
+                      if (result.removed) {
+                        setSavedOwnerAccounts((current) =>
+                          current.filter((item) => item.id !== id)
+                        );
+                        setUsername("");
+                        setPassword("");
+                      }
+                    } catch {
+                      setSavedOwnerError(
+                        "Unable to remove saved login."
+                      );
+                    } finally {
+                      setSavedOwnerBusy(false);
+                    }
+                  }}
+                  onManual={() => {
+                    setFinoraSavedLoginsOpen(false);
+                    setUsername("");
+                    setPassword("");
+                    setSavedOwnerError("");
+                    setError("");
+                  }}
+                />
+              )}
+                    </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+  </div>
+</div>
 
 
-              <div
+              {/* FINORA_C80_B30_B5_PASSWORD_GRID */}
+<div style={{
+  display: "grid",
+  gridTemplateColumns:
+    credentialMode === "LOGIN"
+      ? "minmax(0, 7fr) minmax(0, 3fr)"
+      : "minmax(0, 1fr)",
+  alignItems: "center",
+  columnGap: 8,
+  width: "100%",
+  minWidth: 0,
+}}>
+  <div style={{ minWidth: 0 }}>
+<div
                 style={
                   loginStyles.inputWrapper
                 }
@@ -5397,6 +6005,8 @@ if (
                       ? "text"
                       : "password"
                   }
+                  id="finora-owner-login-password"
+                  name="password"
                   autoComplete={
                     credentialMode === "FORCE_CREDENTIAL_CHANGE"
                       ? "new-password"
@@ -5442,6 +6052,70 @@ if (
                 </button>
 
               </div>
+  </div>
+  <div style={{
+    minWidth: 0,
+    display: credentialMode === "LOGIN" ? "flex" : "none",
+    alignItems: "center",
+    justifyContent: "center",
+  }}>
+{/* FINORA_C80_B15_SAVE_CONSENT_UI */}
+            {credentialMode === "LOGIN" &&
+              getFinoraC80SavedOwnerBridge() !== null && (
+                <label
+  // FINORA_C80_B30_B1_COMPACT_SAVE_LOGIN
+  style={{
+  // FINORA_C80_B30_B6_R2_MATCH_BUTTON
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 6,
+  width: "100%",
+  maxWidth: "100%",
+  minWidth: 0,
+  height: "100%",
+  minHeight: 44,
+  padding: "7px 3px",
+  marginBottom: 0,
+  boxSizing: "border-box",
+  border: "1px solid rgba(148,163,184,0.35)",
+  borderRadius: 10,
+  background: "rgba(148,163,184,0.10)",
+  color: "inherit",
+  fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  fontSize: 11,
+  fontWeight: 600,
+  cursor: loginBusy ? "not-allowed" : "pointer",
+}}
+>
+  <input
+                    type="checkbox"
+                    checked={finoraSaveLoginOptIn}
+                    disabled={loginBusy}
+                    onChange={(event) =>
+                      setFinoraSaveLoginOptIn(event.target.checked)
+                    }
+                    aria-label="Save Login on this device"
+                    style={{
+  width: 16,
+  height: 16,
+  minWidth: 16,
+  margin: 0,
+  accentColor: "#B8860B",
+  cursor: loginBusy ? "not-allowed" : "pointer",
+}}
+                  />
+  <span style={{
+  fontSize: 11,
+  fontWeight: 600,
+  lineHeight: 1.15,
+  whiteSpace: "nowrap",
+}}>Save Login</span>
+</label>
+              )}
+
+  </div>
+</div>
 
 
               {credentialMode === "FORCE_CREDENTIAL_CHANGE" && (
@@ -5952,7 +6626,7 @@ if (
             )}
 
 
-            <button
+                        <button
               type="button"
               onClick={
                 credentialMode === "FORCE_CREDENTIAL_CHANGE"

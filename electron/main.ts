@@ -1,3 +1,8 @@
+import {
+  clipboard as finoraReceiptClipboard,
+  nativeImage as finoraReceiptNativeImage,
+} from "electron";
+// FINORA_R188_B_CLIPBOARD
 import { createFinoraServerWalletHistoryClient } from "./control/finoraServerWalletHistoryClient.js";
 import { getFinoraAccountWalletAuthorization } from "./control/finoraAccountWalletSession.js";
 import {
@@ -57,6 +62,13 @@ import { config as loadDotEnv } from "dotenv";
 loadDotEnv();
 
 import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import {
+  listSavedOwnerLogins,
+  saveOwnerLogin,
+  updateSavedOwnerLoginLabel,
+  getSavedOwnerLogin,
+  removeSavedOwnerLogin,
+} from "./control/finoraSavedOwnerLoginVault.js";
 
 // FINORA_P549E_SERVER_WALLET_IMPORTS
 import {
@@ -2369,7 +2381,94 @@ async function handleUsbSaveUnlocked(
 
     await writeStoragePackage(usbRoot, storagePackage);
 
-    return success(persistedRecord.data);
+    // FINORA HF28-CH45-C45:
+    // Read back the published USB package before returning success.
+    // A failure is an uncertain save outcome, never an instruction
+    // to create the same Customer/Loan/Collection again.
+    const readBackPackage = await readStoragePackage(usbRoot);
+
+    const matchingRecords = readBackPackage.records.filter(
+      (item) =>
+        item.id === persistedRecord.id &&
+        item.entity === persistedRecord.entity &&
+        item.ownerId === persistedRecord.ownerId &&
+        item.businessId === persistedRecord.businessId &&
+        item.branchId === persistedRecord.branchId &&
+        item.demoId === persistedRecord.demoId,
+    );
+
+    if (
+      matchingRecords.length !== 1 ||
+      matchingRecords[0].createdAt !== persistedRecord.createdAt ||
+      matchingRecords[0].updatedAt !== persistedRecord.updatedAt ||
+      JSON.stringify(matchingRecords[0].data) !==
+        JSON.stringify(persistedRecord.data)
+    ) {
+      throw new Error(
+        "FINORA_USB_SAVE_READBACK_UNCERTAIN: Verify the existing USB record before retrying.",
+      );
+    }
+
+    // FINORA HF28-CH45-C60-R2
+    // Optional digest derived after native USB record read-back.
+    // This is NOT signed evidence and cannot authorize billing.
+    let usageRecordDigest: string | undefined;
+
+    const digestOwnerId = persistedRecord.ownerId;
+    const digestBusinessId = persistedRecord.businessId;
+    const digestBranchId = persistedRecord.branchId;
+
+    if (
+      ["CUSTOMER", "LOAN", "COLLECTION"].includes(
+        persistedRecord.entity,
+      ) &&
+      typeof digestOwnerId === "string" &&
+      digestOwnerId.length > 0 &&
+      typeof digestBusinessId === "string" &&
+      digestBusinessId.length > 0 &&
+      typeof digestBranchId === "string" &&
+      digestBranchId.length > 0
+    ) {
+      try {
+        const { createFinoraUsageRecordDigest } =
+          await import("./control/finoraUsageRecordDigest.js");
+
+        const verifiedRecord = matchingRecords[0];
+
+        usageRecordDigest = createFinoraUsageRecordDigest({
+          id: verifiedRecord.id,
+          entity: verifiedRecord.entity,
+          ownerId: digestOwnerId,
+          businessId: digestBusinessId,
+          branchId: digestBranchId,
+          demoId: verifiedRecord.demoId,
+          data: verifiedRecord.data,
+        });
+      } catch {
+        // Native USB read-back already succeeded.
+        // Billing evidence remains unavailable if digest fails.
+        // Never repeat or recreate the saved business record.
+        usageRecordDigest = undefined;
+      }
+    }
+
+    return {
+      ...success(persistedRecord.data),
+      ...(usageRecordDigest
+        ? { usageRecordDigest }
+        : {}),
+      ...(
+        ["CUSTOMER", "LOAN", "COLLECTION"].includes(
+          persistedRecord.entity,
+        )
+          ? {
+              usageDigestStatus: usageRecordDigest
+                ? "LOCAL_USB_READBACK_DIGEST_READY"
+                : "BILLING_DIGEST_UNAVAILABLE",
+            }
+          : {}
+      ),
+    };
   } catch (error) {
     // USB may have been removed between detection and access.
     // Invalidate the cached root so the next operation re-detects it.
@@ -3460,9 +3559,729 @@ function registerUsbStorageHandlers(): void {
 
   handlersRegistered = true;
 
+  // FINORA_C80_B5_SAVED_OWNER_LIST
+  // Only the exact FINORA Owner main window can list local account labels.
+  // No passwords, tokens or session material are returned.
+  ipcMain.handle(
+    "finora:saved-owner-login:list",
+    async (event) => {
+      if (
+        process.platform !== "win32" ||
+        !mainWindow ||
+        mainWindow.isDestroyed() ||
+        event.sender !== mainWindow.webContents ||
+        !event.senderFrame ||
+        event.senderFrame !== event.sender.mainFrame ||
+        !isTrustedRenderer(event.senderFrame) ||
+        event.sender.isDestroyed()
+      ) {
+        return {
+          success: false as const,
+          errorCode: "UNAUTHORIZED_RENDERER",
+        };
+      }
+
+      try {
+        const accounts = await listSavedOwnerLogins();
+
+        return {
+          success: true as const,
+          accounts,
+        };
+      } catch {
+        return {
+          success: false as const,
+          errorCode: "SAVED_LOGIN_VAULT_UNAVAILABLE",
+        };
+      }
+    },
+  );
+
+  // FINORA_C80_B11_REMOVE_OWNER
+  // Deletes one device-local saved credential only.
+  // Never revokes the authenticated Owner account or business session.
+  ipcMain.handle(
+    "finora:saved-owner-login:remove",
+    async (event, input: unknown) => {
+      const deny = (errorCode: string) => ({
+        success: false as const,
+        errorCode,
+      });
+
+      if (
+        process.platform !== "win32" ||
+        !mainWindow ||
+        mainWindow.isDestroyed() ||
+        event.sender !== mainWindow.webContents ||
+        !event.senderFrame ||
+        event.senderFrame !== event.sender.mainFrame ||
+        !isTrustedRenderer(event.senderFrame) ||
+        event.sender.isDestroyed()
+      ) {
+        return deny("UNAUTHORIZED_RENDERER");
+      }
+
+      if (
+        !input ||
+        typeof input !== "object" ||
+        Array.isArray(input) ||
+        Object.keys(input).length !== 1
+      ) {
+        return deny("INVALID_REQUEST");
+      }
+
+      const id = (input as { id?: unknown }).id;
+
+      if (
+        typeof id !== "string" ||
+        !/^[a-f0-9]{64}$/.test(id)
+      ) {
+        return deny("INVALID_ACCOUNT_ID");
+      }
+
+      try {
+        const removed = await removeSavedOwnerLogin(id);
+
+        return {
+          success: true as const,
+          removed,
+        };
+      } catch {
+        return deny("SAVED_LOGIN_VAULT_UNAVAILABLE");
+      }
+    },
+  );
+  // FINORA_C80_B10_SELECT_OWNER
+  // Password retrieval is restricted to the trusted Owner main frame.
+  // Explicit account selection in the UI is required before invocation.
+  // Retrieval does NOT establish any authenticated business session.
+  ipcMain.handle(
+    "finora:saved-owner-login:select",
+    async (event, input: unknown) => {
+      const deny = (errorCode: string) => ({
+        success: false as const,
+        errorCode,
+      });
+
+      if (
+        process.platform !== "win32" ||
+        !mainWindow ||
+        mainWindow.isDestroyed() ||
+        event.sender !== mainWindow.webContents ||
+        !event.senderFrame ||
+        event.senderFrame !== event.sender.mainFrame ||
+        !isTrustedRenderer(event.senderFrame) ||
+        event.sender.isDestroyed()
+      ) {
+        return deny("UNAUTHORIZED_RENDERER");
+      }
+
+      if (
+        !input ||
+        typeof input !== "object" ||
+        Array.isArray(input) ||
+        Object.keys(input).length !== 1
+      ) {
+        return deny("INVALID_REQUEST");
+      }
+
+      const id = (input as { id?: unknown }).id;
+
+      if (
+        typeof id !== "string" ||
+        !/^[a-f0-9]{64}$/.test(id)
+      ) {
+        return deny("INVALID_ACCOUNT_ID");
+      }
+
+      try {
+        const record = await getSavedOwnerLogin(id);
+
+        if (!record) {
+          return deny("SAVED_ACCOUNT_NOT_FOUND");
+        }
+
+        return {
+          success: true as const,
+          username: record.username,
+          password: record.password,
+          branchId: record.branchId,
+          ownerId: record.ownerId,
+        };
+      } catch {
+        return deny("SAVED_LOGIN_VAULT_UNAVAILABLE");
+      }
+    },
+  );
+  // FINORA_C80_B8_SAVE_OWNER_LOGIN
+  // Only a committed, freshly verified Owner session may save credentials.
+  // Renderer-provided tenant identity and display labels are never trusted.
+  ipcMain.handle(
+    "finora:saved-owner-login:save",
+    async (event, input: unknown) => {
+      const deny = (errorCode: string) => ({
+        success: false as const,
+        errorCode,
+      });
+
+      if (
+        process.platform !== "win32" ||
+        !mainWindow ||
+        mainWindow.isDestroyed() ||
+        event.sender !== mainWindow.webContents ||
+        !event.senderFrame ||
+        event.senderFrame !== event.sender.mainFrame ||
+        !isTrustedRenderer(event.senderFrame) ||
+        event.sender.isDestroyed()
+      ) {
+        return deny("UNAUTHORIZED_RENDERER");
+      }
+
+      if (
+        !input ||
+        typeof input !== "object" ||
+        Array.isArray(input) ||
+        Object.keys(input).length !== 4
+      ) {
+        return deny("INVALID_REQUEST");
+      }
+
+      const request = input as Record<string, unknown>;
+
+      if (
+        request.consent !== true ||
+        typeof request.sessionId !== "string" ||
+        !/^[a-f0-9]{64}$/.test(request.sessionId) ||
+        typeof request.username !== "string" ||
+        request.username.length < 1 ||
+        request.username.length > 256 ||
+        typeof request.password !== "string" ||
+        request.password.length < 1 ||
+        request.password.length > 4096
+      ) {
+        return deny("INVALID_REQUEST_OR_CONSENT");
+      }
+
+      const sender = event.sender;
+      const sessionId = request.sessionId;
+      const businessSession =
+        finoraBusinessSessionsBySender.get(sender);
+      const generation =
+        finoraAccountBusinessLoginGeneration.get(sender);
+
+      if (!businessSession) {
+        return deny("AUTHENTICATED_SESSION_REQUIRED");
+      }
+
+      const current = () =>
+        !sender.isDestroyed() &&
+        finoraBusinessSessionsBySender.get(sender) === businessSession &&
+        finoraAccountBusinessLoginGeneration.get(sender) === generation;
+
+      try {
+        const [
+          {
+            getFinoraCommittedReceptionPrincipal,
+            validateFinoraServerReceptionSession,
+          },
+          { verifyFinoraServerBusinessSession },
+        ] = await Promise.all([
+          import("./control/finoraServerReceptionSessionAuthority.js"),
+          import("./control/finoraServerBusinessSessionVerifier.js"),
+        ]);
+
+        if (!current()) return deny("LOGIN_CHANGED");
+
+        const committed = getFinoraCommittedReceptionPrincipal(
+          sender,
+          sessionId,
+        );
+
+        if (
+          !committed ||
+          committed.role !== "OWNER" ||
+          committed.storageMode !== "USB" ||
+          committed.username !== request.username ||
+          !committed.ownerId ||
+          !committed.businessId ||
+          !committed.branchId
+        ) {
+          return deny("COMMITTED_OWNER_REQUIRED");
+        }
+
+        const validation = await validateFinoraServerReceptionSession(
+          sender,
+          sessionId,
+          verifyFinoraServerBusinessSession,
+          businessSession.sessionId,
+        );
+
+        if (!validation.success || !current()) {
+          return deny("SERVER_SESSION_VERIFICATION_FAILED");
+        }
+
+        const verified = validation.principal;
+
+        if (
+          verified.userId !== committed.userId ||
+          verified.username !== committed.username ||
+          verified.ownerId !== committed.ownerId ||
+          verified.businessId !== committed.businessId ||
+          verified.branchId !== committed.branchId ||
+          verified.role !== "OWNER" ||
+          verified.storageMode !== "USB"
+        ) {
+          return deny("PRINCIPAL_MISMATCH");
+        }
+
+        const wallet = getFinoraSenderWalletPrincipal(sender);
+
+        if (
+          !wallet ||
+          !(["userId", "ownerId", "businessId", "branchId"] as const)
+            .every((key) => wallet[key] === committed[key])
+        ) {
+          return deny("WALLET_SCOPE_MISMATCH");
+        }
+
+        if (!finoraServerUsbScopeResolver) {
+          return deny("USB_SCOPE_UNAVAILABLE");
+        }
+
+        const usbScope = await finoraServerUsbScopeResolver(
+          sender,
+          sessionId,
+        );
+
+        if (
+          !usbScope.success ||
+          !usbScope.scope ||
+          usbScope.scope.sessionId !== sessionId ||
+          usbScope.scope.ownerId !== committed.ownerId ||
+          usbScope.scope.businessId !== committed.businessId ||
+          usbScope.scope.branchId !== committed.branchId ||
+          usbScope.scope.dataContext !== "REAL" ||
+          !current()
+        ) {
+          return deny("USB_SCOPE_MISMATCH");
+        }
+
+        // Recheck the committed session immediately before persistence.
+        const finalPrincipal = getFinoraCommittedReceptionPrincipal(
+          sender,
+          sessionId,
+        );
+
+        if (
+          !finalPrincipal ||
+          finalPrincipal.userId !== committed.userId ||
+          finalPrincipal.ownerId !== committed.ownerId ||
+          finalPrincipal.businessId !== committed.businessId ||
+          finalPrincipal.branchId !== committed.branchId ||
+          !current()
+        ) {
+          return deny("COMMITTED_SESSION_CHANGED");
+        }
+
+        // FINORA_C81_A8_AUTHENTICATED_BUSINESS_NAME
+        // Use the existing authenticated wallet session only.
+        // Never substitute a branch ID or a user-controlled label.
+        const labelAuthorization =
+          getFinoraSenderWalletAuthorization(sender);
+
+        if (!labelAuthorization) {
+          return deny("BUSINESS_NAME_AUTHORIZATION_REQUIRED");
+        }
+
+        const labelResponse = await fetch(
+          "https://api.finoraenterprise.com/owner/wallet/business-identity",
+          {
+            method: "GET",
+            headers: { Authorization: labelAuthorization },
+            cache: "no-store",
+            signal: AbortSignal.timeout(8000),
+          },
+        );
+
+        if (!labelResponse.ok) {
+          return deny("BUSINESS_NAME_SERVER_UNAVAILABLE");
+        }
+
+        const labelPayload: unknown = await labelResponse.json();
+
+        if (
+          !labelPayload ||
+          typeof labelPayload !== "object" ||
+          Array.isArray(labelPayload)
+        ) {
+          return deny("BUSINESS_NAME_INVALID_RESPONSE");
+        }
+
+        const labelBody = labelPayload as Record<string, unknown>;
+        const labelIdentity = labelBody.identity;
+
+        if (
+          labelBody.ok !== true ||
+          labelBody.source !== "FINORA_POSTGRESQL_BUSINESS_IDENTITY" ||
+          !labelIdentity ||
+          typeof labelIdentity !== "object" ||
+          Array.isArray(labelIdentity)
+        ) {
+          return deny("BUSINESS_NAME_INVALID_RESPONSE");
+        }
+
+        const verifiedIdentity =
+          labelIdentity as Record<string, unknown>;
+
+        if (
+          verifiedIdentity.ownerId !== committed.ownerId ||
+          verifiedIdentity.businessId !== committed.businessId ||
+          verifiedIdentity.branchId !== committed.branchId ||
+          verifiedIdentity.storageMode !== "USB" ||
+          typeof verifiedIdentity.businessName !== "string" ||
+          !verifiedIdentity.businessName.trim() ||
+          verifiedIdentity.businessName.trim().length > 256 ||
+          !current()
+        ) {
+          return deny("BUSINESS_NAME_SCOPE_MISMATCH");
+        }
+
+        const account = await saveOwnerLogin({
+          branchId: committed.branchId,
+          ownerId: committed.ownerId,
+          username: committed.username,
+          branchLabel: verifiedIdentity.businessName.trim(),
+          password: request.password,
+        });
+
+        return {
+          success: true as const,
+          account,
+        };
+      } catch {
+        // Deliberately never log password, account details or ciphertext.
+        return deny("SAVED_LOGIN_UNAVAILABLE");
+      }
+    },
+  );
   // ----------------------------------------------------------
   // AVAILABILITY
   // ----------------------------------------------------------
+
+  // FINORA_R188_B_CLIPBOARD
+  // Trusted renderer only; no arbitrary file paths.
+  // FINORA_AP04_R039_RECEIPT_PICTURES_SAVE
+  // Owner-requested receipt images only. No arbitrary filesystem paths.
+  ipcMain.handle(
+    "finora:receipt:save-pictures-png",
+    async (event, input: unknown) => {
+      const fail = (errorCode: string) => ({
+        success: false as const,
+        errorCode,
+      });
+
+      if (
+        process.platform !== "win32" ||
+        !mainWindow ||
+        mainWindow.isDestroyed() ||
+        event.sender !== mainWindow.webContents ||
+        !event.senderFrame ||
+        event.senderFrame !== event.sender.mainFrame ||
+        !isTrustedRenderer(event.senderFrame)
+      ) {
+        return fail("UNTRUSTED_RENDERER");
+      }
+
+      if (
+        !input ||
+        typeof input !== "object" ||
+        Array.isArray(input)
+      ) {
+        return fail("INVALID_RECEIPT_REQUEST");
+      }
+
+      const request = input as Record<string, unknown>;
+      const receiptType = request.receiptType;
+      const fileName = request.fileName;
+      const dataBase64 = request.dataBase64;
+
+      if (
+        receiptType !== "loan" &&
+        receiptType !== "collection"
+      ) {
+        return fail("INVALID_RECEIPT_TYPE");
+      }
+
+      if (
+        typeof fileName !== "string" ||
+        fileName.length < 5 ||
+        fileName.length > 120 ||
+        !/^[A-Za-z0-9][A-Za-z0-9_.-]*\.png$/.test(fileName) ||
+        fileName.includes("..") ||
+        typeof dataBase64 !== "string" ||
+        dataBase64.length < 32 ||
+        dataBase64.length > 33_554_432 ||
+        !/^[A-Za-z0-9+/]+={0,2}$/.test(dataBase64)
+      ) {
+        return fail("INVALID_RECEIPT_PNG_PAYLOAD");
+      }
+
+      const bytes = Buffer.from(dataBase64, "base64");
+
+      if (
+        bytes.length < 24 ||
+        bytes.length > 25_165_824 ||
+        !bytes.subarray(0, 8).equals(
+          Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+        ) ||
+        bytes.toString("ascii", 12, 16) !== "IHDR"
+      ) {
+        return fail("INVALID_RECEIPT_PNG_CONTENT");
+      }
+
+      // Validate that PNG data decodes successfully.
+      const image = finoraReceiptNativeImage.createFromBuffer(
+        bytes,
+      );
+
+      if (image.isEmpty()) {
+        return fail("RECEIPT_PNG_DECODE_FAILED");
+      }
+
+      const album =
+        receiptType === "loan"
+          ? "Finora Loan Receipts"
+          : "Finora Collection Receipts";
+
+      try {
+        const picturesPath = app.getPath("pictures");
+        const directory = path.join(picturesPath, album);
+
+        await fs.mkdir(directory, { recursive: true });
+
+        const directoryInfo = await fs.lstat(directory);
+
+        if (
+          !directoryInfo.isDirectory() ||
+          directoryInfo.isSymbolicLink()
+        ) {
+          return fail("UNSAFE_RECEIPT_FOLDER");
+        }
+
+        const baseName = fileName.replace(/\.png$/i, "");
+
+        // Exclusive creation: never overwrite an existing image.
+        for (let index = 0; index < 1000; index += 1) {
+          const candidate =
+            index === 0
+              ? `${baseName}.png`
+              : `${baseName} (${index}).png`;
+
+          const destination = path.join(directory, candidate);
+
+          try {
+            await fs.writeFile(destination, bytes, {
+              flag: "wx",
+            });
+
+            return {
+              success: true as const,
+              saved: true as const,
+              album,
+              fileName: candidate,
+            };
+          } catch (writeError) {
+            const code =
+              typeof writeError === "object" &&
+              writeError !== null &&
+              "code" in writeError
+                ? String(writeError.code)
+                : "UNKNOWN";
+
+            if (code === "EEXIST") {
+              continue;
+            }
+
+            return fail(`PNG_WRITE_FAILED_${code}`);
+          }
+        }
+
+        return fail("PNG_FILENAME_COLLISION_LIMIT");
+      } catch (error) {
+        const reason =
+          error instanceof Error
+            ? error.message
+            : "UNKNOWN";
+
+        console.error(
+          "FINORA RECEIPT PICTURES SAVE ERROR:",
+          reason,
+        );
+
+        return fail("PICTURES_FOLDER_UNAVAILABLE");
+      }
+    },
+  );
+  ipcMain.handle(
+    "finora:receipt:copy-png",
+    async (event, dataUrl: unknown) => {
+      if (!isTrustedRenderer(event.senderFrame)) {
+        return {
+          ok: false,
+          error: "Untrusted renderer.",
+        };
+      }
+
+      try {
+        if (
+          typeof dataUrl !== "string" ||
+          dataUrl.length > 12_000_000 ||
+          !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(dataUrl)
+        ) {
+          return {
+            ok: false,
+            error: "Invalid or oversized receipt PNG.",
+          };
+        }
+
+        const image = finoraReceiptNativeImage.createFromDataURL(
+          dataUrl,
+        );
+
+        if (image.isEmpty()) {
+          return {
+            ok: false,
+            error: "Could not decode PNG image.",
+          };
+        }
+
+        finoraReceiptClipboard.writeImage(image);
+
+        return { ok: true };
+      } catch (error) {
+        return {
+          ok: false,
+          error: error instanceof Error
+            ? error.message
+            : "Native clipboard failed.",
+        };
+      }
+    },
+  );
+  // FINORA_C80_B27_E3_B1_SILENT_PDF_SAVE
+  // Owner reports: explicit user-requested WhatsApp PDF handoff.
+  // No dialog, no arbitrary destination, no overwrite.
+  ipcMain.handle(
+    "finora:reports:save-whatsapp-pdf",
+    async (event, input: unknown) => {
+      const fail = (errorCode: string) => ({
+        success: false as const,
+        errorCode,
+      });
+
+      if (
+        process.platform !== "win32" ||
+        !mainWindow ||
+        mainWindow.isDestroyed() ||
+        event.sender !== mainWindow.webContents ||
+        !event.senderFrame ||
+        event.senderFrame !== event.sender.mainFrame ||
+        !isTrustedRenderer(event.senderFrame)
+      ) {
+        return fail("UNTRUSTED_RENDERER");
+      }
+
+      if (!input || typeof input !== "object" || Array.isArray(input)) {
+        return fail("INVALID_PDF_REQUEST");
+      }
+
+      const request = input as Record<string, unknown>;
+      const fileName = request.fileName;
+      const dataBase64 = request.dataBase64;
+
+      if (
+        typeof fileName !== "string" ||
+        fileName.length > 180 ||
+        !/^[A-Za-z0-9][A-Za-z0-9_.-]*\.pdf$/i.test(fileName) ||
+        fileName.includes("..") ||
+        typeof dataBase64 !== "string" ||
+        dataBase64.length < 16 ||
+        dataBase64.length > 20_000_000 ||
+        !/^[A-Za-z0-9+/]+={0,2}$/.test(dataBase64)
+      ) {
+        return fail("INVALID_PDF_PAYLOAD");
+      }
+
+      const bytes = Buffer.from(dataBase64, "base64");
+
+      if (
+        bytes.length < 16 ||
+        bytes.length > 15_000_000 ||
+        bytes.subarray(0, 5).toString("ascii") !== "%PDF-"
+      ) {
+        return fail("INVALID_PDF_CONTENT");
+      }
+
+      // Basic PDF trailer check. This is not a PDF signature
+      // or a substitute for the authoritative report guards.
+      if (!bytes.subarray(-4096).toString("latin1").includes("%%EOF")) {
+        return fail("INCOMPLETE_PDF_CONTENT");
+      }
+
+      try {
+        const fs = await import("node:fs/promises");
+        const downloadsPath = app.getPath("downloads");
+
+        const baseName = fileName.replace(/\.pdf$/i, "");
+
+        // 'wx' guarantees an existing PDF cannot be overwritten.
+        for (let index = 0; index < 1000; index += 1) {
+          const candidate =
+            index === 0
+              ? `${baseName}.pdf`
+              : `${baseName} (${index}).pdf`;
+
+          const destination = path.join(downloadsPath, candidate);
+
+          try {
+            await fs.writeFile(destination, bytes, { flag: "wx" });
+
+            return {
+              success: true as const,
+              fileName: candidate,
+            };
+          } catch (writeError) {
+            const code =
+              typeof writeError === "object" &&
+              writeError !== null &&
+              "code" in writeError
+                ? String(writeError.code)
+                : "";
+
+            if (code === "EEXIST") {
+              continue;
+            }
+
+            console.error(
+              "FINORA SILENT REPORT PDF SAVE ERROR:",
+              code || "UNKNOWN",
+            );
+
+            return fail("PDF_WRITE_FAILED");
+          }
+        }
+
+        return fail("PDF_FILENAME_COLLISION_LIMIT");
+      } catch (error) {
+        console.error(
+          "FINORA REPORT DOWNLOADS ACCESS ERROR:",
+          error instanceof Error ? error.message : "UNKNOWN",
+        );
+
+        return fail("DOWNLOADS_UNAVAILABLE");
+      }
+    },
+  );
 
   ipcMain.handle(IPC_CHANNELS.IS_AVAILABLE, async (event) => {
     if (!isTrustedRenderer(event.senderFrame)) {
@@ -5440,6 +6259,50 @@ app.whenReady().then(async () => {
             };
           }
 
+          // FINORA_C81_A18_WINDOWS_LABEL_REFRESH
+          // Refresh only the authenticated Owner's local saved label.
+          // Never take account scope or business name from the renderer.
+          // The server identity read must succeed independently of
+          // this best-effort encrypted-vault metadata operation.
+          // FINORA_C81_A39_SCOPE_VERIFIED_LABEL_REFRESH
+          // Business Name belongs to the authenticated Owner/Branch.
+          // All saved usernames under this exact scope share that name.
+          // The encrypted passwords and timestamps are preserved.
+          try {
+            const sessionPrincipal =
+              getFinoraSenderWalletPrincipal(event.sender);
+
+            if (
+              sessionPrincipal &&
+              sessionPrincipal.ownerId === row.ownerId &&
+              sessionPrincipal.businessId === row.businessId &&
+              sessionPrincipal.branchId === row.branchId &&
+              typeof row.businessName === "string" &&
+              row.businessName.trim().length > 0 &&
+              row.businessName.trim().length <= 256
+            ) {
+              const savedAccounts = await listSavedOwnerLogins();
+
+              for (const saved of savedAccounts) {
+                if (
+                  saved.ownerId === row.ownerId &&
+                  saved.branchId === row.branchId
+                ) {
+                  await updateSavedOwnerLoginLabel(
+                    saved.id,
+                    saved.branchId,
+                    saved.ownerId,
+                    saved.username,
+                    row.businessName.trim(),
+                  );
+                }
+              }
+            }
+          } catch {
+            // Metadata refresh is best-effort; never deny Login.
+            // Never print or return saved credential material.
+          }
+
           return {
             success: true,
             identity: {
@@ -6307,7 +7170,10 @@ app.whenReady().then(async () => {
 
           try {
             const [
-              { verifyFinoraServerBusinessSession },
+              {
+                verifyFinoraServerBusinessSession,
+                touchFinoraServerBusinessSession, // FINORA_C80_AUTH_R29_R2_TOUCH_WIRING
+              },
               {
                 validateFinoraServerReceptionSession,
                 touchFinoraServerReceptionSession,
@@ -6337,6 +7203,7 @@ app.whenReady().then(async () => {
                     sender,
                     sessionId,
                     verifyFinoraServerBusinessSession,
+                    touchFinoraServerBusinessSession,
                     businessSession.sessionId,
                   );
 

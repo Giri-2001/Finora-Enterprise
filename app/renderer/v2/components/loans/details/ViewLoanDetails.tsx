@@ -302,6 +302,9 @@ function formatScheduleStatus(value: unknown): string {
     case "overdue":
       return "Overdue";
 
+    case "overdue paid":
+      return "Overdue Paid";
+
     case "pending":
       return "Pending";
 

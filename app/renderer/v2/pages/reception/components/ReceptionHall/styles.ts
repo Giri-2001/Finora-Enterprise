@@ -181,6 +181,29 @@ export function createReceptionHallStyles(
      Imperial Gold / Amethyst / Emerald light themes.
   ========================================================= */
 
+    // FINORA_C80_B21_B2_RECEPTION_ONLY
+  // Additional 15% RGB darkening on Reception card gradients.
+  // No effect on Gold, Obsidian or other modules.
+  const finoraReceptionVivid =
+    theme.id === "royal-navy" ||
+    theme.id === "amethyst" ||
+    theme.id === "emerald";
+
+  const finoraReceptionTone = (value: string): string => {
+    if (!finoraReceptionVivid) return value;
+    if (!/^#[0-9a-fA-F]{6}$/.test(value)) {
+      return value;
+    }
+
+    const channel = (offset: number): string =>
+      Math.round(
+        parseInt(value.slice(offset, offset + 2), 16) * 0.85,
+      )
+        .toString(16)
+        .padStart(2, "0");
+
+    return `#${channel(1)}${channel(3)}${channel(5)}`;
+  };
   const wallStyle:
     CSSProperties = {
 
@@ -206,17 +229,21 @@ export function createReceptionHallStyles(
       `
         linear-gradient(
           180deg,
-          ${theme.colors.background.surfaceElevated} 0%,
-          ${theme.colors.background.surface} 52%,
-          ${theme.colors.background.surfaceMuted} 100%
+          ${finoraReceptionTone(theme.colors.background.surfaceElevated)} 0%,
+          ${finoraReceptionTone(theme.colors.background.surface)} 52%,
+          ${finoraReceptionTone(theme.colors.background.surfaceMuted)} 100%
         )
       `,
 
     border:
-      `${tokens.border.width}px solid ${theme.colors.border.default}`,
+      finoraReceptionVivid
+        ? `${tokens.border.width}px solid transparent`
+        : `${tokens.border.width}px solid ${theme.colors.border.default}`,
 
     borderBottom:
-      `${tokens.border.strongWidth}px solid ${theme.colors.border.strong}`,
+      finoraReceptionVivid
+        ? `${tokens.border.strongWidth}px solid transparent`
+        : `${tokens.border.strongWidth}px solid ${theme.colors.border.strong}`,
 
     boxShadow:
       `

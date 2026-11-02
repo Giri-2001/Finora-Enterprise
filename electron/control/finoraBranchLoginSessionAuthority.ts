@@ -99,8 +99,10 @@ const FINORA_BRANCH_LOGIN_SESSION_PREFIX =
 const FINORA_BRANCH_LOGIN_SESSION_RANDOM_BYTES =
   32;
 
+// FINORA_R195_C1_IDLE_60_MINUTES
+// Authoritative monotonic inactivity limit.
 const FINORA_BRANCH_LOGIN_IDLE_TIMEOUT_MS =
-  30 *
+  60 *
   60 *
   1000;
 

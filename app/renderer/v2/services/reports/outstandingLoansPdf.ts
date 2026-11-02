@@ -33,6 +33,8 @@ import { formatFinoraDate } from "../../../shared/finoraDateTimeDisplay";
 // ============================================================
 
 import { getBusinessContext } from "../business/businessContextService";
+import { loadFinoraServerSettingsIdentity } from "../business/finoraServerSettingsIdentity";
+import finoraOutstandingLogoUrl from "../../app/assets/finoraenterprise.png";
 
 import type { jsPDF } from "jspdf";
 
@@ -46,6 +48,7 @@ import type {
 import {
   addFinoraPdfFooters,
   createFinoraPdf,
+  getReportGeneratedAt,
   downloadFinoraPdf,
   printFinoraPdf,
   shareFinoraPdf,
@@ -112,6 +115,137 @@ function formatDate(value: string): string {
 // PAGE WIDTH
 // ============================================================
 
+// FINORA_C80_B24_B1_OUTSTANDING_PREMIUM_HEADER
+// Owner-only operational PDF header. Never modifies financial data.
+
+async function addFinoraOutstandingCenterLogo(
+  document: jsPDF,
+): Promise<void> {
+  const image = new Image();
+  image.src = finoraOutstandingLogoUrl;
+
+  try {
+    await image.decode();
+  } catch {
+    throw new Error("Unable to load FINORA Outstanding Loans logo.");
+  }
+
+  if (!image.naturalWidth || !image.naturalHeight) {
+    throw new Error("FINORA Outstanding Loans logo dimensions invalid.");
+  }
+
+  const canvas = window.document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("FINORA Outstanding Loans logo canvas unavailable.");
+  }
+
+  context.drawImage(image, 0, 0, 256, 256);
+
+  const size = 30;
+  const pageWidth = document.internal.pageSize.getWidth();
+
+  document.addImage(
+    canvas.toDataURL("image/png"),
+    "PNG",
+    (pageWidth - size) / 2,
+    5,
+    size,
+    size,
+    "FINORA_OUTSTANDING_CENTER_LOGO",
+    "FAST",
+  );
+}
+
+async function drawFinoraOutstandingBusinessIdentity(
+  document: jsPDF,
+): Promise<void> {
+  const context = getBusinessContext();
+
+  const scope =
+    context?.ownerId?.trim() &&
+    context.businessId?.trim() &&
+    context.branchId?.trim()
+      ? {
+          ownerId: context.ownerId.trim(),
+          businessId: context.businessId.trim(),
+          branchId: context.branchId.trim(),
+        }
+      : null;
+
+  let businessName = "Not recorded";
+  let branchName = "Not recorded";
+
+  if (scope) {
+    const serverIdentity =
+      await loadFinoraServerSettingsIdentity(scope);
+
+    if (serverIdentity.success) {
+      businessName = serverIdentity.data.businessName.trim();
+      branchName = serverIdentity.data.branchName.trim();
+    } else {
+      const profile = context?.businessProfile;
+
+      if (
+        profile &&
+        profile.ownerId === scope.ownerId &&
+        profile.businessId === scope.businessId &&
+        profile.branchId === scope.branchId &&
+        profile.businessName.trim() &&
+        profile.branchName.trim()
+      ) {
+        businessName = profile.businessName.trim();
+        branchName = profile.branchName.trim();
+      }
+    }
+  }
+
+  const rightX =
+    document.internal.pageSize.getWidth() - PAGE_MARGIN_X;
+
+  // Replace only the shared header's old top-right date.
+  // Left title and center PNG remain untouched.
+  document.setFillColor(255, 255, 255);
+  document.rect(135, 9, rightX - 135 + 1, 23, "F");
+
+  const rightName = (
+    value: string,
+    y: number,
+    fontSize: number,
+  ): void => {
+    document.setFont("helvetica", "bold");
+    document.setFontSize(fontSize);
+
+    let visible = value || "Not recorded";
+
+    while (
+      visible.length > 4 &&
+      document.getTextWidth(visible) > 58
+    ) {
+      visible = visible.slice(0, -1);
+    }
+
+    if (visible !== (value || "Not recorded")) {
+      visible = `${visible.slice(0, -3)}...`;
+    }
+
+    document.text(visible, rightX, y, {
+      align: "right",
+    });
+  };
+
+  document.setTextColor(22, 35, 52);
+  rightName(businessName, 17, 11);
+
+  document.setTextColor(92, 101, 113);
+  rightName(branchName, 25, 9);
+
+  document.setTextColor(0);
+}
 function getPageContentWidth(document: jsPDF): number {
   return document.internal.pageSize.getWidth() - PAGE_MARGIN_X * 2;
 }
@@ -244,7 +378,6 @@ function drawMetricGrid(
       const x = PAGE_MARGIN_X + columnIndex * (columnWidth + gap);
 
       document.setDrawColor(210);
-
       document.setFillColor(248, 249, 251);
 
       document.roundedRect(x, y, columnWidth, rowHeight, 2, 2, "FD");
@@ -392,6 +525,8 @@ function drawTableRow(
   currentY: number,
 
   rowHeight = 8,
+
+  highlightOutstanding = false,
 ): number {
   let x = PAGE_MARGIN_X;
 
@@ -412,6 +547,28 @@ function drawTableRow(
     const align = column.align ?? "left";
 
     const rawValue = values[index] ?? "--";
+
+    const outstandingCell =
+      highlightOutstanding &&
+      column.label.toLowerCase() === "outstanding";
+
+    if (outstandingCell) {
+      document.setFillColor(255, 239, 240);
+
+      document.rect(
+        x,
+        currentY,
+        column.width,
+        rowHeight - 0.2,
+        "F",
+      );
+
+      document.setFont("helvetica", "bold");
+      document.setTextColor(145, 32, 43);
+    } else {
+      document.setFont("helvetica", "normal");
+      document.setTextColor(35);
+    }
 
     const fitted = fitTableText(document, rawValue, column.width - 4);
 
@@ -563,6 +720,8 @@ function drawOutstandingLoansTable(
 
   y = drawSectionTitle(document, "OUTSTANDING LOAN DETAILS", y);
 
+  y += 2;
+
   if (loans.length === 0) {
     document.setFont("helvetica", "normal");
 
@@ -607,6 +766,8 @@ function drawOutstandingLoansTable(
         formatMoney(loan.outstanding),
       ],
       y,
+      8,
+      true,
     );
   }
 
@@ -650,7 +811,6 @@ function drawFinalOutstanding(
   const contentWidth = getPageContentWidth(document);
 
   document.setDrawColor(40, 130, 90);
-
   document.setFillColor(240, 250, 245);
 
   document.roundedRect(PAGE_MARGIN_X, y, contentWidth, 24, 2, 2, "FD");
@@ -700,13 +860,17 @@ function drawFinalOutstanding(
 export async function buildOutstandingLoansPdf(): Promise<jsPDF> {
   const report = await buildOutstandingLoansReport();
 
+  const generatedAt = getReportGeneratedAt();
   const document = createFinoraPdf({
     fileName: "FINORA_Outstanding_Loans.pdf",
 
-    title: resolveBusinessReportTitle("Outstanding Loans"),
+    title: "Outstanding Loans",
 
-    subtitle: "Current Authoritative Receivables",
+
   });
+
+  await addFinoraOutstandingCenterLogo(document);
+  await drawFinoraOutstandingBusinessIdentity(document);
 
   let y = CONTENT_START_Y;
 
@@ -718,19 +882,31 @@ export async function buildOutstandingLoansPdf(): Promise<jsPDF> {
 
   const summaryRows = Math.ceil(summaryMetrics.length / 2);
 
-  const summaryHeight = 12 + summaryRows * 19;
+  // FINORA_C80_B24_C1_PREMIUM_OUTSTANDING_STYLING
+  const summaryHeight = 14 + summaryRows * 19;
 
-  y = ensurePageSpace(document, y, summaryHeight);
+  y = ensurePageSpace(document, y + 1, summaryHeight);
 
   y = drawSectionTitle(document, "OUTSTANDING SUMMARY", y);
 
-  y = drawMetricGrid(document, summaryMetrics, y, 2);
+  document.setFont("helvetica", "normal");
+  document.setFontSize(7);
+  document.setTextColor(85, 94, 108);
+  document.text(
+    `Generated: ${generatedAt}`,
+    document.internal.pageSize.getWidth() - PAGE_MARGIN_X,
+    y - 9,
+    { align: "right" },
+  );
+  document.setTextColor(0);
+
+  y = drawMetricGrid(document, summaryMetrics, y + 2, 2);
 
   // ==========================================================
   // OUTSTANDING LOANS
   // ==========================================================
 
-  y = drawOutstandingLoansTable(document, report.generatedLoans, y + 2);
+  y = drawOutstandingLoansTable(document, report.generatedLoans, y + 4);
 
   // ==========================================================
   // FINAL AUTHORITATIVE OUTSTANDING

@@ -113,6 +113,7 @@ import useResponsive from "../../utils/responsive/useResponsive";
 
 import {
   buildLoanReportStatement,
+  isReportActiveLoan,
   loadReportDataSnapshot,
 } from "../../services/reports/reportDataService";
 
@@ -162,6 +163,13 @@ import {
 
 import { buildClosedLoansReport } from "../../services/reports/closedLoansDataService";
 
+// FINORA_C80_B26_D7_NOC_EXPORT
+import {
+  downloadCustomerClosedLoanNocPdf,
+  printCustomerClosedLoanNocPdf,
+  shareCustomerClosedLoanNocPdf,
+} from "../../services/reports/customerClosedLoanNocPdf";
+
 import type { ClosedLoansReport } from "../../services/reports/closedLoansDataService";
 
 import {
@@ -185,7 +193,8 @@ type ReportType =
   | "customer-statement"
   | "monthly-collections"
   | "outstanding-loans"
-  | "closed-loans";
+  | "closed-loans"
+  | "customer-closed-loans";
 
 // ============================================================
 // ACTION TYPE
@@ -386,6 +395,19 @@ const REPORT_OPTIONS: ReportOption[] = [
 
     icon: CheckCircle2,
   },
+
+  // FINORA_C80_B26_D2_CUSTOMER_CLOSED_NAVIGATION
+  {
+    id: "customer-closed-loans",
+
+    title: "Customer Closed Loans",
+
+    subtitle: "Individual closed Loan clearance and NOC.",
+
+    enabled: true,
+
+    icon: CheckCircle2,
+  },
 ];
 
 // ============================================================
@@ -423,13 +445,17 @@ function formatCurrency(value: number): string {
 // ============================================================
 
 function getLoanLabel(loan: Loan): string {
+  // FINORA_C80_B23_B2_CUSTOMER_FIRST
+  const customerName =
+    safeString(loan.customerName) || "Unnamed Customer";
+
   const loanNumber = safeString(loan.loanNumber || loan.id || "--");
 
   const status = safeString(loan.status).toUpperCase();
 
   const outstanding = formatCurrency(safeNumber(loan.outstanding));
 
-  return `${loanNumber} • ${status || "UNKNOWN"} • ${outstanding}`;
+  return `${customerName} • ${loanNumber} • ${status || "UNKNOWN"} • ${outstanding}`;
 }
 
 // ============================================================
@@ -561,6 +587,11 @@ export default function ReportsPage() {
   const [closedLoansReport, setClosedLoansReport] =
     useState<ClosedLoansReport | null>(null);
 
+  // FINORA_C80_B26_D5_CUSTOMER_CLOSED_SELECTORS
+  // Independent of Loan Statement and Customer Statement.
+  const [closedNocCustomerId, setClosedNocCustomerId] = useState("");
+  const [closedNocLoanId, setClosedNocLoanId] = useState("");
+
   // ==========================================================
   // LOADING
   // ==========================================================
@@ -626,10 +657,15 @@ export default function ReportsPage() {
         loadCustomerReportCustomers(),
       ]);
 
+      // FINORA_C80_B26_D4_B_ACTIVE_STATEMENT_ONLY
+      // Preserve the complete loan snapshot for other report workflows.
       setLoans(snapshot.loans);
 
+      const activeStatementLoans =
+        snapshot.loans.filter(isReportActiveLoan);
+
       setSelectedLoanId((previousLoanId) => {
-        const previousExists = snapshot.loans.some(
+        const previousExists = activeStatementLoans.some(
           (loan) => safeString(loan.id) === previousLoanId,
         );
 
@@ -637,7 +673,7 @@ export default function ReportsPage() {
           return previousLoanId;
         }
 
-        return safeString(snapshot.loans[0]?.id);
+        return safeString(activeStatementLoans[0]?.id);
       });
 
       setCustomers(reportCustomers);
@@ -966,7 +1002,7 @@ export default function ReportsPage() {
     let cancelled = false;
 
     async function loadClosedLoansReport(): Promise<void> {
-      if (selectedReport !== "closed-loans") {
+      if (selectedReport !== "closed-loans" && selectedReport !== "customer-closed-loans") {
         return;
       }
 
@@ -1049,7 +1085,7 @@ export default function ReportsPage() {
             ? "Preparing Report for Print..."
             : isNativePlatform
               ? "Preparing Report to Share..."
-              : "Opening WhatsApp Web...",
+              : "Preparing PDF for WhatsApp...",
       );
 
     setError("");
@@ -1072,14 +1108,10 @@ export default function ReportsPage() {
           return;
         }
 
-        if (isNativePlatform) {
-          await shareLoanStatementPdf(selectedLoanId);
-
-          return;
-        }
-
-        openWhatsAppWeb();
-
+         // FINORA_C80_B31_C2_C_SIX_REPORT_HANDOFF
+        // Native: Android shares the actual PDF.
+        // Windows: save PDF first, then open WhatsApp Web.
+        await shareLoanStatementPdf(selectedLoanId);
         return;
       }
 
@@ -1100,14 +1132,10 @@ export default function ReportsPage() {
           return;
         }
 
-        if (isNativePlatform) {
-          await shareCustomerStatementPdf(selectedCustomerId);
-
-          return;
-        }
-
-        openWhatsAppWeb();
-
+         // FINORA_C80_B31_C2_C_SIX_REPORT_HANDOFF
+        // Native: Android shares the actual PDF.
+        // Windows: save PDF first, then open WhatsApp Web.
+        await shareCustomerStatementPdf(selectedCustomerId);
         return;
       }
 
@@ -1128,14 +1156,10 @@ export default function ReportsPage() {
           return;
         }
 
-        if (isNativePlatform) {
-          await shareMonthlyCollectionsPdf(selectedMonth);
-
-          return;
-        }
-
-        openWhatsAppWeb();
-
+         // FINORA_C80_B31_C2_C_SIX_REPORT_HANDOFF
+        // Native: Android shares the actual PDF.
+        // Windows: save PDF first, then open WhatsApp Web.
+        await shareMonthlyCollectionsPdf(selectedMonth);
         return;
       }
 
@@ -1156,20 +1180,66 @@ export default function ReportsPage() {
           return;
         }
 
-        if (isNativePlatform) {
-          await shareOutstandingLoansPdf();
-
-          return;
-        }
-
-        openWhatsAppWeb();
-
+         // FINORA_C80_B31_C2_C_SIX_REPORT_HANDOFF
+        // Native: Android shares the actual PDF.
+        // Windows: save PDF first, then open WhatsApp Web.
+        await shareOutstandingLoansPdf();
         return;
       }
 
       // ======================================================
       // CLOSED LOANS
       // ======================================================
+
+      // FINORA_C80_B26_D7_NOC_EXPORT_ACTIONS
+      if (selectedReport === "customer-closed-loans") {
+        if (!closedNocCustomerId || !closedNocLoanId) {
+          setError("Select a Customer and a CLOSED Loan first.");
+          return;
+        }
+
+        const matchingLoans = (closedLoansReport?.loans ?? []).filter(
+          (loan) =>
+            loan.customerId === closedNocCustomerId &&
+            loan.loanId === closedNocLoanId &&
+            loan.status === "CLOSED" &&
+            loan.currentOutstanding === 0,
+        );
+
+        if (matchingLoans.length !== 1) {
+          setError(
+            "NOC unavailable: unique CLOSED Loan with zero outstanding required.",
+          );
+          return;
+        }
+
+        // The dedicated NOC renderer independently reloads and verifies
+        // the authoritative selected loan before each export.
+        if (action === "download") {
+          await downloadCustomerClosedLoanNocPdf(
+            closedNocCustomerId,
+            closedNocLoanId,
+          );
+          return;
+        }
+
+        if (action === "print") {
+          await printCustomerClosedLoanNocPdf(
+            closedNocCustomerId,
+            closedNocLoanId,
+          );
+          return;
+        }
+
+        // FINORA_C80_B31_C2_C_NOC_WHATSAPP
+        // Existing CLOSED/zero-outstanding guards remain above.
+        await shareCustomerClosedLoanNocPdf(
+          closedNocCustomerId,
+          closedNocLoanId,
+        );
+        return;
+
+      }
 
       if (selectedReport === "closed-loans") {
         if (action === "download") {
@@ -1184,14 +1254,10 @@ export default function ReportsPage() {
           return;
         }
 
-        if (isNativePlatform) {
-          await shareClosedLoansPdf();
-
-          return;
-        }
-
-        openWhatsAppWeb();
-
+         // FINORA_C80_B31_C2_C_SIX_REPORT_HANDOFF
+        // Native: Android shares the actual PDF.
+        // Windows: save PDF first, then open WhatsApp Web.
+        await shareClosedLoansPdf();
         return;
       }
     } catch (actionError) {
@@ -1440,7 +1506,7 @@ export default function ReportsPage() {
                     </div>
                   </header>
 
-                  {loans.length === 0 ? (
+                  {loans.filter(isReportActiveLoan).length === 0 ? (
                     <div style={reportsPageStyles.emptyState}>
                       <strong style={reportsPageStyles.emptyStateTitle}>
                         No Loans Available
@@ -1466,7 +1532,7 @@ export default function ReportsPage() {
                             }
                             style={reportsPageStyles.select}
                           >
-                            {loans.map((loan) => (
+                            {loans.filter(isReportActiveLoan).map((loan) => (
                               <option key={loan.id} value={loan.id}>
                                 {getLoanLabel(loan)}
                               </option>
@@ -2219,6 +2285,152 @@ export default function ReportsPage() {
               {/* ===============================================
                   CLOSED LOANS
               =============================================== */}
+
+              {/* FINORA_C80_B26_D2_CUSTOMER_CLOSED_WORKSPACE */}
+              {selectedReport === "customer-closed-loans" && (
+                <div style={reportsPageStyles.preview}>
+                  <header style={reportsPageStyles.panelHeader}>
+                    <CheckCircle2
+                      aria-hidden="true"
+                      style={reportsPageStyles.panelIcon}
+                    />
+                    <div style={reportsPageStyles.panelHeading}>
+                      <h2 style={reportsPageStyles.panelTitle}>
+                        Customer Closed Loans
+                      </h2>
+                      <p style={reportsPageStyles.panelSubtitle}>
+                        Select one customer and one CLOSED Loan for an
+                        individual Loan Closure / NOC certificate.
+                      </p>
+                    </div>
+                  </header>
+
+                  {closedLoansReportLoading ? (
+                    <div style={reportsPageStyles.emptyState}>
+                      <span style={reportsPageStyles.loadingText}>
+                        Loading verified Closed Loan records...
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={reportsPageStyles.controlGrid}>
+                        <label style={reportsPageStyles.field}>
+                          <span style={reportsPageStyles.label}>
+                            Select Customer
+                          </span>
+                          <select
+                            value={closedNocCustomerId}
+                            onChange={(event) => {
+                              setClosedNocCustomerId(event.target.value);
+                              setClosedNocLoanId("");
+                            }}
+                            style={reportsPageStyles.select}
+                          >
+                            <option value="">Select Closed Loan Customer</option>
+                            {Array.from(
+                              new Map(
+                                (closedLoansReport?.loans ?? [])
+                                  .filter((loan) =>
+                                    loan.status === "CLOSED" &&
+                                    Boolean(loan.customerId),
+                                  )
+                                  .map((loan) => [
+                                    loan.customerId,
+                                    loan.customerName,
+                                  ]),
+                              ),
+                            ).map(([customerId, customerName]) => (
+                              <option key={customerId} value={customerId}>
+                                {customerName} - {customerId}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label style={reportsPageStyles.field}>
+                          <span style={reportsPageStyles.label}>
+                            Select Closed Loan
+                          </span>
+                          <select
+                            value={closedNocLoanId}
+                            disabled={!closedNocCustomerId}
+                            onChange={(event) =>
+                              setClosedNocLoanId(event.target.value)
+                            }
+                            style={reportsPageStyles.select}
+                          >
+                            <option value="">Select Closed Loan Number</option>
+                            {(closedLoansReport?.loans ?? [])
+                              .filter(
+                                (loan) =>
+                                  loan.customerId === closedNocCustomerId &&
+                                  loan.status === "CLOSED",
+                              )
+                              .map((loan) => (
+                                <option key={loan.loanId} value={loan.loanId}>
+                                  {loan.loanNumber} - Outstanding INR{" "}
+                                  {loan.currentOutstanding.toLocaleString("en-IN")}
+                                </option>
+                              ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      <div style={reportsPageStyles.emptyState}>
+                        {(() => {
+                          const selected = (closedLoansReport?.loans ?? [])
+                            .find(
+                              (loan) =>
+                                loan.loanId === closedNocLoanId &&
+                                loan.customerId === closedNocCustomerId &&
+                                loan.status === "CLOSED",
+                            );
+
+                          if (!selected) {
+                            return (
+                              <span style={reportsPageStyles.emptyStateText}>
+                                Select a customer and their CLOSED Loan to
+                                review NOC eligibility.
+                              </span>
+                            );
+                          }
+
+                          if (selected.currentOutstanding !== 0) {
+                            return (
+                              <span style={reportsPageStyles.emptyStateText}>
+                                NOC NOT ELIGIBLE: This Loan has a remaining
+                                outstanding balance. Closure verification
+                                is required.
+                              </span>
+                            );
+                          }
+
+                          return (
+                            <span style={reportsPageStyles.emptyStateText}>
+                              CLOSED Loan identified: {selected.customerName}
+                              {" - "}{selected.loanNumber}.
+                              Outstanding INR 0. The dedicated verified NOC
+                              PDF renderer will be enabled in the next step.
+                            </span>
+                          );
+                        })()}
+                      </div>
+                      {/* FINORA_C80_B26_D7_NOC_EXPORT_BUTTONS */}
+                      {renderReportActions(
+                        !(
+                          (closedLoansReport?.loans ?? []).filter(
+                            (loan) =>
+                              loan.customerId === closedNocCustomerId &&
+                              loan.loanId === closedNocLoanId &&
+                              loan.status === "CLOSED" &&
+                              loan.currentOutstanding === 0,
+                          ).length === 1
+                        ),
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
 
               {selectedReport === "closed-loans" && (
                 <>

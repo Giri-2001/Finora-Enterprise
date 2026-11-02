@@ -126,6 +126,21 @@ export default function FinoraControlCenterLiveWalletPanel() {
   const [fetchedAt, setFetchedAt] =
     useState<string>();
 
+  // FINORA_W9C1_CONFIRMED_RECHARGE_REFRESH
+  useEffect(() => {
+    const refreshConfirmedRecharge = () => {
+      setRevision(value => value + 1);
+    };
+    window.addEventListener(
+      "finora:control-center-recharge-decision-confirmed",
+      refreshConfirmedRecharge
+    );
+    return () => window.removeEventListener(
+      "finora:control-center-recharge-decision-confirmed",
+      refreshConfirmedRecharge
+    );
+  }, []);
+
   useEffect(
     () => {
       let active = true;

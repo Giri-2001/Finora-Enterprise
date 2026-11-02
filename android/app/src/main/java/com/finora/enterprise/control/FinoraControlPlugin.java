@@ -81,6 +81,9 @@ public final class FinoraControlPlugin
     // STATE
     // ========================================================
 
+    // FINORA_C80_AUTH_R143_SAVED_OWNER_VAULT
+    private FinoraSavedOwnerLoginVault savedOwnerLoginVault;
+
     private FinoraControlStore controlStore;
 
     private FinoraInstallationBindingService installationBindingService;
@@ -115,6 +118,10 @@ public final class FinoraControlPlugin
             new FinoraControlStore(
                 getContext()
             );
+
+        // FINORA_C80_AUTH_R143_INIT
+        this.savedOwnerLoginVault =
+            new FinoraSavedOwnerLoginVault(getContext());
 
         this.installationBindingService =
             new FinoraInstallationBindingService(
@@ -11701,6 +11708,319 @@ private boolean isValidEntitlement(
         );
     }
 
+    // ========================================================
+    // FINORA_C80_AUTH_R143_SAVED_OWNER_BRIDGE
+    // Device-local encrypted credentials; never USB storage.
+    // Save is intentionally NOT exposed until independent
+    // authenticated Owner/Branch session checks are wired.
+    // ========================================================
+
+    @PluginMethod
+    public void listSavedOwnerLogins(PluginCall call) {
+        getBridge().execute(() -> {
+            try {
+                com.getcapacitor.JSObject response =
+                    new com.getcapacitor.JSObject();
+                response.put("success", true);
+                response.put("accounts", savedOwnerLoginVault.list());
+                call.resolve(response);
+            } catch (Exception ignored) {
+                com.getcapacitor.JSObject response =
+                    new com.getcapacitor.JSObject();
+                response.put("success", false);
+                response.put("errorCode", "SAVED_LOGIN_VAULT_UNAVAILABLE");
+                call.resolve(response);
+            }
+        });
+    }
+
+    @PluginMethod
+    public void selectSavedOwnerLogin(PluginCall call) {
+        final String id = call.getString("id");
+
+        if (id == null || id.trim().isEmpty()) {
+            call.reject("SAVED_ACCOUNT_ID_REQUIRED");
+            return;
+        }
+
+        getBridge().execute(() -> {
+            try {
+                org.json.JSONObject record =
+                    savedOwnerLoginVault.select(id);
+
+                com.getcapacitor.JSObject response =
+                    new com.getcapacitor.JSObject();
+                response.put("success", true);
+                response.put("username", record.getString("username"));
+                response.put("password", record.getString("password"));
+                response.put("branchId", record.getString("branchId"));
+                response.put("ownerId", record.getString("ownerId"));
+                call.resolve(response);
+            } catch (Exception ignored) {
+                com.getcapacitor.JSObject response =
+                    new com.getcapacitor.JSObject();
+                response.put("success", false);
+                response.put("errorCode", "SAVED_ACCOUNT_SELECT_FAILED");
+                call.resolve(response);
+            }
+        });
+    }
+
+    @PluginMethod
+    public void removeSavedOwnerLogin(PluginCall call) {
+        final String id = call.getString("id");
+
+        if (id == null || id.trim().isEmpty()) {
+            call.reject("SAVED_ACCOUNT_ID_REQUIRED");
+            return;
+        }
+
+        getBridge().execute(() -> {
+            try {
+                boolean removed = savedOwnerLoginVault.remove(id);
+                com.getcapacitor.JSObject response =
+                    new com.getcapacitor.JSObject();
+                response.put("success", true);
+                response.put("removed", removed);
+                call.resolve(response);
+            } catch (Exception ignored) {
+                com.getcapacitor.JSObject response =
+                    new com.getcapacitor.JSObject();
+                response.put("success", false);
+                response.put("errorCode", "SAVED_ACCOUNT_REMOVE_FAILED");
+                call.resolve(response);
+            }
+        });
+    }
+    // ========================================================
+    // FINORA_C80_AUTH_R145_VERIFIED_SAVE
+    // Save is allowed only with explicit consent and a
+    // currently server-validated native Reception session.
+    // Branch/Owner identity is NEVER accepted from WebView.
+    // ========================================================
+
+    @PluginMethod
+    public void saveSavedOwnerLogin(PluginCall call) {
+        if (call == null) {
+            return;
+        }
+
+        final Boolean consent = call.getBoolean("consent", false);
+        final String handle = call.getString("sessionId");
+        final String requestedUsername = call.getString("username");
+        final String requestedPassword = call.getString("password");
+
+        if (!Boolean.TRUE.equals(consent)) {
+            com.getcapacitor.JSObject response =
+                new com.getcapacitor.JSObject();
+            response.put("success", false);
+            response.put("errorCode", "EXPLICIT_CONSENT_REQUIRED");
+            call.resolve(response);
+            return;
+        }
+
+        if (handle == null ||
+            !handle.matches("^[a-f0-9]{64}$") ||
+            requestedUsername == null ||
+            requestedUsername.trim().isEmpty() ||
+            requestedPassword == null ||
+            requestedPassword.isEmpty()) {
+
+            com.getcapacitor.JSObject response =
+                new com.getcapacitor.JSObject();
+            response.put("success", false);
+            response.put("errorCode", "INVALID_SAVE_LOGIN_REQUEST");
+            call.resolve(response);
+            return;
+        }
+
+        getBridge().execute(() -> {
+            try {
+                org.json.JSONObject validation =
+                    FinoraNativeWalletSession
+                        .validateAndroidReception(handle);
+
+                if (!validation.optBoolean("success", false) ||
+                    !validation.optBoolean(
+                        "businessDataAccess", false) ||
+                    !"BUSINESS_RECEPTION".equals(
+                        validation.optString("sessionType", ""))) {
+                    throw new IllegalStateException(
+                        "RECEPTION_AUTHORIZATION_REQUIRED");
+                }
+
+                org.json.JSONObject principal =
+                    validation.optJSONObject("principal");
+
+                if (principal == null) {
+                    throw new IllegalStateException(
+                        "VERIFIED_PRINCIPAL_REQUIRED");
+                }
+
+                // Owner and Branch come only from server authority.
+                // Username is bound to successful native login.
+                final String branchId =
+                    principal.optString("branchId", "").trim();
+                final String ownerId =
+                    principal.optString("ownerId", "").trim();
+                final String username =
+                    requestedUsername.trim();
+
+                if (branchId.isEmpty() ||
+                    ownerId.isEmpty() ||
+                    !"OWNER".equals(
+                        principal.optString("role", "")) ||
+                    !FinoraNativeWalletSession
+                        .matchesAuthenticatedLoginUsername(username)) {
+                    throw new IllegalStateException(
+                        "VERIFIED_OWNER_SCOPE_MISMATCH");
+                }
+
+                // Stable identity for one Owner within one branch.
+                // Do not use a device-bound billing identifier.
+                final String identity =
+                    branchId + "\u0000" +
+                    ownerId + "\u0000" +
+                    username.toLowerCase(
+                        java.util.Locale.ROOT);
+
+                final byte[] digest =
+                    java.security.MessageDigest.getInstance(
+                        "SHA-256"
+                    ).digest(
+                        identity.getBytes(
+                            java.nio.charset.StandardCharsets.UTF_8
+                        )
+                    );
+
+                final StringBuilder accountId =
+                    new StringBuilder(64);
+
+                for (byte value : digest) {
+                    accountId.append(String.format(
+                        java.util.Locale.ROOT,
+                        "%02x",
+                        value & 255
+                    ));
+                }
+
+                // FINORA_C81_A12_R1_BUSINESS_NAME
+                // Authenticated PostgreSQL identity only.
+                // Stable Owner/Branch account ID and password are unchanged.
+                final org.json.JSONObject businessIdentityResult =
+                    FinoraNativeWalletSession.verifiedBusinessIdentity();
+
+                if (!businessIdentityResult.optBoolean("success", false)) {
+                    throw new IllegalStateException(
+                        "BUSINESS_NAME_SERVER_UNAVAILABLE");
+                }
+
+                final org.json.JSONObject businessIdentityResponse =
+                    businessIdentityResult.optJSONObject("data");
+
+                if (businessIdentityResponse == null ||
+                    !businessIdentityResponse.optBoolean("ok", false) ||
+                    !"FINORA_POSTGRESQL_BUSINESS_IDENTITY".equals(
+                        businessIdentityResponse.optString("source", ""))) {
+                    throw new IllegalStateException(
+                        "BUSINESS_NAME_INVALID_RESPONSE");
+                }
+
+                final org.json.JSONObject verifiedBusinessIdentityRow =
+                    businessIdentityResponse.optJSONObject("identity");
+
+                if (verifiedBusinessIdentityRow == null ||
+                    !ownerId.equals(
+                        verifiedBusinessIdentityRow.optString("ownerId", "")) ||
+                    !branchId.equals(
+                        verifiedBusinessIdentityRow.optString("branchId", "")) ||
+                    !principal.optString("businessId", "").equals(
+                        verifiedBusinessIdentityRow.optString("businessId", "")) ||
+                    !"USB".equals(
+                        verifiedBusinessIdentityRow.optString("storageMode", ""))) {
+                    throw new IllegalStateException(
+                        "BUSINESS_NAME_SCOPE_MISMATCH");
+                }
+
+                final String branchLabel =
+                    verifiedBusinessIdentityRow
+                        .optString("businessName", "").trim();
+
+                if (branchLabel.isEmpty() ||
+                    branchLabel.length() > 256) {
+                    throw new IllegalStateException(
+                        "BUSINESS_NAME_INVALID");
+                }
+
+                org.json.JSONObject saved =
+                    savedOwnerLoginVault.save(
+                        accountId.toString(),
+                        branchId,
+                        ownerId,
+                        username,
+                        requestedPassword,
+                        branchLabel
+                    );
+
+                // Password is intentionally excluded.
+                com.getcapacitor.JSObject account =
+                    new com.getcapacitor.JSObject();
+
+                account.put("id", saved.getString("id"));
+                account.put(
+                    "branchId", saved.getString("branchId"));
+                account.put(
+                    "ownerId", saved.getString("ownerId"));
+                account.put(
+                    "username", saved.getString("username"));
+                account.put(
+                    "branchLabel", saved.getString("branchLabel"));
+                account.put(
+                    "savedAt", saved.getString("savedAt"));
+
+                com.getcapacitor.JSObject response =
+                    new com.getcapacitor.JSObject();
+                response.put("success", true);
+                response.put("account", account);
+
+                call.resolve(response);
+            } catch (Exception error) {
+                // FINORA_C80_AUTH_R160_SAFE_FAILURE_CLASSIFICATION
+                // Only fixed codes may cross the native bridge.
+                // Never expose raw exceptions, credentials,
+                // principal content or Keystore internals.
+                String code = "SAVED_LOGIN_STORAGE_FAILED";
+
+                if (error instanceof IllegalStateException) {
+                    String reason = error.getMessage();
+
+                    if ("RECEPTION_AUTHORIZATION_REQUIRED".equals(reason) ||
+                        "VERIFIED_PRINCIPAL_REQUIRED".equals(reason) ||
+                        "VERIFIED_OWNER_SCOPE_MISMATCH".equals(reason)) {
+                        code = reason;
+                    } else {
+                        code = "SAVED_LOGIN_STATE_FAILED";
+                    }
+                } else if (
+                    error instanceof
+                        java.security.GeneralSecurityException
+                ) {
+                    code = "SAVED_LOGIN_KEYSTORE_FAILED";
+                } else if (
+                    error instanceof java.io.IOException
+                ) {
+                    code = "SAVED_LOGIN_FILE_IO_FAILED";
+                }
+
+                com.getcapacitor.JSObject response =
+                    new com.getcapacitor.JSObject();
+
+                response.put("success", false);
+                response.put("errorCode", code);
+                call.resolve(response);
+            }
+        });
+    }
     // P1-684X: Account/Wallet authentication only.
     // Business and Reception authorization remain separate.
     @PluginMethod
@@ -11762,11 +12082,202 @@ private boolean isValidEntitlement(
 
         getBridge().execute(() -> {
             try {
-                call.resolve(com.getcapacitor.JSObject.fromJSONObject(
-                    FinoraNativeWalletSession.validateAndroidReception(handle)
-                ));
+                final org.json.JSONObject verifiedReception =
+                    FinoraNativeWalletSession.validateAndroidReception(handle);
+
+                call.resolve(
+                    com.getcapacitor.JSObject.fromJSONObject(
+                        verifiedReception
+                    )
+                );
+
+                // FINORA_C81_A17_SAVED_LABEL_REFRESH
+                // Run only after native successful Reception verification.
+                // The caller cannot provide a business label or account scope.
+                // This best-effort metadata refresh must never block Login.
+                if (verifiedReception.optBoolean("success", false) &&
+                    verifiedReception.optBoolean("businessDataAccess", false) &&
+                    "BUSINESS_RECEPTION".equals(
+                        verifiedReception.optString("sessionType", ""))) {
+                    try {
+                        final org.json.JSONObject authenticatedPrincipal =
+                            verifiedReception.optJSONObject("principal");
+
+                        if (authenticatedPrincipal != null &&
+                            "OWNER".equals(
+                                authenticatedPrincipal.optString("role", "")) &&
+                            "USB".equals(
+                                authenticatedPrincipal.optString("storageMode", ""))) {
+
+                            final org.json.JSONObject verifiedIdentityResult =
+                                FinoraNativeWalletSession.verifiedBusinessIdentity();
+
+                            final org.json.JSONObject identityPayload =
+                                verifiedIdentityResult.optJSONObject("data");
+
+                            final org.json.JSONObject identityRow =
+                                identityPayload == null
+                                    ? null
+                                    : identityPayload.optJSONObject("identity");
+
+                            if (verifiedIdentityResult.optBoolean("success", false) &&
+                                identityPayload != null &&
+                                identityPayload.optBoolean("ok", false) &&
+                                "FINORA_POSTGRESQL_BUSINESS_IDENTITY".equals(
+                                    identityPayload.optString("source", "")) &&
+                                identityRow != null &&
+                                authenticatedPrincipal.optString("ownerId", "")
+                                    .equals(identityRow.optString("ownerId", "")) &&
+                                authenticatedPrincipal.optString("businessId", "")
+                                    .equals(identityRow.optString("businessId", "")) &&
+                                authenticatedPrincipal.optString("branchId", "")
+                                    .equals(identityRow.optString("branchId", "")) &&
+                                "USB".equals(identityRow.optString("storageMode", ""))) {
+
+                                final String verifiedBusinessName =
+                                    identityRow.optString("businessName", "").trim();
+
+                                if (!verifiedBusinessName.isEmpty() &&
+                                    verifiedBusinessName.length() <= 256) {
+
+                                    final org.json.JSONArray savedAccounts =
+                                        savedOwnerLoginVault.list();
+
+                                    for (int index = 0;
+                                         index < savedAccounts.length();
+                                         index++) {
+
+                                        final org.json.JSONObject saved =
+                                            savedAccounts.getJSONObject(index);
+
+                                        final String savedUsername =
+                                            saved.optString("username", "");
+
+                                        // FINORA_C81_A41_ANDROID_SCOPE_LABEL_REFRESH
+                                        // The verified business identity is scoped
+                                        // to this authenticated Owner and Branch.
+                                        // Do not require a wallet username match.
+                                        if (saved.optString("ownerId", "")
+                                                .equals(authenticatedPrincipal.optString("ownerId", "")) &&
+                                            saved.optString("branchId", "")
+                                                .equals(authenticatedPrincipal.optString("branchId", "")) &&
+                                            !savedUsername.trim().isEmpty()) {
+
+                                            savedOwnerLoginVault.updateBusinessLabel(
+                                                saved.getString("id"),
+                                                saved.getString("branchId"),
+                                                saved.getString("ownerId"),
+                                                savedUsername,
+                                                verifiedBusinessName
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception ignored) {
+                        // Never log account identities or credentials.
+                        // Label refresh failure cannot alter Login outcome.
+                    }
+                }
             } catch (Exception ignored) {
                 call.reject("RECEPTION_VALIDATION_UNAVAILABLE");
+            }
+        });
+    }
+    // FINORA_C80_AUTH_R59_NATIVE_TOUCH_BRIDGE
+    // The renderer supplies only its opaque Reception handle.
+    // Server bearer credentials remain exclusively in native memory.
+    @PluginMethod
+    public void touchAndroidReception(PluginCall call) {
+        if (call == null) {
+            return;
+        }
+
+        final String handle = call.getString("sessionId");
+
+        getBridge().execute(() -> {
+            try {
+                call.resolve(
+                    com.getcapacitor.JSObject.fromJSONObject(
+                        FinoraNativeWalletSession.touchAndroidReception(handle)
+                    )
+                );
+            } catch (Exception ignored) {
+                com.getcapacitor.JSObject response =
+                    new com.getcapacitor.JSObject();
+
+                response.put("success", false);
+                response.put(
+                    "errorCode",
+                    "BUSINESS_RENEWAL_FAILED"
+                );
+
+                call.resolve(response);
+            }
+        });
+    }
+    // FINORA_W9_J8_OWNER_CAPACITOR_RECHARGE
+    // Server account token stays in FinoraNativeWalletSession.
+    // This bridge cannot select a wallet or grant wallet credit.
+    @PluginMethod
+    public void submitServerWalletRecharge(PluginCall call) {
+        if (call == null) {
+            return;
+        }
+
+        final String walletId = call.getString("walletId");
+        final Integer amountInr = call.getInt("amountInr");
+        final String paymentMethod = call.getString("paymentMethod");
+        final String idempotencyKey = call.getString("idempotencyKey");
+
+        if (walletId == null ||
+            !walletId.matches("[0-9]{8,12}") ||
+            amountInr == null ||
+            amountInr < 50 ||
+            amountInr > 2000 ||
+            (!"PHONEPE".equals(paymentMethod) &&
+             !"GOOGLE_PAY".equals(paymentMethod)) ||
+            idempotencyKey == null ||
+            !idempotencyKey.matches(
+                "(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+            )) {
+            com.getcapacitor.JSObject response =
+                new com.getcapacitor.JSObject();
+
+            response.put("success", false);
+            response.put("errorCode", "INVALID_REQUEST");
+            call.resolve(response);
+            return;
+        }
+
+        getBridge().execute(() -> {
+            try {
+                org.json.JSONObject result =
+                    FinoraNativeWalletSession.submitOwnerRecharge(
+                        getContext(),
+                        walletId,
+                        amountInr.intValue(),
+                        paymentMethod,
+                        idempotencyKey
+                    );
+
+                call.resolve(
+                    com.getcapacitor.JSObject.fromJSONObject(result)
+                );
+            } catch (Exception ignored) {
+                // Do not clear the native session or pending intent.
+                // A network outcome may be unknown.
+                com.getcapacitor.JSObject response =
+                    new com.getcapacitor.JSObject();
+
+                response.put("success", false);
+                response.put(
+                    "errorCode",
+                    "RECHARGE_OUTCOME_UNCONFIRMED"
+                );
+
+                call.resolve(response);
             }
         });
     }
@@ -11857,6 +12368,63 @@ private boolean isValidEntitlement(
         });
     }
 
+    // FINORA_W9_J9_PLUGIN_RECOVERY
+    // No UUID, bearer, or credential is returned to JavaScript.
+    @PluginMethod
+    public void getPendingServerWalletRecharge(PluginCall call) {
+        if (call == null) return;
+
+        getBridge().execute(() -> {
+            try {
+                call.resolve(
+                    com.getcapacitor.JSObject.fromJSONObject(
+                        FinoraNativeWalletSession.pendingOwnerRecharge(
+                            getContext()
+                        )
+                    )
+                );
+            } catch (Exception ignored) {
+                com.getcapacitor.JSObject result =
+                    new com.getcapacitor.JSObject();
+
+                result.put("success", false);
+                result.put(
+                    "errorCode",
+                    "RECHARGE_INTENT_STORAGE_UNAVAILABLE"
+                );
+                call.resolve(result);
+            }
+        });
+    }
+
+    // Explicit user-triggered retry only.
+    // The native encrypted store owns the original UUID.
+    @PluginMethod
+    public void resumeServerWalletRecharge(PluginCall call) {
+        if (call == null) return;
+
+        getBridge().execute(() -> {
+            try {
+                call.resolve(
+                    com.getcapacitor.JSObject.fromJSONObject(
+                        FinoraNativeWalletSession.resumeOwnerRecharge(
+                            getContext()
+                        )
+                    )
+                );
+            } catch (Exception ignored) {
+                com.getcapacitor.JSObject result =
+                    new com.getcapacitor.JSObject();
+
+                result.put("success", false);
+                result.put(
+                    "errorCode",
+                    "RECHARGE_OUTCOME_UNCONFIRMED"
+                );
+                call.resolve(result);
+            }
+        });
+    }
     @PluginMethod
     public void getServerWalletRecharges(PluginCall call) {
         getBridge().execute(() -> {
@@ -11934,5 +12502,342 @@ private boolean isValidEntitlement(
             result.put("live", live);
             call.resolve(result);
         });
+    }
+
+    // FINORA_AP04_R027_RECEIPT_PNG_SAVE_AS
+    // Android system document picker for customer-facing PNG receipts.
+    // This does not modify USB, wallet, branch, or business records.
+    private byte[] pendingReceiptPngExportBytes;
+
+    @PluginMethod
+    public void saveReceiptPngAsDocument(PluginCall call) {
+        if (call == null) {
+            return;
+        }
+
+        if (pendingReceiptPngExportBytes != null) {
+            call.reject("RECEIPT_EXPORT_ALREADY_IN_PROGRESS");
+            return;
+        }
+
+        try {
+            String filename = call.getString("filename");
+            String encoded = call.getString("pngBase64");
+
+            if (
+                filename == null ||
+                !filename.matches("[A-Za-z0-9_.-]{1,120}[.]png")
+            ) {
+                call.reject("INVALID_RECEIPT_PNG_FILENAME");
+                return;
+            }
+
+            // Bound encoded input before decoding.
+            if (
+                encoded == null ||
+                encoded.length() < 16 ||
+                encoded.length() > 33554432
+            ) {
+                call.reject("INVALID_RECEIPT_PNG_SIZE");
+                return;
+            }
+
+            byte[] decoded = android.util.Base64.decode(
+                encoded,
+                android.util.Base64.DEFAULT
+            );
+
+            if (
+                decoded.length < 24 ||
+                decoded.length > 25165824
+            ) {
+                call.reject("INVALID_RECEIPT_PNG_SIZE");
+                return;
+            }
+
+            // Verify standard PNG signature.
+            final int[] signature = {
+                137, 80, 78, 71, 13, 10, 26, 10
+            };
+
+            for (int i = 0; i < signature.length; i++) {
+                if ((decoded[i] & 255) != signature[i]) {
+                    call.reject("INVALID_RECEIPT_PNG_SIGNATURE");
+                    return;
+                }
+            }
+
+            pendingReceiptPngExportBytes = decoded;
+
+            android.content.Intent intent =
+                new android.content.Intent(
+                    android.content.Intent.ACTION_CREATE_DOCUMENT
+                );
+
+            intent.addCategory(
+                android.content.Intent.CATEGORY_OPENABLE
+            );
+
+            intent.setType("image/png");
+
+            intent.putExtra(
+                android.content.Intent.EXTRA_TITLE,
+                filename
+            );
+
+            intent.addFlags(
+                android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            );
+
+            startActivityForResult(
+                call,
+                intent,
+                "completeReceiptPngSaveAs"
+            );
+        } catch (Exception error) {
+            pendingReceiptPngExportBytes = null;
+            call.reject(
+                "Unable to open Android receipt PNG Save As.",
+                error
+            );
+        }
+    }
+
+    @com.getcapacitor.annotation.ActivityCallback
+    private void completeReceiptPngSaveAs(
+        PluginCall call,
+        androidx.activity.result.ActivityResult result
+    ) {
+        byte[] pending = pendingReceiptPngExportBytes;
+        pendingReceiptPngExportBytes = null;
+
+        if (call == null) {
+            return;
+        }
+
+        if (pending == null) {
+            call.reject("RECEIPT_EXPORT_SESSION_UNAVAILABLE");
+            return;
+        }
+
+        if (
+            result == null ||
+            result.getResultCode() !=
+                android.app.Activity.RESULT_OK ||
+            result.getData() == null ||
+            result.getData().getData() == null
+        ) {
+            JSObject cancelled = new JSObject();
+            cancelled.put("success", true);
+            cancelled.put("cancelled", true);
+            call.resolve(cancelled);
+            return;
+        }
+
+        try {
+            android.net.Uri destination =
+                result.getData().getData();
+
+            try (
+                java.io.OutputStream output =
+                    getContext()
+                        .getContentResolver()
+                        .openOutputStream(destination, "wt")
+            ) {
+                if (output == null) {
+                    throw new java.io.IOException(
+                        "Cannot open selected receipt destination."
+                    );
+                }
+
+                output.write(pending);
+                output.flush();
+            }
+
+            JSObject completed = new JSObject();
+            completed.put("success", true);
+            completed.put("cancelled", false);
+            completed.put("saved", true);
+            call.resolve(completed);
+        } catch (Exception error) {
+            call.reject(
+                "Unable to save receipt PNG to selected location.",
+                error
+            );
+        }
+    }
+
+    // FINORA_AP04_R028_RECEIPT_GALLERY_SAVE
+    // Save customer-facing PNG images to an Android Gallery album.
+    // Never writes branch storage, wallet, or server records.
+    @PluginMethod
+    public void saveReceiptPngToGallery(PluginCall call) {
+        if (call == null) {
+            return;
+        }
+
+        android.net.Uri createdUri = null;
+
+        try {
+            // MediaStore scoped storage requires Android 10+.
+            // Do not silently fall back to unrestricted storage.
+            if (
+                android.os.Build.VERSION.SDK_INT <
+                android.os.Build.VERSION_CODES.Q
+            ) {
+                call.reject("GALLERY_SAVE_REQUIRES_ANDROID_10");
+                return;
+            }
+
+            String kind = call.getString("receiptType");
+            String name = call.getString("filename");
+            String encoded = call.getString("pngBase64");
+
+            if (
+                !("loan".equals(kind) || "collection".equals(kind))
+            ) {
+                call.reject("INVALID_RECEIPT_TYPE");
+                return;
+            }
+
+            if (
+                name == null ||
+                !name.matches("[A-Za-z0-9_.-]{1,120}[.]png")
+            ) {
+                call.reject("INVALID_RECEIPT_FILENAME");
+                return;
+            }
+
+            if (
+                encoded == null ||
+                encoded.length() < 32 ||
+                encoded.length() > 33554432
+            ) {
+                call.reject("INVALID_RECEIPT_PNG_SIZE");
+                return;
+            }
+
+            byte[] bytes = android.util.Base64.decode(
+                encoded,
+                android.util.Base64.DEFAULT
+            );
+
+            if (
+                bytes.length < 24 ||
+                bytes.length > 25165824
+            ) {
+                call.reject("INVALID_RECEIPT_PNG_SIZE");
+                return;
+            }
+
+            final int[] signature = {
+                137, 80, 78, 71, 13, 10, 26, 10
+            };
+
+            for (int i = 0; i < signature.length; i++) {
+                if ((bytes[i] & 255) != signature[i]) {
+                    call.reject("INVALID_PNG_SIGNATURE");
+                    return;
+                }
+            }
+
+            String album = "loan".equals(kind)
+                ? "Finora Loan Receipts"
+                : "Finora Collection Receipts";
+
+            android.content.ContentValues values =
+                new android.content.ContentValues();
+
+            values.put(
+                android.provider.MediaStore.Images.Media.DISPLAY_NAME,
+                name
+            );
+
+            values.put(
+                android.provider.MediaStore.Images.Media.MIME_TYPE,
+                "image/png"
+            );
+
+            values.put(
+                android.provider.MediaStore.Images.Media.RELATIVE_PATH,
+                android.os.Environment.DIRECTORY_PICTURES +
+                    "/" + album
+            );
+
+            values.put(
+                android.provider.MediaStore.Images.Media.IS_PENDING,
+                1
+            );
+
+            android.content.ContentResolver resolver =
+                getContext().getContentResolver();
+
+            createdUri = resolver.insert(
+                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                values
+            );
+
+            if (createdUri == null) {
+                throw new java.io.IOException(
+                    "Gallery did not allocate a receipt image."
+                );
+            }
+
+            try (
+                java.io.OutputStream output =
+                    resolver.openOutputStream(createdUri, "w")
+            ) {
+                if (output == null) {
+                    throw new java.io.IOException(
+                        "Gallery receipt output unavailable."
+                    );
+                }
+
+                output.write(bytes);
+                output.flush();
+            }
+
+            android.content.ContentValues completed =
+                new android.content.ContentValues();
+
+            completed.put(
+                android.provider.MediaStore.Images.Media.IS_PENDING,
+                0
+            );
+
+            if (resolver.update(
+                createdUri,
+                completed,
+                null,
+                null
+            ) != 1) {
+                throw new java.io.IOException(
+                    "Gallery receipt publication failed."
+                );
+            }
+
+            JSObject success = new JSObject();
+            success.put("success", true);
+            success.put("saved", true);
+            success.put("album", album);
+            success.put("filename", name);
+            call.resolve(success);
+
+        } catch (Exception error) {
+            if (createdUri != null) {
+                try {
+                    getContext()
+                        .getContentResolver()
+                        .delete(createdUri, null, null);
+                } catch (Exception ignored) {
+                    // Never hide the original save failure.
+                }
+            }
+
+            call.reject(
+                "Unable to save receipt PNG to Android Gallery.",
+                error
+            );
+        }
     }
 }

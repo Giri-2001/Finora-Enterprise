@@ -120,6 +120,18 @@ function Field({
 
       <label style={styles.labelStyle}>
         {label}
+        {label === "Nominee Name" && !readOnly && (
+          <span
+            aria-hidden="true"
+            style={{
+              color: "var(--finora-theme-danger, #DC2626)",
+              marginLeft: 4,
+              fontWeight: 700,
+            }}
+          >
+            *
+          </span>
+        )}
       </label>
 
       <div style={styles.inputWrapperStyle}>
@@ -347,7 +359,16 @@ const nomineeTokens =
 
           <label style={styles.labelStyle}>
             Relationship
-          </label>
+          <span
+              aria-hidden="true"
+              style={{
+                color: "var(--finora-theme-danger, #DC2626)",
+                marginLeft: 4,
+                fontWeight: 700,
+              }}
+            >
+              *
+            </span></label>
 
           <div style={styles.inputWrapperStyle}>
 

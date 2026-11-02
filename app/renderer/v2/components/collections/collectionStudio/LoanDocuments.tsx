@@ -35,6 +35,7 @@
 // IMPORTS
 // ============================================================
 
+import { Capacitor } from "@capacitor/core";
 import { useEffect, useMemo, useState } from "react";
 
 import { useResponsive } from "../../../utils/responsive";
@@ -111,6 +112,12 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
   const { tokens } = useResponsive();
 
   const isTablet = tokens.meta.viewport === "tablet";
+
+  // FINORA_AP03_R009_R3 - ANDROID MOBILE GALLERY
+  const isAndroidMobile =
+    Capacitor.isNativePlatform() &&
+    Capacitor.getPlatform() === "android" &&
+    tokens.meta.viewport === "mobile";
   // ==========================================================
   // NORMALIZED DOCUMENTS
   // ==========================================================
@@ -402,18 +409,39 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
             "repeat(3, minmax(0, 1fr))",
         }
       : {}),
+    ...(isAndroidMobile
+      ? {
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          gap: "12px",
+          alignItems: "stretch",
+        }
+      : {}),
   }}
 >
-            {normalizedDocuments.slice(0, isTablet ? 3 : 5).map((document) => (
+            {normalizedDocuments.slice(0, isAndroidMobile ? 4 : isTablet ? 3 : 5).map((document) => (
               <article
                 key={document.id}
-                style={loanDocumentsStyles.allDocumentCard}
+                style={{
+                  ...loanDocumentsStyles.allDocumentCard,
+                  ...(isAndroidMobile
+                    ? { width: "100%", minWidth: 0 }
+                    : {}),
+                }}
               >
                 <button
                   type="button"
                   aria-label={`View ${document.name}`}
                   title={`View ${document.name}`}
-                  style={loanDocumentsStyles.documentButton}
+                  style={{
+                    ...loanDocumentsStyles.documentButton,
+                    ...(isAndroidMobile
+                      ? {
+                          width: "100%",
+                          aspectRatio: "1 / 1.05",
+                          minHeight: "130px",
+                        }
+                      : {}),
+                  }}
                   onClick={() => openDocument(document)}
                 >
                   {renderDocumentPreview(document)}
@@ -425,6 +453,13 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
+                      ...(isAndroidMobile
+                        ? {
+                            flexDirection: "column" as const,
+                            alignItems: "stretch" as const,
+                            width: "100%",
+                          }
+                        : {}),
                       gap: "8px",
                       minWidth: 0,
                     }}
@@ -440,7 +475,16 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
                       type="button"
                       aria-label={`View ${document.name}`}
                       title={`View ${document.name}`}
-                      style={loanDocumentsStyles.viewAllButton}
+                      style={{
+                        ...loanDocumentsStyles.viewAllButton,
+                        ...(isAndroidMobile
+                          ? {
+                              width: "100%",
+                              minWidth: 0,
+                              justifyContent: "center",
+                            }
+                          : {}),
+                      }}
                       onClick={() => openDocument(document)}
                     >
                       {document.type === "pdf" ? "OPEN" : "VIEW"}

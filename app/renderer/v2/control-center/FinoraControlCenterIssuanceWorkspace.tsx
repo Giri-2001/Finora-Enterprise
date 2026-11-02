@@ -313,6 +313,14 @@ export default function FinoraControlCenterIssuanceWorkspace({
   const [provisioningOpeningWalletBalance, setProvisioningOpeningWalletBalance] =
     useState("0");
 
+  // FINORA_P1_758BR_OWNER_ATTEMPT
+  // Locks Owner Creation after an attempted submission.
+  // No automatic retry while server idempotency is disabled.
+  const ownerCreateAttemptRef = useRef<{
+    requestKey: string;
+    status: "IN_FLIGHT" | "OUTCOME_UNKNOWN" | "SUCCESS";
+  } | null>(null);
+
   const [serverProvisioningState, setServerProvisioningState] =
     useState<"IDLE" | "CREATING" | "SUCCESS" | "ERROR">("IDLE");
 
@@ -2468,15 +2476,16 @@ setEnrollmentOpenState(
     serverProvisioningValidationErrors.push("Valid Until must be later than Valid From.");
   }
 
+  // FINORA_P1_758Y2_OWNER_WALLET_CAP
   const openingWalletBalanceNumber =
     Number(provisioningOpeningWalletBalance);
 
   if (
     !Number.isFinite(openingWalletBalanceNumber) ||
     openingWalletBalanceNumber < 0 ||
-    openingWalletBalanceNumber > 100000000
+    openingWalletBalanceNumber > 25000
   ) {
-    serverProvisioningValidationErrors.push("Opening Wallet Balance must be between 0 and 100,000,000.");
+    serverProvisioningValidationErrors.push("Opening Wallet Balance must be between 0 and 25,000.");
   }
 
   const serverProvisioningHasInput =
@@ -4380,6 +4389,29 @@ setEnrollmentOpenState(
                     return;
                   }
 
+                  if (ownerCreateAttemptRef.current) {
+                    setServerProvisioningState("ERROR");
+                    setServerProvisioningError(
+                      "An Owner Creation request was already submitted. Verify its outcome in the server Owner Directory before creating another Owner. Automatic retry is disabled."
+                    );
+                    return;
+                  }
+
+                  const requestUuid = globalThis.crypto?.randomUUID?.();
+
+                  if (!requestUuid) {
+                    setServerProvisioningState("ERROR");
+                    setServerProvisioningError(
+                      "Secure request ID unavailable. No Owner Creation request was sent."
+                    );
+                    return;
+                  }
+
+                  ownerCreateAttemptRef.current = {
+                    requestKey: requestUuid,
+                    status: "IN_FLIGHT",
+                  };
+
                   setServerProvisioningState("CREATING");
                   setServerProvisioningError(undefined);
                   setServerProvisioningResult(undefined);
@@ -4388,6 +4420,7 @@ setEnrollmentOpenState(
                   try {
                     const result =
                       await bridge.provisionServerOwner({
+                        requestKey: requestUuid,
                         ownerName:
                           provisioningOwnerName.trim(),
 
@@ -4470,8 +4503,15 @@ setEnrollmentOpenState(
                       result.data.credentials.username,
                     );
 
+                    if (ownerCreateAttemptRef.current) {
+                      ownerCreateAttemptRef.current.status = "SUCCESS";
+                    }
                     setServerProvisioningState("SUCCESS");
                   } catch (error) {
+                    if (ownerCreateAttemptRef.current) {
+                      ownerCreateAttemptRef.current.status =
+                        "OUTCOME_UNKNOWN";
+                    }
                     setServerProvisioningError(
                       error instanceof Error
                         ? error.message

@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTIONS ENGINE
@@ -216,6 +216,9 @@ export default function ReviewActions() {
       stopFinoraProcessing(
         processingId,
       );
+
+      window.dispatchEvent(new Event("finora:verified-wallet-balance-refresh"));
+      window.dispatchEvent(new Event("finora:wallet-history-refresh"));
 
       await finoraSuccess(
         "Collection Completed Successfully",

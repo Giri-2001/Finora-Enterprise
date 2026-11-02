@@ -26,6 +26,7 @@ type Item = {
   when: string;
   title: string;
   reference: string;
+  businessReference?: string;
   amount: string;
   status: string;
   declineReason?: string | null;
@@ -62,12 +63,20 @@ function fromTransaction(t: ServerWalletTransactionRow): Item {
   const credit = kind.includes("RECHARGE") ||
     kind.includes("CREDIT");
 
+  // FINORA_F1_Y_NUMBERED_HISTORY
+  // Describe only verified server ledger rows.
+  // Never invent a Customer, Loan or Collection reference.
+  const transactionReference =
+    typeof t.reference === "string"
+      ? t.reference.trim()
+      : "";
+
   const title = kind.includes("CUSTOMER")
-    ? "Customer creation"
+    ? "Customer created"
     : kind.includes("LOAN")
-      ? "Loan transaction"
+      ? "Loan disbursed"
       : kind.includes("COLLECTION")
-        ? "Collection processing"
+        ? "Collection received"
         : credit
           ? "Wallet credit"
           : t.transactionType.replace(/_/g, " ");
@@ -83,11 +92,33 @@ function fromTransaction(t: ServerWalletTransactionRow): Item {
     title,
     reference: t.reference || t.rechargeRequestId ||
       t.transactionId,
+    // FINORA_F1_Z_VERIFIED_BUSINESS_REFERENCE
+    // Do not substitute a Wallet transaction ID for a business number.
+    businessReference: transactionReference,
     amount: `${Number(t.amountInr) < 0 ? "−" : credit ? "+" : debit ? "−" : ""}${currency(Math.abs(Number(t.amountInr)).toFixed(2))}`,
     status: "Recorded",
   };
 }
 
+function numberedTransactionReference(item: Item): string {
+  // FINORA_F1_Y2_REFERENCE_COLUMN
+  // Display only a reference received from the server ledger.
+  // Do not invent or reconstruct business transaction numbers.
+  if (
+    item.key.startsWith("tx:") &&
+    (
+      item.title === "Customer created" ||
+      item.title === "Loan disbursed" ||
+      item.title === "Collection received"
+    )
+  ) {
+    const reference = item.businessReference?.trim() || "";
+
+    return reference || "Reference unavailable";
+  }
+
+  return readableWalletReference(item);
+}
 function fromRequest(r: ServerWalletRechargeRow): Item {
   return {
     key: "req:" + r.requestId,
@@ -424,7 +455,33 @@ export default function ServerWalletLiveHistory({
           </td>
         </tr>
       ) : visibleItems.map(item => (
-        <tr key={item.key}>
+        <tr
+          key={item.key}
+          style={{
+            background:
+              item.status === "Declined"
+                ? "rgba(239,68,68,0.12)"
+                : item.key.startsWith("tx:") &&
+                    item.amount.startsWith("+")
+                  ? "rgba(16,185,129,0.22)"
+                  : item.key.startsWith("tx:") &&
+                      (item.amount.startsWith("-") ||
+                       item.amount.startsWith("\u2212"))
+                    ? "rgba(239,68,68,0.12)"
+                    : "rgba(100,116,139,0.14)",
+            borderLeft:
+              item.status === "Declined"
+                ? "3px solid #f87171"
+                : item.key.startsWith("tx:") &&
+                    item.amount.startsWith("+")
+                  ? "3px solid #34d399"
+                  : item.key.startsWith("tx:") &&
+                      (item.amount.startsWith("-") ||
+                       item.amount.startsWith("\u2212"))
+                    ? "3px solid #f87171"
+                    : "3px solid #94a3b8",
+          }}
+        >
           <td style={{ ...cell, whiteSpace: "nowrap" }}>
             {displayDate(item.when)}
           </td>
@@ -438,7 +495,7 @@ export default function ServerWalletLiveHistory({
               fontWeight: 650,
               color: "var(--finora-theme-text-primary, #172033)",
             }}>
-              {readableWalletReference(item)}
+              {numberedTransactionReference(item)}
             </div>
           </td>
           <td style={{ ...cell, whiteSpace: "nowrap" }}>

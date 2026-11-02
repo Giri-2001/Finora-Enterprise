@@ -90,6 +90,21 @@ export default function FinoraControlCenterDashboardOverview() {
   const [refresh, setRefresh] = useState(0);
   const [selectedMonth, setSelectedMonth] = useState(currentIndiaMonth);
 
+  // FINORA_W9C1_CONFIRMED_RECHARGE_REFRESH
+  useEffect(() => {
+    const refreshConfirmedRecharge = () => {
+      setRefresh(value => value + 1);
+    };
+    window.addEventListener(
+      "finora:control-center-recharge-decision-confirmed",
+      refreshConfirmedRecharge
+    );
+    return () => window.removeEventListener(
+      "finora:control-center-recharge-decision-confirmed",
+      refreshConfirmedRecharge
+    );
+  }, []);
+
   useEffect(() => {
     let active = true;
 

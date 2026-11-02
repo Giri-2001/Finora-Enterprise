@@ -773,7 +773,7 @@ export async function buildClosedLoansPdf(): Promise<jsPDF> {
   const report = await buildClosedLoansReport();
 
   const document = createFinoraPdf({
-    fileName: "FINORA_Closed_Loans.pdf",
+    fileName: "Finora_Closed_Loans_Official_Report.pdf",
 
     title: resolveBusinessReportTitle("Closed Loans"),
 
@@ -822,7 +822,7 @@ export async function downloadClosedLoansPdf(): Promise<void> {
 
   addFinoraPdfFooters(document);
 
-  downloadFinoraPdf(document, "FINORA_Closed_Loans.pdf");
+  downloadFinoraPdf(document, "Finora_Closed_Loans_Official_Report.pdf");
 }
 
 // ============================================================
@@ -851,7 +851,7 @@ export async function shareClosedLoansPdf(): Promise<void> {
   await shareFinoraPdf(
     document,
 
-    "FINORA_Closed_Loans.pdf",
+    "Finora_Closed_Loans_Official_Report.pdf",
 
     {
       title: "FINORA Closed Loans",
