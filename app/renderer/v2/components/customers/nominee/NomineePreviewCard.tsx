@@ -403,7 +403,7 @@ export default function NomineePreviewCard({
 
         {
           isCustomerLinked
-            ? "Existing FINORA customer linked successfully."
+            ? "Existing PAISARULE customer linked successfully."
             : "Enter the existing customer's 6-digit Customer Number to link them."
         }
 

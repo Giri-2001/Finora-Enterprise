@@ -679,7 +679,7 @@ export default function LoansPage() {
           if (!gateResult.canEnter) {
             void finoraError(
               gateResult.message ??
-                "Please recharge your wallet to unlock this button.",
+                "An ACTIVE PAISARULE subscription is required.",
             );
             return;
           }
@@ -740,7 +740,7 @@ export default function LoansPage() {
           if (!gateResult.canEnter) {
             void finoraError(
               gateResult.message ??
-                "Please recharge your wallet to unlock this button.",
+                "An ACTIVE PAISARULE subscription is required.",
             );
             return;
           }
@@ -1091,7 +1091,7 @@ window.removeEventListener(
     // --------------------------------------------------------
 
     if (!result.success || !result.handoff) {
-      console.error("FINORA GOLD LOAN STEP-1 HANDOFF ERROR:", {
+      console.error("PAISARULE GOLD LOAN STEP-1 HANDOFF ERROR:", {
         error: result.error,
 
         validation: result.preparation.validation,
@@ -1347,7 +1347,7 @@ window.removeEventListener(
         loanCreateGate?.canEnter
           ? undefined
           : loanCreateGate?.message ??
-            "Please recharge your wallet to unlock this button."
+            "An ACTIVE PAISARULE subscription is required."
       }
     />;
   }
@@ -1362,7 +1362,7 @@ window.removeEventListener(
         loanCreateGate?.canEnter
           ? undefined
           : loanCreateGate?.message ??
-            "Please recharge your wallet to unlock this button."
+            "An ACTIVE PAISARULE subscription is required."
       }
     />;
 }

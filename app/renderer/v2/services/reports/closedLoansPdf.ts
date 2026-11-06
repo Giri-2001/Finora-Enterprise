@@ -156,7 +156,7 @@ function addContinuationPage(document: jsPDF): number {
 
   document.setTextColor(0);
 
-  document.text(`FINORA ENTERPRISE - ${resolveBusinessReportTitle("Closed Loans")}`, PAGE_MARGIN_X, PAGE_TOP);
+  document.text(`PAISARULE - ${resolveBusinessReportTitle("Closed Loans")}`, PAGE_MARGIN_X, PAGE_TOP);
 
   document.setLineWidth(0.2);
 
@@ -622,7 +622,7 @@ function drawClosedLoansTable(
     document.setFontSize(8);
 
     document.text(
-      "No CLOSED Loans are currently stored in FINORA.",
+      "No CLOSED Loans are currently stored in PAISARULE.",
       PAGE_MARGIN_X,
       y,
     );
@@ -647,7 +647,7 @@ function drawClosedLoansTable(
       [
         safeText(loan.customerName),
 
-        safeText(loan.loanNumber),
+        safeText(loan.loanNumber).replace(/^FIN-(?=LOAN-)/i, "PAISA-"),
 
         formatDate(loan.loanDate),
 
@@ -773,7 +773,7 @@ export async function buildClosedLoansPdf(): Promise<jsPDF> {
   const report = await buildClosedLoansReport();
 
   const document = createFinoraPdf({
-    fileName: "Finora_Closed_Loans_Official_Report.pdf",
+    fileName: "PAISARULE_Closed_Loans_Official_Report.pdf",
 
     title: resolveBusinessReportTitle("Closed Loans"),
 
@@ -822,7 +822,7 @@ export async function downloadClosedLoansPdf(): Promise<void> {
 
   addFinoraPdfFooters(document);
 
-  downloadFinoraPdf(document, "Finora_Closed_Loans_Official_Report.pdf");
+  downloadFinoraPdf(document, "PAISARULE_Closed_Loans_Official_Report.pdf");
 }
 
 // ============================================================
@@ -851,10 +851,10 @@ export async function shareClosedLoansPdf(): Promise<void> {
   await shareFinoraPdf(
     document,
 
-    "Finora_Closed_Loans_Official_Report.pdf",
+    "PAISARULE_Closed_Loans_Official_Report.pdf",
 
     {
-      title: "FINORA Closed Loans",
+      title: "PAISARULE Closed Loans",
 
       text: `Closed Loans - ${report.loanCount} Loans - Settlement ${formatMoney(
         report.settlementValue,

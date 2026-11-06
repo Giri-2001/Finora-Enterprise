@@ -231,14 +231,14 @@ async function runSelfTest(): Promise<void> {
 
   assert(
     observedDefaultPath ===
-      "FINORA-PBA-BACKUP-N3A-TEST.finora",
+      "FINORA-PBA-BACKUP-N3A-TEST.paisarule",
     "Backup default filename is invalid.",
   );
 
   assert(
     writtenDestination ===
-      "C:\\FINORA-TEST\\Chosen Branch Backup.finora",
-    "Native destination did not enforce .finora extension.",
+      "C:\\FINORA-TEST\\Chosen Branch Backup.paisarule",
+    "Native destination did not enforce .paisarule extension.",
   );
 
   assert(
@@ -249,7 +249,7 @@ async function runSelfTest(): Promise<void> {
 
   assert(
     success.data.fileName ===
-      "Chosen Branch Backup.finora" &&
+      "Chosen Branch Backup.paisarule" &&
     success.data.bytesWritten ===
       BACKUP_BYTES &&
     success.data.backupId ===
@@ -283,7 +283,7 @@ async function runSelfTest(): Promise<void> {
   );
 
   console.log(
-    "PASS: native backup export writes exact privileged serializedBackup bytes to native-selected .finora destination",
+    "PASS: native backup export writes exact privileged serializedBackup bytes to native-selected .paisarule destination",
   );
 
   console.log(
@@ -541,12 +541,12 @@ async function runSelfTest(): Promise<void> {
     existingExtension.success &&
     !existingExtension.cancelled &&
     existingExtensionDestination ===
-      "C:\\FINORA-TEST\\Existing.FINORA",
-    "Existing .finora extension was duplicated.",
+      "C:\\FINORA-TEST\\Existing.paisarule",
+    "Legacy .finora extension was not normalized to .paisarule.",
   );
 
   console.log(
-    "PASS: existing .finora extension is preserved without duplication",
+    "PASS: legacy .finora filename is normalized to .paisarule without duplication",
   );
 
   console.log(

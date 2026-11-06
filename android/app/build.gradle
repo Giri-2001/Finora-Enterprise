@@ -33,7 +33,7 @@ android {
         owner {
             dimension "finoraApp"
             applicationId "com.finora.enterprise"
-            resValue "string", "finora_variant_label", "FINORA Enterprise"
+            resValue "string", "finora_variant_label", "PAISARULE"
             buildConfigField "boolean", "FINORA_DEVELOPER_VARIANT", "false"
         }
 

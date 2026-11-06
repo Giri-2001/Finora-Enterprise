@@ -779,7 +779,7 @@ export default function CollectionSystemGenerated() {
         );
       } catch (error) {
         console.error(
-          "FINORA PREMIUM SCHEDULE REFRESH FAILED:",
+          "PAISARULE PREMIUM SCHEDULE REFRESH FAILED:",
           error,
         );
 

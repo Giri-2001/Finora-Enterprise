@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { finoraControlShared } from "../../services/finoraControlShared";
 import {
   finoraAndroidSavedOwnerBridge,
@@ -57,7 +58,7 @@ function getFinoraC80SavedOwnerBridge():
 // FINORA_C80_B14_PICKER_WIRING
 import { getFinoraServerWalletBridge } from "../../services/wallet/finoraServerWalletBridge";
 import { getFinoraAndroidServerFirstV2Recovery } from "../../services/auth/loginSessionBridge";
-import { Capacitor as FinoraP1075Capacitor } from "@capacitor/core";
+import { Capacitor as FinoraP1075Capacitor, CapacitorHttp } from "@capacitor/core";
 import {
 } from "../../services/auth/credentialEnrollmentBridge";
 import { getFinoraLoginSessionBridge } from "../../services/auth/loginSessionBridge";
@@ -187,7 +188,7 @@ import {
 } from "./Login.styles";
 
 import finoraLogo
-  from "../../app/assets/finoraenterprise.png?url";
+  from "../../app/assets/paisarule_official_brand.png?url";
 
 
 // ============================================================
@@ -347,6 +348,23 @@ export default function Login({
   const [savedOwnerAccounts, setSavedOwnerAccounts] =
     useState<FinoraSavedOwnerAccount[]>([]);
   const [savedOwnerBusy, setSavedOwnerBusy] = useState(false);
+
+  // PAISARULE_R172_S8_B1
+  // Confirmation never enters the saved credential vault.
+  const [savedLoginPendingRemovalId, setSavedLoginPendingRemovalId] =
+    useState<string | null>(null);
+
+  const [savedLoginRemovalConfirmation, setSavedLoginRemovalConfirmation] =
+    useState("");
+
+  const savedLoginRemovalValid =
+    /^\S{10,}$/.test(savedLoginRemovalConfirmation);
+
+  function cancelSavedLoginRemoval(): void {
+    if (savedOwnerBusy) return;
+    setSavedLoginPendingRemovalId(null);
+    setSavedLoginRemovalConfirmation("");
+  }
   const [savedOwnerError, setSavedOwnerError] = useState("");
 
   useEffect(() => {
@@ -674,7 +692,7 @@ const [
     usbMessage,
     setUsbMessage,
   ] = useState(
-    "Checking FINORA USB...",
+    "Checking PAISARULE USB...",
   );
 
   const [
@@ -733,7 +751,7 @@ const [
             setUsbAvailable(false);
 
             setUsbMessage(
-              "FINORA USB bridge is unavailable.",
+              "PAISARULE USB connection service is unavailable.",
             );
 
             if (initialCheck) {
@@ -779,7 +797,7 @@ const [
 
           setUsbMessage(
             available
-              ? "FINORA USB detected."
+              ? "PAISARULE USB detected."
               : "No USB detected.",
           );
 
@@ -817,7 +835,7 @@ const [
 
           setUsbMessage(
             available
-              ? "FINORA USB detected."
+              ? "PAISARULE USB detected."
               : "No USB detected.",
           );
 
@@ -837,7 +855,7 @@ const [
           setUsbAvailable(false);
 
           setUsbMessage(
-            "FINORA USB status service is unavailable.",
+            "PAISARULE USB status service is unavailable.",
           );
 
           if (initialCheck) {
@@ -860,7 +878,7 @@ const [
           setUsbAvailable(false);
 
           setUsbMessage(
-            "Unable to determine FINORA USB status.",
+            "Unable to determine PAISARULE USB status.",
           );
 
           if (initialCheck) {
@@ -1031,7 +1049,7 @@ const [
     if (!bridge?.requestAccess) {
 
       setUsbMessage(
-        "FINORA USB access selection is unavailable.",
+        "PAISARULE USB access selection is unavailable.",
       );
 
       return;
@@ -1054,7 +1072,7 @@ const [
 
         setUsbMessage(
           result.error ??
-            "Unable to select FINORA USB storage.",
+            "Unable to select PAISARULE USB storage.",
         );
 
         return;
@@ -1071,7 +1089,7 @@ const [
         setUsbAvailability("ERROR");
 
         setUsbMessage(
-          "FINORA USB access returned no storage status.",
+          "PAISARULE USB access returned no storage status.",
         );
 
         return;
@@ -1097,7 +1115,7 @@ const [
 
       setUsbMessage(
         available
-          ? "FINORA USB detected."
+          ? "PAISARULE USB detected."
           : "No USB detected.",
       );
 
@@ -1113,7 +1131,7 @@ const [
       setUsbAvailability("ERROR");
 
       setUsbMessage(
-        "Unable to request FINORA USB access.",
+        "Unable to request PAISARULE USB access.",
       );
 
     } finally {
@@ -1410,7 +1428,7 @@ const [
     ) {
 
       setError(
-        "FINORA USB is not connected.",
+        "PAISARULE USB is not connected.",
       );
 
       return;
@@ -2210,7 +2228,7 @@ setError(
     );
 
     setCredentialEnrollmentMessage(
-      "Restore mode: enter your User ID, Password and Security Code, then select the FINORA backup.",
+      "Restore mode: enter your User ID, Password and Security Code, then select the PAISARULE backup.",
     );
 
     setError(
@@ -2475,10 +2493,17 @@ setError(
       return;
     }
 
+    if (ownerStorage === "usb" && !usbAvailable && usbAvailability !== "RECOVERY_REQUIRED") {
+      setError("PAISARULE USB is not connected.");
+      return;
+    }
+
     setLoginBusy(true);
     setError("");
 
     // FINORA_P1_710D_PERSISTENT_TRACE
+    const paisaruleLoginStartMs = performance.now();
+    const paisaruleLoginTimings: Array<{stage: string; ms: number}> = [];
     const finoraTrace = (stage: string) => {
       try {
         window.sessionStorage.setItem(
@@ -2486,6 +2511,15 @@ setError(
           stage
         );
         console.info("[FINORA LOGIN STAGE]", stage);
+        const elapsedMs = Math.round(
+          performance.now() - paisaruleLoginStartMs
+        );
+        paisaruleLoginTimings.push({ stage, ms: elapsedMs });
+        window.sessionStorage.setItem(
+          "PAISARULE_LOGIN_TIMING_U3",
+          JSON.stringify(paisaruleLoginTimings)
+        );
+        console.info("[PAISARULE LOGIN PERF]", stage, elapsedMs);
       } catch {
         // Diagnostics must not affect authentication.
       }
@@ -2523,21 +2557,49 @@ setError(
         const timeout = setTimeout(() => controller.abort(), 8000);
 
         try {
-          const response = await fetch(
-            "https://api.finoraenterprise.com/time",
-            {
-              method: "GET",
-              cache: "no-store",
+          let payload: unknown;
+
+          if (FinoraP1075Capacitor.isNativePlatform()) {
+            // Android native HTTPS: not subject to WebView CORS.
+            // Server authority and fail-closed verification remain mandatory.
+            const nativeResponse = await CapacitorHttp.get({
+              url: "https://api.finoraenterprise.com/time",
               headers: { Accept: "application/json" },
-              signal: controller.signal,
-            },
-          );
+              connectTimeout: 8000,
+              readTimeout: 8000,
+            });
 
-          if (!response.ok) {
-            throw new Error("FINORA Server Date is unavailable.");
+            if (
+              nativeResponse.status < 200 ||
+              nativeResponse.status >= 300
+            ) {
+              throw new Error("PAISARULE Server Date is unavailable.");
+            }
+
+            payload =
+              typeof nativeResponse.data === "string"
+                ? JSON.parse(nativeResponse.data)
+                : nativeResponse.data;
+          } else {
+            // Existing Windows and npm run dev request.
+            const response = await fetch(
+              import.meta.env.DEV
+                ? "/finora-dev-server-time"
+                : "https://api.finoraenterprise.com/time",
+              {
+                method: "GET",
+                cache: "no-store",
+                headers: { Accept: "application/json" },
+                signal: controller.signal,
+              },
+            );
+
+            if (!response.ok) {
+              throw new Error("PAISARULE Server Date is unavailable.");
+            }
+
+            payload = await response.json();
           }
-
-          const payload: unknown = await response.json();
 
           if (
             !payload ||
@@ -2548,10 +2610,10 @@ setError(
             !("serverTime" in payload) ||
             typeof payload.serverTime !== "string"
           ) {
-            throw new Error("FINORA Server Date response is invalid.");
+            throw new Error("PAISARULE Server Date response is invalid.");
           }
 
-          const serverMs = Date.parse(payload.serverTime);
+const serverMs = Date.parse(payload.serverTime);
 
           if (!Number.isFinite(serverMs)) {
             throw new Error("FINORA Server Date is invalid.");
@@ -2583,7 +2645,7 @@ setError(
           });
 
           dateError =
-            "FINORA could not verify today's server date.\n" +
+            "PAISARULE could not verify today's server date.\n" +
             "Check the internet connection and try again.\n" +
             "Login remains blocked until verification succeeds.";
         } finally {
@@ -2977,6 +3039,7 @@ setError(
 
           finoraReceptionCompleted = true;
           finoraLoginStage = "ANDROID_RECEPTION_NAVIGATION";
+          finoraTrace("RECEPTION_OPEN");
           onLogin();
 
           if (savedLoginFailure) {
@@ -3303,7 +3366,7 @@ setError(
             sessionId: issued.sessionId,
           }).catch(() => undefined);
 
-          setError("Authorized FINORA storage is unavailable.");
+          setError("Authorized PAISARULE storage is unavailable.");
           return;
         }
 
@@ -3684,6 +3747,7 @@ setError(
             "FINORA_STORAGE_MODE",
             StorageMode.USB
           );
+          finoraTrace("RECEPTION_OPEN");
           onLogin();
           finoraReceptionCompleted = true;
           finoraTrace("RECEPTION_CALLBACK_RETURNED");
@@ -4475,7 +4539,7 @@ if (
 <span
   role="status"
   aria-live="polite"
-  title="FINORA API and PostgreSQL connectivity"
+  title="Server Connectivity"
   style={{
     ...loginStyles.themeOptionActive,
     position: "absolute",
@@ -4528,7 +4592,7 @@ if (
               src={
                 finoraLogo
               }
-              alt="FINORA Enterprise"
+              alt="PAISARULE"
               style={
                 loginStyles.logoImage
               }
@@ -4643,7 +4707,7 @@ if (
                 style={
                   loginStyles.fieldLabel
                 }
-              >Storage <span style={{ marginLeft: 6, fontSize: "inherit", fontWeight: "inherit" }}> - Owner authentication - FINORA Pendrive</span></div>
+              >Storage <span style={{ marginLeft: 6, fontSize: "inherit", fontWeight: "inherit" }}> - Owner authentication - PAISARULE Pendrive</span></div>
 
 
               <div
@@ -4803,8 +4867,8 @@ if (
                     }
                   >
                     {usbAvailable
-                      ? "FINORA USB Detected"
-                      : "FINORA USB Not Detected"}
+                      ? "PAISARULE USB Detected"
+                      : "PAISARULE USB Not Detected"}
                   </span>
 
                 </div>
@@ -4817,7 +4881,10 @@ if (
                   {usbMessage}
                   {usbAvailable && usbStoragePath && (
                     <div style={{ marginTop: "4px", fontSize: "12px", opacity: 0.78, wordBreak: "break-all" }}>
-                      USB Storage: {usbStoragePath}
+                      { /^[A-Za-z]:[\\/]?$/.test(usbStoragePath.trim())
+  ? "Folder: Not selected — use Change USB Storage"
+  : <>Folder: {usbStoragePath}</>
+}
                     </div>
                   )}
                 </div>
@@ -5887,39 +5954,24 @@ if (
                       setSavedOwnerBusy(false);
                     }
                   }}
-                  onRemove={async (id) => {
-                    const bridge = getFinoraC80SavedOwnerBridge();
-                    if (!bridge || loginBusy || savedOwnerBusy) return;
+                  onRemove={(id) => {
+                    // PAISARULE_R172_S8_B1
+                    // First click NEVER deletes saved credentials.
+                    if (loginBusy || savedOwnerBusy) return;
 
-                    setSavedOwnerBusy(true);
+                    const account = savedOwnerAccounts.find(
+                      (item) => item.id === id
+                    );
+
+                    if (!account) return;
+
+                    setSavedLoginRemovalConfirmation("");
+                    setSavedLoginPendingRemovalId(id);
                     setSavedOwnerError("");
-
-                    try {
-                      const result = await bridge.remove(id);
-
-                      if (!result.success) {
-                        setSavedOwnerError(
-                          "Unable to remove saved login."
-                        );
-                        return;
-                      }
-
-                      if (result.removed) {
-                        setSavedOwnerAccounts((current) =>
-                          current.filter((item) => item.id !== id)
-                        );
-                        setUsername("");
-                        setPassword("");
-                      }
-                    } catch {
-                      setSavedOwnerError(
-                        "Unable to remove saved login."
-                      );
-                    } finally {
-                      setSavedOwnerBusy(false);
-                    }
                   }}
                   onManual={() => {
+                    setSavedLoginPendingRemovalId(null);
+                    setSavedLoginRemovalConfirmation("");
                     setFinoraSavedLoginsOpen(false);
                     setUsername("");
                     setPassword("");
@@ -5928,6 +5980,325 @@ if (
                   }}
                 />
               )}
+              {/* PAISARULE_R172_S8_B1 PREMIUM REMOVE MODAL */}
+              {credentialMode === "LOGIN" &&
+                finoraSavedLoginsOpen &&
+                savedLoginPendingRemovalId !== null &&
+                createPortal(
+                  <div
+                    role="presentation"
+                    onMouseDown={(event) => {
+                      if (event.target === event.currentTarget) {
+                        cancelSavedLoginRemoval();
+                      }
+                    }}
+                    style={{
+                      position: "fixed",
+                      inset: 0,
+                      zIndex: 30000,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 16,
+                      background: "rgba(2, 6, 23, 0.76)",
+                      backdropFilter: "blur(8px)",
+                    }}
+                  >
+                    <div
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label="Remove Saved Login Confirmation"
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") {
+                          event.stopPropagation();
+                          cancelSavedLoginRemoval();
+                        }
+                      }}
+                      style={{
+                        width: "min(440px, 100%)",
+                        maxHeight: "calc(100dvh - 32px)",
+                        overflowY: "auto",
+                        boxSizing: "border-box",
+                        borderRadius: 22,
+                        padding: "26px 24px",
+                        background: activeLoginTheme.surface,
+                        color: activeLoginTheme.text,
+                        border: `1px solid ${activeLoginTheme.border}`,
+                        boxShadow: `0 28px 90px ${activeLoginTheme.shadow}`,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 14,
+                          marginBottom: 18,
+                        }}
+                      >
+                        <div
+                          aria-hidden="true"
+                          style={{
+                            width: 48,
+                            height: 48,
+                            flexShrink: 0,
+                            display: "grid",
+                            placeItems: "center",
+                            borderRadius: 14,
+                            color: "#ef4444",
+                            background: "rgba(239,68,68,0.12)",
+                            fontSize: 25,
+                          }}
+                        >
+                          !
+                        </div>
+                        <div>
+                          <div
+                            style={{
+                              fontSize: 20,
+                              fontWeight: 750,
+                              letterSpacing: "-0.4px",
+                            }}
+                          >
+                            Remove Saved Login?
+                          </div>
+                          <div
+                            style={{
+                              marginTop: 5,
+                              fontSize: 12,
+                              opacity: 0.7,
+                            }}
+                          >
+                            Protected confirmation
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          fontSize: 13,
+                          lineHeight: 1.7,
+                          opacity: 0.85,
+                          marginBottom: 18,
+                        }}
+                      >
+                        This removes only the selected saved login
+                        from this device. Your Owner account and
+                        USB business records will remain unchanged.
+                      </div>
+
+                      <div
+                        style={{
+                          padding: "13px 15px",
+                          borderRadius: 12,
+                          border: `1px solid ${activeLoginTheme.border}`,
+                          marginBottom: 20,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 11,
+                            opacity: 0.65,
+                            marginBottom: 5,
+                          }}
+                        >
+                          Selected saved account
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {savedOwnerAccounts.find(
+                            (item) => item.id === savedLoginPendingRemovalId
+                          )?.username ?? "Account unavailable"}
+                        </div>
+                      </div>
+
+                      <label
+                        htmlFor="paisarule-remove-login-confirmation"
+                        style={{
+                          display: "block",
+                          fontSize: 13,
+                          fontWeight: 650,
+                          marginBottom: 9,
+                        }}
+                      >
+                        Confirmation Text
+                      </label>
+
+                      <input
+                        id="paisarule-remove-login-confirmation"
+                        type="text"
+                        value={savedLoginRemovalConfirmation}
+                        onChange={(event) => {
+                          setSavedLoginRemovalConfirmation(
+                            event.target.value
+                          );
+                        }}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck={false}
+                        maxLength={80}
+                        autoFocus
+                        disabled={savedOwnerBusy || loginBusy}
+                        placeholder="Minimum 10 characters, no spaces"
+                        style={{
+                          boxSizing: "border-box",
+                          width: "100%",
+                          minHeight: 48,
+                          padding: "12px 14px",
+                          borderRadius: 12,
+                          border: `1px solid ${activeLoginTheme.border}`,
+                          background: activeLoginTheme.surface,
+                          color: activeLoginTheme.text,
+                          fontSize: 14,
+                          outlineOffset: 3,
+                        }}
+                      />
+
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 8,
+                          marginTop: 10,
+                          fontSize: 12,
+                          color: savedLoginRemovalValid
+                            ? "#16a34a"
+                            : "#ef4444",
+                        }}
+                      >
+                        <span>
+                          {savedLoginRemovalValid
+                            ? "Valid confirmation"
+                            : "10+ characters without spaces required"}
+                        </span>
+                        <span>
+                          {savedLoginRemovalConfirmation.length} characters
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: 12,
+                          marginTop: 26,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          disabled={savedOwnerBusy}
+                          onClick={cancelSavedLoginRemoval}
+                          style={{
+                            minHeight: 46,
+                            borderRadius: 12,
+                            border: `1px solid ${activeLoginTheme.border}`,
+                            background: "transparent",
+                            color: activeLoginTheme.text,
+                            fontWeight: 650,
+                            cursor: savedOwnerBusy
+                              ? "not-allowed"
+                              : "pointer",
+                          }}
+                        >
+                          Cancel
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={
+                            !savedLoginRemovalValid ||
+                            savedOwnerBusy ||
+                            loginBusy ||
+                            !savedOwnerAccounts.some(
+                              (item) =>
+                                item.id === savedLoginPendingRemovalId
+                            )
+                          }
+                          onClick={async () => {
+                            const id = savedLoginPendingRemovalId;
+                            const bridge = getFinoraC80SavedOwnerBridge();
+
+                            if (
+                              !id ||
+                              !bridge ||
+                              loginBusy ||
+                              savedOwnerBusy ||
+                              !/^\S{10,}$/.test(
+                                savedLoginRemovalConfirmation
+                              ) ||
+                              !savedOwnerAccounts.some(
+                                (item) => item.id === id
+                              )
+                            ) {
+                              return;
+                            }
+
+                            setSavedOwnerBusy(true);
+                            setSavedOwnerError("");
+
+                            try {
+                              // Only this guarded confirmation
+                              // can invoke credential deletion.
+                              const result = await bridge.remove(id);
+
+                              if (!result.success) {
+                                setSavedOwnerError(
+                                  "Unable to remove saved login."
+                                );
+                                return;
+                              }
+
+                              if (result.removed) {
+                                setSavedOwnerAccounts((current) =>
+                                  current.filter(
+                                    (item) => item.id !== id
+                                  )
+                                );
+                                setUsername("");
+                                setPassword("");
+                                setSavedLoginPendingRemovalId(null);
+                                setSavedLoginRemovalConfirmation("");
+                              } else {
+                                setSavedOwnerError(
+                                  "Saved login was not removed."
+                                );
+                              }
+                            } catch {
+                              setSavedOwnerError(
+                                "Unable to remove saved login."
+                              );
+                            } finally {
+                              setSavedOwnerBusy(false);
+                            }
+                          }}
+                          style={{
+                            minHeight: 46,
+                            border: "none",
+                            borderRadius: 12,
+                            background: savedLoginRemovalValid
+                              ? "#dc2626"
+                              : "rgba(148,163,184,0.3)",
+                            color: "#ffffff",
+                            fontWeight: 750,
+                            cursor: savedLoginRemovalValid
+                              ? "pointer"
+                              : "not-allowed",
+                          }}
+                        >
+                          {savedOwnerBusy
+                            ? "Removing..."
+                            : "Confirm Remove"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>,
+                  document.body
+                )}
                     </div>
                     </>
                   )}

@@ -198,7 +198,7 @@ export function createFinoraServerWalletSessionClient(
     if (
       result.tokenType !== "Bearer" ||
       !hex(result.accessToken) ||
-      !expiry(result.expiresAt, 1_805_000)
+      !expiry(result.expiresAt, 3_605_000)
     ) {
       return { success: false, errorCode: "INVALID_SERVER_RESPONSE" };
     }

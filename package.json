@@ -2,8 +2,8 @@
   "name": "finora-enterprise",
   "version": "1.0.2",
   "private": true,
-  "description": "FINORA Enterprise - Private Finance Management Platform",
-  "author": "FINORA Enterprise",
+  "description": "Every Rupee. Every Repayment. Every Record.",
+  "author": "DURGAM GIRISH KUMAR",
   "license": "UNLICENSED",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -48,8 +48,8 @@
   },
   "build": {
     "appId": "com.finora.enterprise",
-    "productName": "FINORA Enterprise",
-    "icon": "assets/icons/finora.ico",
+    "productName": "PAISARULE",
+    "icon": "assets/icons/paisarule_official.ico",
     "directories": {
       "output": "release"
     },

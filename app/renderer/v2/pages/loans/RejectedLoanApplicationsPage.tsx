@@ -798,7 +798,7 @@ export default function RejectedLoanApplicationsPage({
       );
     } catch (reopenError) {
       console.error(
-        "FINORA REJECTED LOAN APPLICATION REOPEN ERROR:",
+        "PAISARULE REJECTED LOAN APPLICATION REOPEN ERROR:",
         reopenError,
       );
 

@@ -9,7 +9,7 @@
    TITLES
 =========================================================== */
 export const SMART_WALL_TITLE =
-  "FINORA Smart Customers Hub™";
+  "PAISARULE Smart Customers Hub™";
 
 /* ===========================================================
    RAIL

@@ -1304,7 +1304,7 @@ export default function GoldStorageSettingsPage() {
 
         title: "Business Context unavailable",
 
-        text: "An active FINORA owner context is required before Gold Storage Settings can be saved.",
+        text: "An active PAISARULE owner context is required before Gold Storage Settings can be saved.",
       });
 
       return;

@@ -3,6 +3,7 @@ package com.finora.enterprise;
 import android.os.Bundle;
 
 import com.finora.enterprise.control.FinoraControlPlugin;
+import com.finora.enterprise.control.PaisarulePdfPlugin;
 import com.finora.enterprise.control.FinoraDeveloperControlCenterPlugin;
 import com.finora.enterprise.control.FinoraControlBundleImportPlugin;
 import com.finora.enterprise.control.FinoraRecipientTrustTransitionImportPlugin;
@@ -52,6 +53,11 @@ public class MainActivity
 
         registerPlugin(
             FinoraUsbPlugin.class
+        );
+
+        // PAISARULE_R173_P1_B1_R1
+        registerPlugin(
+            PaisarulePdfPlugin.class
         );
         registerPlugin(
             FinoraFullscreenPlugin.class

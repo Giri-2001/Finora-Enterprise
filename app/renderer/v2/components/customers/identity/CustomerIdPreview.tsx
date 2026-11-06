@@ -48,7 +48,7 @@ export default function CustomerIdPreview({
     <section style={wrapperStyle}>
 
       <p style={labelStyle}>
-        FINORA CUSTOMER ID
+        PAISARULE CUSTOMER ID
       </p>
 
       <div style={idStyle}>

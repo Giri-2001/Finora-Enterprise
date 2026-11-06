@@ -101,7 +101,7 @@ async function assertAccountsStorageReady(): Promise<void> {
   throw new Error(
     safeText(
       status.message,
-      "FINORA storage is not ready. Please reconnect the configured storage and try again.",
+      "PAISARULE storage is not ready. Please reconnect the configured storage and try again.",
     ),
   );
 }
@@ -420,7 +420,7 @@ export async function loadAccountsData(): Promise<AccountsDataResult> {
     }
   } else {
     console.warn(
-      "FINORA ACCOUNTS GOLD HISTORY LOAD WARNING:",
+      "PAISARULE ACCOUNTS GOLD HISTORY LOAD WARNING:",
       goldStorageResult.error ?? "Unable to load Gold custody history.",
     );
   }

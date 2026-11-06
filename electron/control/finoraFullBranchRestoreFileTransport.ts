@@ -206,7 +206,7 @@ async function selectBackupFileNative(
       parentWindow,
       {
         title:
-          "Restore FINORA Branch Backup",
+          "Restore PAISARULE Branch Backup",
 
         buttonLabel:
           "Select Backup",
@@ -214,12 +214,13 @@ async function selectBackupFileNative(
         filters: [
           {
             name:
-              "FINORA Branch Backup",
+              "PAISARULE Branch Backup",
 
             extensions: [
               FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION.slice(
                 1,
               ),
+              "finora",
             ],
           },
         ],
@@ -263,10 +264,7 @@ async function readBackupFileBounded(
     string,
 ): Promise<string> {
   if (
-    extname(
-      selectedFilePath,
-    ).toLowerCase() !==
-      FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION
+    ![".finora", FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION].includes(extname(selectedFilePath).toLowerCase())
   ) {
     throw new FullBackupFileError(
       "INVALID",
@@ -572,10 +570,7 @@ export async function restoreFinoraFullBranchFromNativeBackup(
   }
 
   if (
-    extname(
-      selectedFilePath,
-    ).toLowerCase() !==
-      FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION
+    ![".finora", FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION].includes(extname(selectedFilePath).toLowerCase())
   ) {
     return failure(
       "BACKUP_FILE_INVALID",

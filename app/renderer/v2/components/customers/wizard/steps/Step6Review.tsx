@@ -613,7 +613,7 @@ export default function Step6Review({
 
             if (!captureResult.success) {
               console.error(
-                "FINORA CUSTOMER ID CARD CAPTURE FAILED:",
+                "PAISARULE CUSTOMER ID CARD CAPTURE FAILED:",
                 captureResult.error,
               );
             } else {
@@ -2573,7 +2573,7 @@ Customer ID: ${finalCustomerId}`,
   const handleEdit = (): void => {
 
     console.info(
-      "FINORA REVIEW: Edit requested. Parent wizard navigation is required.",
+      "PAISARULE REVIEW: Edit requested. Parent wizard navigation is required.",
     );
 
   };

@@ -150,7 +150,7 @@ export default function BranchSettingsSection() {
                 "Branch Context Unavailable",
 
               message:
-                "No active FINORA business and branch context is available.",
+                "No active PAISARULE business and branch context is available.",
             });
 
             setLoading(
@@ -180,7 +180,7 @@ export default function BranchSettingsSection() {
             kind: "danger",
             title: "Server Business Identity Unavailable",
             message:
-              "FINORA could not verify the active Business/Branch identity. " +
+              "PAISARULE could not verify the active Business/Branch identity. " +
               identityResult.errorCode,
           });
           setLoading(false);
@@ -437,7 +437,7 @@ export default function BranchSettingsSection() {
         <SettingsFeedback
           kind="info"
           title="Loading Branch Settings"
-          message="FINORA is loading the active branch configuration."
+          message="PAISARULE is loading the active branch configuration."
         />
       </section>
     );

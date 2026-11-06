@@ -110,6 +110,12 @@ async function main():
         "branch-backup.finora",
       );
 
+    const paisaruleBackupPath =
+      join(
+        tempRoot,
+        "branch-backup.paisarule",
+      );
+
     const wrongExtensionPath =
       join(
         tempRoot,
@@ -124,6 +130,12 @@ async function main():
 
     await writeFile(
       validBackupPath,
+      "VALID_PRIVILEGED_BACKUP_BYTES",
+      "utf8",
+    );
+
+    await writeFile(
+      paisaruleBackupPath,
       "VALID_PRIVILEGED_BACKUP_BYTES",
       "utf8",
     );
@@ -364,6 +376,64 @@ async function main():
     }
 
     // ========================================================
+    // NEW .PAISARULE RESTORE POSITIVE TRANSPORT TEST
+    {
+      let paisaruleCoordinatorCalls = 0;
+      let paisaruleBytesObserved = "";
+
+      const paisaruleResult =
+        await restoreFinoraPortableBranchAuthFromNativeBackup(
+          credentials,
+          {
+            parentWindow: fakeParentWindow,
+
+            resolveLocalRoot: () => tempRoot,
+
+            async validateUsbRoot() {
+              return true;
+            },
+
+            async selectBackupFile() {
+              return paisaruleBackupPath;
+            },
+
+            async restoreCoordinator(input) {
+              paisaruleCoordinatorCalls += 1;
+              paisaruleBytesObserved =
+                (input as { serializedBackup: string }).serializedBackup;
+
+              return {
+                success: true,
+                data: {
+                  backupId: "backup-paisarule-test",
+                  storageMode: "LOCAL" as const,
+                  authGeneration: 5,
+                },
+              };
+            },
+          },
+        );
+
+      assert(
+        paisaruleResult.success &&
+          !paisaruleResult.cancelled &&
+          paisaruleResult.data.fileName ===
+            "branch-backup.paisarule",
+        "New .paisarule Restore must succeed and return basename.",
+      );
+
+      assert(
+        paisaruleCoordinatorCalls === 1 &&
+          paisaruleBytesObserved ===
+            "VALID_PRIVILEGED_BACKUP_BYTES",
+        "New .paisarule Restore must forward exact bytes once.",
+      );
+
+      pass(
+        "new .paisarule Restore accepts native file and forwards exact bytes once",
+      );
+    }
+
     // BOUNDED FILE READ
     // ========================================================
 

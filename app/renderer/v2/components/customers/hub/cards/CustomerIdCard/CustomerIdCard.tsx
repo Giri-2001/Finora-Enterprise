@@ -31,7 +31,7 @@
    IMPORTS
 =========================================================== */
 
-import finoraLogo from "../../../../../app/assets/finoraenterprise.png?url";
+import finoraLogo from "../../../../../app/assets/paisarule_official_brand.png?url";
 
 import type { CustomerIdCardProps } from "./types";
 
@@ -182,7 +182,7 @@ export default function CustomerIdCard({
               style={createPhotoImageStyle()}
             />
           ) : (
-            <img src={finoraLogo} alt="FINORA" style={createLogoImageStyle()} />
+            <img src={finoraLogo} alt="PAISARULE" style={createLogoImageStyle()} />
           )}
         </div>
 
@@ -210,7 +210,7 @@ export default function CustomerIdCard({
             customer name. No theme accent colour.
         ================================================= */}
 
-        <div style={resolvedCustomerIdStyle}>{customerId}</div>
+        <div style={resolvedCustomerIdStyle}>{customerId.replace(/^FIN-(?=CUS-)/i, "PAISA-")}</div>
 
         {/* =================================================
             CUSTOMER STATUS / KYC

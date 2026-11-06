@@ -375,7 +375,7 @@ export async function runFinoraFullBranchBackupFileTransportSelfTest():
 
   assert.equal(
     writtenPath,
-    "C:\\Backups\\branch-copy.finora",
+    "C:\\Backups\\branch-copy.paisarule",
   );
 
   assert.equal(

@@ -5,8 +5,8 @@
    CONSTANTS
 =========================================================== */
 
-import finoraLogo from "../../../../app/assets/finoraenterprise.png?url";
+import finoraLogo from "../../../../app/assets/paisarule_official_brand.png?url";
 
 export const LOGO_IMAGE = finoraLogo;
 
-export const LOGO_TITLE = "FINORA ENTERPRISE";
+export const LOGO_TITLE = "PAISARULE";

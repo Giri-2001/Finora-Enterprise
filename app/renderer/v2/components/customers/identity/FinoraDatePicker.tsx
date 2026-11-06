@@ -517,7 +517,7 @@ function clearDate() {
           title={
             typedDobInvalid
               ? "Enter a valid Date of Birth in DD-MM-YYYY format."
-              : "Type DD-MM-YYYY or select from the FINORA calendar."
+              : "Type DD-MM-YYYY or select from the PAISARULE calendar."
           }
           aria-haspopup="dialog"
           aria-expanded={isOpen}

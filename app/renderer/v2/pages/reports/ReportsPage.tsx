@@ -449,7 +449,7 @@ function getLoanLabel(loan: Loan): string {
   const customerName =
     safeString(loan.customerName) || "Unnamed Customer";
 
-  const loanNumber = safeString(loan.loanNumber || loan.id || "--");
+  const loanNumber = safeString(loan.loanNumber || loan.id || "--").replace(/^FIN-(?=LOAN-)/i, "PAISA-");
 
   const status = safeString(loan.status).toUpperCase();
 
@@ -467,7 +467,7 @@ function getCustomerLabel(customer: CustomerProfile): string {
     safeString(customer.basic.fullName || customer.basic.displayName) ||
     "Unnamed Customer";
 
-  const customerId = safeString(customer.identity.customerId) || "--";
+  const customerId = (safeString(customer.identity.customerId) || "--").replace(/^FIN-(?=CUS-)/i, "PAISA-");
 
   const mobile = safeString(customer.basic.mobileNumber) || "--";
 
@@ -1261,7 +1261,7 @@ export default function ReportsPage() {
         return;
       }
     } catch (actionError) {
-      console.error("FINORA REPORT ACTION ERROR:", actionError);
+      console.error("PAISARULE REPORT ACTION ERROR:", actionError);
 
       const message =
         actionError instanceof Error
@@ -1501,7 +1501,7 @@ export default function ReportsPage() {
 
                       <p style={reportsPageStyles.panelSubtitle}>
                         Generate a complete Loan, EMI and Collection statement
-                        from authoritative FINORA data.
+                        from authoritative PAISARULE data.
                       </p>
                     </div>
                   </header>
@@ -1514,7 +1514,7 @@ export default function ReportsPage() {
 
                       <span style={reportsPageStyles.emptyStateText}>
                         Loan Statements will become available after at least one
-                        Loan exists in FINORA.
+                        Loan exists in PAISARULE.
                       </span>
                     </div>
                   ) : (
@@ -1572,7 +1572,7 @@ export default function ReportsPage() {
                       ) : loanStatement ? (
                         <div style={reportsPageStyles.preview}>
                           <h3 style={reportsPageStyles.previewTitle}>
-                            Statement Preview — {loanStatement.loanNumber}
+                            Statement Preview — {String(loanStatement.loanNumber).replace(/^FIN-(?=LOAN-)/i, "PAISA-")}
                           </h3>
 
                           <div style={reportsPageStyles.metricGrid}>
@@ -1710,7 +1710,7 @@ export default function ReportsPage() {
 
                       <p style={reportsPageStyles.panelSubtitle}>
                         Generate a complete Customer, Loan and Collection
-                        statement using authoritative FINORA records.
+                        statement using authoritative PAISARULE records.
                       </p>
                     </div>
                   </header>
@@ -1780,7 +1780,7 @@ export default function ReportsPage() {
                         <div style={reportsPageStyles.preview}>
                           <h3 style={reportsPageStyles.previewTitle}>
                             Statement Preview — {customerStatement.customerName}{" "}
-                            • {customerStatement.customerId}
+                            • {String(customerStatement.customerId).replace(/^FIN-(?=CUS-)/i, "PAISA-")}
                           </h3>
 
                           <div style={reportsPageStyles.metricGrid}>
@@ -1955,7 +1955,7 @@ export default function ReportsPage() {
 
                       <p style={reportsPageStyles.panelSubtitle}>
                         Generate the complete collection statement for a
-                        selected month using authoritative FINORA Collection
+                        selected month using authoritative PAISARULE Collection
                         records.
                       </p>
                     </div>
@@ -2125,7 +2125,7 @@ export default function ReportsPage() {
 
                       <p style={reportsPageStyles.panelSubtitle}>
                         Generate the current authoritative receivables report
-                        from ACTIVE / RUNNING FINORA Loans.
+                        from ACTIVE / RUNNING PAISARULE Loans.
                       </p>
                     </div>
                   </header>
@@ -2341,7 +2341,7 @@ export default function ReportsPage() {
                               ),
                             ).map(([customerId, customerName]) => (
                               <option key={customerId} value={customerId}>
-                                {customerName} - {customerId}
+                                {customerName} - {String(customerId).replace(/^FIN-(?=CUS-)/i, "PAISA-")}
                               </option>
                             ))}
                           </select>
@@ -2368,7 +2368,7 @@ export default function ReportsPage() {
                               )
                               .map((loan) => (
                                 <option key={loan.loanId} value={loan.loanId}>
-                                  {loan.loanNumber} - Outstanding INR{" "}
+                                  {String(loan.loanNumber).replace(/^FIN-(?=LOAN-)/i, "PAISA-")} - Outstanding INR{" "}
                                   {loan.currentOutstanding.toLocaleString("en-IN")}
                                 </option>
                               ))}
@@ -2408,9 +2408,9 @@ export default function ReportsPage() {
                           return (
                             <span style={reportsPageStyles.emptyStateText}>
                               CLOSED Loan identified: {selected.customerName}
-                              {" - "}{selected.loanNumber}.
-                              Outstanding INR 0. The dedicated verified NOC
-                              PDF renderer will be enabled in the next step.
+                              {" - "}{String(selected.loanNumber).replace(/^FIN-(?=LOAN-)/i, "PAISA-")}.
+                              Outstanding INR 0. The verified NOC
+                              PDF is ready to Download, Print or Share.
                             </span>
                           );
                         })()}
@@ -2445,7 +2445,7 @@ export default function ReportsPage() {
 
                       <p style={reportsPageStyles.panelSubtitle}>
                         Generate the completed Loan settlement and
-                        reconciliation report from authoritative FINORA records.
+                        reconciliation report from authoritative PAISARULE records.
                       </p>
                     </div>
                   </header>

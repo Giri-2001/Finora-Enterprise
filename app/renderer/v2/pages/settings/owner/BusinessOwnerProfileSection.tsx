@@ -196,7 +196,7 @@ export default function BusinessOwnerProfileSection() {
                 "Authenticated User Unavailable",
 
               message:
-                "No active FINORA authenticated user session is available.",
+                "No active PAISARULE authenticated user session is available.",
             });
 
             setLoading(
@@ -226,7 +226,7 @@ export default function BusinessOwnerProfileSection() {
                 "Business Context Unavailable",
 
               message:
-                "No complete FINORA owner, business and branch context is available.",
+                "No complete PAISARULE owner, business and branch context is available.",
             });
 
             setLoading(
@@ -257,7 +257,7 @@ export default function BusinessOwnerProfileSection() {
                 "Owner Context Mismatch",
 
               message:
-                "The authenticated user does not match the active FINORA owner context.",
+                "The authenticated user does not match the active PAISARULE owner context.",
             });
 
             setLoading(
@@ -284,7 +284,7 @@ export default function BusinessOwnerProfileSection() {
                 "Business Context Mismatch",
 
               message:
-                "The authenticated user does not match the active FINORA business context.",
+                "The authenticated user does not match the active PAISARULE business context.",
             });
 
             setLoading(
@@ -311,7 +311,7 @@ export default function BusinessOwnerProfileSection() {
                 "Branch Context Mismatch",
 
               message:
-                "The authenticated user does not match the active FINORA branch context.",
+                "The authenticated user does not match the active PAISARULE branch context.",
             });
 
             setLoading(
@@ -609,7 +609,7 @@ export default function BusinessOwnerProfileSection() {
           "Authenticated Session Required",
 
         message:
-          "Sign in again before creating a FINORA Branch Backup.",
+          "Sign in again before creating a PAISARULE Branch Backup.",
       });
 
       return;
@@ -652,7 +652,7 @@ export default function BusinessOwnerProfileSection() {
           "Branch Backup Unavailable",
 
         message:
-          "FINORA Branch Backup is not available in this application build.",
+          "PAISARULE Branch Backup is not available in this application build.",
       });
 
       return;
@@ -668,7 +668,7 @@ export default function BusinessOwnerProfileSection() {
 
     const processingId =
       startFinoraProcessing(
-        "Preparing FINORA Branch Backup...",
+        "Preparing PAISARULE Branch Backup...",
       );
 
     try {
@@ -722,7 +722,7 @@ export default function BusinessOwnerProfileSection() {
 
         message:
           (
-            "FINORA saved " +
+            "PAISARULE saved " +
             result.data.fileName +
             ". Store this backup securely. It contains encrypted branch recovery authority."
           ),
@@ -737,7 +737,7 @@ export default function BusinessOwnerProfileSection() {
           "Branch Backup Failed",
 
         message:
-          "FINORA could not complete the Branch Backup request.",
+          "PAISARULE could not complete the Branch Backup request.",
       });
     }
     finally {
@@ -797,7 +797,7 @@ export default function BusinessOwnerProfileSection() {
           "Authenticated Session Required",
 
         message:
-          "Sign in again before preparing this FINORA branch for a new device.",
+          "Sign in again before preparing this PAISARULE branch for a new device.",
       });
 
       return;
@@ -840,7 +840,7 @@ export default function BusinessOwnerProfileSection() {
           "New Device Preparation Unavailable",
 
         message:
-          "FINORA fresh-device preparation is not available in this application build.",
+          "PAISARULE fresh-device preparation is not available in this application build.",
       });
 
       return;
@@ -856,7 +856,7 @@ export default function BusinessOwnerProfileSection() {
 
     const processingId =
       startFinoraProcessing(
-        "Preparing FINORA for a new device...",
+        "Preparing PAISARULE for a new device...",
       );
 
     try {
@@ -882,7 +882,7 @@ export default function BusinessOwnerProfileSection() {
             "New Device Ready",
 
           message:
-            "FINORA wrote the signed fresh-device authority to this branch's authoritative storage. You can now continue secure login on a new device.",
+            "PAISARULE wrote the signed fresh-device authority to this branch's authoritative storage. You can now continue secure login on a new device.",
         });
 
         return;
@@ -901,7 +901,7 @@ export default function BusinessOwnerProfileSection() {
           "CERTIFICATION_AUTHORITY_MISSING",
         ) ||
         result.error.includes(
-          "FINORA Branch Certification bootstrap custody is unavailable for this legacy branch.",
+          "PAISARULE Branch Certification bootstrap custody is unavailable for this legacy branch.",
         ) ||
         resultRecord.errorCode ===
           "CERTIFICATION_AUTHORITY_MISSING";
@@ -1022,7 +1022,7 @@ export default function BusinessOwnerProfileSection() {
 
         message:
           (
-            "FINORA saved " +
+            "PAISARULE saved " +
             exportResult.fileName +
             ". Approve this request in Control Center, return with the signed authority file, enter your Password and Security Code again, then choose Apply Recovery Authority."
           ),
@@ -1037,7 +1037,7 @@ export default function BusinessOwnerProfileSection() {
           "New Device Preparation Failed",
 
         message:
-          "FINORA could not prepare this branch for a new device.",
+          "PAISARULE could not prepare this branch for a new device.",
       });
     }
     finally {
@@ -1137,7 +1137,7 @@ export default function BusinessOwnerProfileSection() {
           "Certification Recovery Unavailable",
 
         message:
-          "FINORA Branch Certification recovery is not available in this application build.",
+          "PAISARULE Branch Certification recovery is not available in this application build.",
       });
 
       return;
@@ -1153,7 +1153,7 @@ export default function BusinessOwnerProfileSection() {
 
     const processingId =
       startFinoraProcessing(
-        "Applying FINORA Branch Certification recovery...",
+        "Applying PAISARULE Branch Certification recovery...",
       );
 
     try {
@@ -1244,7 +1244,7 @@ export default function BusinessOwnerProfileSection() {
           "New Device Ready",
 
         message:
-          "Branch Certification recovery was applied successfully and FINORA wrote the signed fresh-device authority to the authoritative branch storage. You can now continue secure login on a new device.",
+          "Branch Certification recovery was applied successfully and PAISARULE wrote the signed fresh-device authority to the authoritative branch storage. You can now continue secure login on a new device.",
       });
     }
     catch {
@@ -1256,7 +1256,7 @@ export default function BusinessOwnerProfileSection() {
           "Certification Recovery Failed",
 
         message:
-          "FINORA could not apply the signed Branch Certification recovery authority.",
+          "PAISARULE could not apply the signed Branch Certification recovery authority.",
       });
     }
     finally {
@@ -1288,7 +1288,7 @@ export default function BusinessOwnerProfileSection() {
         <SettingsFeedback
           kind="info"
           title="Loading Owner Profile"
-          message="FINORA is loading the authenticated Business Owner profile."
+          message="PAISARULE is loading the authenticated Business Owner profile."
         />
       </section>
     );
@@ -1346,7 +1346,7 @@ export default function BusinessOwnerProfileSection() {
 
       <section
         aria-labelledby="finora-branch-backup-title"
-        style={{
+        style={{ display: "none",
           marginTop:
             "8px",
 
@@ -1362,7 +1362,7 @@ export default function BusinessOwnerProfileSection() {
           background:
             "var(--finora-theme-background-surface)",
         }}
-      >
+       hidden aria-hidden="true">
         <h3
           id="finora-branch-backup-title"
           style={{
@@ -1385,8 +1385,8 @@ export default function BusinessOwnerProfileSection() {
               1.5,
           }}
         >
-          Create an encrypted recovery backup for this FINORA branch.
-          Keep the exported .finora file in a secure location.
+          Create an encrypted recovery backup for this PAISARULE branch.
+          Keep the exported .paisarule file in a secure location.
         </p>
 
         <div

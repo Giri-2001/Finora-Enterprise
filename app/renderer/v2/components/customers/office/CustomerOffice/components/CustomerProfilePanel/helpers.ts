@@ -5,7 +5,7 @@
    HELPERS
 =========================================================== */
 
-import finoraLogo from "../../../../../../app/assets/finoraenterprise.png?url";
+import finoraLogo from "../../../../../../app/assets/paisarule_official_brand.png?url";
 
 import type {
 

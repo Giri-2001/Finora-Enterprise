@@ -237,6 +237,160 @@ public final class FinoraUsbStorage {
             target
         );
     }
+    /**
+     * PAISARULE R172-B4
+     *
+     * Read both original USB storage files for encrypted
+     * Business Backup V1.
+     *
+     * This method must never create, recover, overwrite,
+     * normalize or delete a source storage file.
+     *
+     * Result order:
+     *   [0] finora-storage.json
+     *   [1] finora-storage.backup.json
+     *
+     * Privileged caller must independently verify the
+     * authenticated Owner, branch and live server session.
+     */
+    public synchronized byte[][] readPaisaruleBackupRawFiles()
+        throws Exception {
+
+        final int maximumFileBytes = 32 * 1024 * 1024;
+
+        UsbTarget target = resolveConfiguredTarget();
+
+        if (target == null ||
+            !target.isReady() ||
+            target.storageDirectory == null ||
+            !target.storageDirectory.isDirectory()) {
+            throw new IllegalStateException(
+                "BACKUP_USB_NOT_READY"
+            );
+        }
+
+        DocumentFile mainFile =
+            target.storageDirectory.findFile(STORAGE_FILE);
+
+        DocumentFile secondaryFile =
+            target.storageDirectory.findFile(BACKUP_FILE);
+
+        if (mainFile == null ||
+            secondaryFile == null ||
+            !mainFile.isFile() ||
+            !secondaryFile.isFile()) {
+            throw new IllegalStateException(
+                "BACKUP_STORAGE_FILES_MISSING"
+            );
+        }
+
+        byte[] primary = null;
+        byte[] secondary = null;
+
+        try {
+            primary = readPaisaruleBackupRawFile(
+                mainFile,
+                maximumFileBytes
+            );
+
+            secondary = readPaisaruleBackupRawFile(
+                secondaryFile,
+                maximumFileBytes
+            );
+
+            return new byte[][] {
+                primary,
+                secondary
+            };
+        } catch (Exception error) {
+            if (primary != null) {
+                java.util.Arrays.fill(primary, (byte) 0);
+            }
+
+            if (secondary != null) {
+                java.util.Arrays.fill(secondary, (byte) 0);
+            }
+
+            throw error;
+        }
+    }
+
+    private byte[] readPaisaruleBackupRawFile(
+        DocumentFile file,
+        int maximumFileBytes
+    ) throws Exception {
+
+        if (file == null || !file.isFile()) {
+            throw new IllegalStateException(
+                "BACKUP_STORAGE_FILE_INVALID"
+            );
+        }
+
+        long declaredSize = file.length();
+
+        if (declaredSize > maximumFileBytes) {
+            throw new IllegalStateException(
+                "BACKUP_STORAGE_FILE_TOO_LARGE"
+            );
+        }
+
+        byte[] buffer = new byte[65536];
+
+        try (
+            InputStream input =
+                contentResolver.openInputStream(file.getUri())
+        ) {
+            if (input == null) {
+                throw new java.io.IOException(
+                    "BACKUP_STORAGE_READ_UNAVAILABLE"
+                );
+            }
+
+            try (
+                java.io.ByteArrayOutputStream output =
+                    new java.io.ByteArrayOutputStream()
+            ) {
+                int count;
+
+                while ((count = input.read(buffer)) != -1) {
+                    if (count == 0) {
+                        continue;
+                    }
+
+                    if (output.size() >
+                        maximumFileBytes - count) {
+                        throw new java.io.IOException(
+                            "BACKUP_STORAGE_FILE_TOO_LARGE"
+                        );
+                    }
+
+                    output.write(buffer, 0, count);
+                }
+
+                byte[] bytes = output.toByteArray();
+
+                if (bytes.length == 0) {
+                    throw new java.io.IOException(
+                        "BACKUP_STORAGE_FILE_EMPTY"
+                    );
+                }
+
+                if (declaredSize > 0 &&
+                    declaredSize != bytes.length) {
+                    java.util.Arrays.fill(bytes, (byte) 0);
+
+                    throw new java.io.IOException(
+                        "BACKUP_STORAGE_READ_INCOMPLETE"
+                    );
+                }
+
+                return bytes;
+            }
+        } finally {
+            java.util.Arrays.fill(buffer, (byte) 0);
+        }
+    }
+
 
     public boolean isAvailable() {
         return resolveConfiguredTarget()
@@ -1985,7 +2139,7 @@ public final class FinoraUsbStorage {
                 return targetFailure(
                     "DISCONNECTED",
                     "USB:" + volumeId,
-                    "FINORA USB storage is disconnected."
+                    "PAISARULE USB storage is disconnected."
                 );
             }
 
@@ -2016,7 +2170,7 @@ public final class FinoraUsbStorage {
                 return targetFailure(
                     "DISCONNECTED",
                     "USB:" + volumeId,
-                    "FINORA USB storage is disconnected."
+                    "PAISARULE USB storage is disconnected."
                 );
             }
 
@@ -2038,7 +2192,19 @@ public final class FinoraUsbStorage {
                 );
             }
 
-            if (!root.canWrite()) {
+                    // PAISARULE_R175_C30_ROOT
+        // Reject interrupted Restore before directory creation.
+        try {
+            PaisaruleRestoreIncompleteGuard
+                .requireComplete(root);
+        } catch (IllegalStateException incomplete) {
+            return targetFailure(
+                "ERROR",
+                "USB:" + volumeId,
+                "PAISARULE Restore incomplete: USB access blocked."
+            );
+        }
+if (!root.canWrite()) {
                 return targetFailure(
                     "UNAVAILABLE",
                     "USB:" + volumeId,
@@ -2122,6 +2288,13 @@ public final class FinoraUsbStorage {
     private JSONObject readStoragePackage(
         UsbTarget target
     ) throws Exception {
+        // PAISARULE_R175_C30_READ
+        // Must run before empty-storage initialization.
+        PaisaruleRestoreIncompleteGuard
+            .requireCompleteAncestors(
+                target.storageDirectory
+            );
+
 
         DocumentFile storageFile =
             resolveRecoverableStorageFile(
@@ -2164,6 +2337,13 @@ public final class FinoraUsbStorage {
         UsbTarget target,
         JSONObject storagePackage
     ) throws Exception {
+        // PAISARULE_R175_C30_WRITE
+        // Reject incomplete Restore before ANY storage mutation.
+        PaisaruleRestoreIncompleteGuard
+            .requireCompleteAncestors(
+                target.storageDirectory
+            );
+
 
         validateStoragePackage(
             storagePackage

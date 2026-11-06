@@ -242,7 +242,7 @@ const nomineeTokens =
           </h2>
 
           <p style={styles.subtitleStyle}>
-            Link an existing FINORA customer or enter nominee details.
+            Link an existing PAISARULE customer or enter nominee details.
           </p>
 
         </div>
@@ -281,7 +281,7 @@ const nomineeTokens =
           }
           helper={
             isCustomerLinked
-              ? "Registered FINORA customer linked successfully."
+              ? "Registered PAISARULE customer linked successfully."
               : customerNumberLocked
                 ? "Customer Number is disabled while manual nominee details are entered."
                 : "Enter the existing customer's 6-digit Customer Number."

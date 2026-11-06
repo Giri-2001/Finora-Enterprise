@@ -214,12 +214,10 @@ function resolveCanonicalCustomerRoot(
 
   const canonicalShape =
     parts.length === 3 &&
-    parts[0] === "FIN" &&
+    (parts[0] === "FIN" || parts[0] === "PAISA") &&
     parts[1] === "CUS" &&
     /^\d{6}$/.test(parts[2] ?? "") &&
-    normalizedCustomerId === formatCustomerId(
-      scope.businessCode, scope.branchCode, Number(parts[2]),
-    );
+    (normalizedCustomerId === formatCustomerId(scope.businessCode, scope.branchCode, Number(parts[2])) || normalizedCustomerId === `FIN-CUS-${parts[2]}`);
 
   const previousCanonicalShape =
     parts.length === 4 &&
@@ -302,10 +300,7 @@ function resolveCanonicalCustomerRoot(
     ).padStart(6, "0")}`;
 
   if (
-    canonicalCustomerId !==
-      normalizedCustomerId &&
-    legacyCanonicalCustomerId !==
-      normalizedCustomerId
+    canonicalCustomerId !== normalizedCustomerId && `FIN-CUS-${String(customerNumber).padStart(6, "0")}` !== normalizedCustomerId && legacyCanonicalCustomerId !== normalizedCustomerId
   ) {
     return {
       success: false,

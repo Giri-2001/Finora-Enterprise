@@ -132,7 +132,7 @@ function parseCanonicalLoanNumber(
 
   if (
     shortCanonicalParts.length === 4 &&
-    shortCanonicalParts[0] === "FIN" &&
+    (shortCanonicalParts[0] === "FIN" || shortCanonicalParts[0] === "PAISA") &&
     shortCanonicalParts[1] === "LOAN"
   ) {
     const customerText = shortCanonicalParts[2];
@@ -173,7 +173,7 @@ function parseCanonicalLoanNumber(
         loanSequence,
       );
 
-      if (normalizedLoanNumber !== expectedLoanNumber) {
+      if ((normalizedLoanNumber !== expectedLoanNumber && normalizedLoanNumber !== `FIN-LOAN-${customerText}-${sequenceText}`)) {
         return {
           success: false,
           error: "Canonical Loan Number does not match the active scope.",

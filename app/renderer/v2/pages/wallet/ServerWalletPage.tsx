@@ -347,7 +347,7 @@ export default function ServerWalletPage({
       if (isFinoraAndroidWallet()) {
         setAvailable(true);
         setBusy(true);
-        setMessage("Verifying Android Wallet with FINORA server...");
+        setMessage("Verifying Android Wallet with PAISARULE server...");
 
         try {
           const result = await getFinoraAndroidWalletBalance();
@@ -392,7 +392,7 @@ export default function ServerWalletPage({
 
             // FINORA_P1_723K_PRICING
             // Server-authenticated branch subscription only.
-            setMessage("Verified PostgreSQL Wallet balance loaded.");
+            setMessage("Wallet balance verified successfully.");
 
             const pricing = await getFinoraAndroidPricing();
 
@@ -427,7 +427,7 @@ export default function ServerWalletPage({
               } : null);
 
               setPricingUnavailable(false);
-              setMessage("Wallet and subscription verified by FINORA server.");
+              setMessage("Wallet and subscription verified by PAISARULE server.");
             } else {
               setSubscription(null);
               setLivePricing(null);
@@ -691,7 +691,7 @@ export default function ServerWalletPage({
           setRechargeBalanceStale(false);
         }
 
-        setMessage("Verified PostgreSQL Wallet balance refreshed.");
+        setMessage("Wallet balance refreshed successfully.");
         return;
       }
 
@@ -2150,7 +2150,7 @@ export default function ServerWalletPage({
     fontSize: 18,
     fontWeight: 500,
   }}>
-    FINORA Wallet Available
+    PAISARULE Wallet Available
   </div>
   <button type="button" style={button} disabled={!available || busy}
             onClick={() => void run("balance")}>
@@ -2479,7 +2479,7 @@ export default function ServerWalletPage({
 {/* FINORA_P1_747Z_COMPACT_LEFT */}
       {/* FINORA_P1_580J_HISTORY_LAYOUT */}
       <section className="finora-wallet-access" style={{ ...panel, padding: 14, alignSelf: "stretch", height: "100%", boxSizing: "border-box" }}
-        aria-label="FINORA Wallet Transaction History">
+        aria-label="PAISARULE Wallet Transaction History">
         <div style={{
           display: "flex", justifyContent: "space-between",
           alignItems: "center", flexWrap: "wrap", gap: 10
@@ -2822,7 +2822,7 @@ export default function ServerWalletPage({
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
             <h2 style={{ margin: 0, fontSize: "clamp(20px, 2.5vw, 28px)" }}>
-              FINORA Premium Plans
+              PAISARULE Premium Plans
             </h2>
             <p style={{ color: theme.colors.text.secondary, marginBottom: 0 }}>
               Simple subscriptions. One branch wallet.

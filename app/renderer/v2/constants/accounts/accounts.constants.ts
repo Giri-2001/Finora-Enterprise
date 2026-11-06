@@ -457,11 +457,11 @@ export const ACCOUNTS_SHARE_LABEL = "Share";
    DOCUMENT COPY
 =========================================================== */
 
-export const ACCOUNTS_DOCUMENT_TITLE = "FINORA Accounts Register";
+export const ACCOUNTS_DOCUMENT_TITLE = "PAISARULE Accounts Register";
 
-export const ACCOUNTS_DOCUMENT_FILE_PREFIX = "FINORA_Accounts_Register";
+export const ACCOUNTS_DOCUMENT_FILE_PREFIX = "PAISARULE_Accounts_Register";
 
-export const ACCOUNTS_DOCUMENT_SHARE_TITLE = "FINORA Accounts Register";
+export const ACCOUNTS_DOCUMENT_SHARE_TITLE = "PAISARULE Accounts Register";
 
 export const ACCOUNTS_DOCUMENT_SHARE_DIALOG_TITLE = "Share Accounts Register";
 

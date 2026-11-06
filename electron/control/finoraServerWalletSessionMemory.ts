@@ -113,7 +113,7 @@ export function createFinoraServerWalletSessionMemory(
     const expires = Date.parse(data.expiresAt);
     if (
       !Number.isFinite(expires) || expires <= now ||
-      expires - now > 1_805_000
+      expires - now > 3_605_000
     ) return false;
 
     stored = {

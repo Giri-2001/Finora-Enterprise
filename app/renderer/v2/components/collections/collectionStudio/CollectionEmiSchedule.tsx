@@ -278,7 +278,7 @@ export default function CollectionEmiSchedule({
         setSchedule(normalizedSchedule);
       } catch (error) {
         console.error(
-          "FINORA VIEW EMI SCHEDULE LOAD ERROR:",
+          "PAISARULE VIEW EMI SCHEDULE LOAD ERROR:",
           error,
         );
 

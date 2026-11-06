@@ -49,6 +49,18 @@ import { loadCollections } from "../../../services/collection/collectionService"
 
 import { collectionHistoryStyles } from "./CollectionHistory.styles";
 
+// PAISARULE B07-R3D: UI-only presentation.
+// Stored collection, loan and receipt IDs remain unchanged.
+function displayPaisaruleCollectionTableId(
+  value: string | null | undefined,
+): string {
+  return String(value ?? "").replace(
+    /^FIN-(RCP|LOAN)-/i,
+    "PAISA-$1-",
+  );
+}
+
+
 // ============================================================
 // TYPES
 // ============================================================
@@ -229,7 +241,7 @@ export default function CollectionHistory({ loanId }: CollectionHistoryProps = {
 
         setHistory(loanCollections);
       } catch (error) {
-        console.error("FINORA COLLECTION HISTORY LOAD ERROR:", error);
+        console.error("PAISARULE COLLECTION HISTORY LOAD ERROR:", error);
 
         if (!cancelled) {
           setHistory([]);
@@ -457,7 +469,7 @@ export default function CollectionHistory({ loanId }: CollectionHistoryProps = {
                   }}
                 >
                   <span style={collectionHistoryStyles.receiptNumber}>
-                    {record.receiptNumber}
+                    {displayPaisaruleCollectionTableId(record.receiptNumber)}
                   </span>
                 </td>
 

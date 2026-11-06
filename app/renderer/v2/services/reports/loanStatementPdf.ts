@@ -50,7 +50,7 @@
 // ============================================================
 
 import { getBusinessContext } from "../business/businessContextService";
-import finoraLoanStatementLogoUrl from "../../app/assets/finoraenterprise.png";
+import finoraLoanStatementLogoUrl from "../../app/assets/paisarule_official_brand.png";
 import { loadFinoraServerSettingsIdentity } from "../business/finoraServerSettingsIdentity";
 
 import type { jsPDF } from "jspdf";
@@ -165,7 +165,7 @@ function addContinuationPage(document: jsPDF): number {
 
   document.setTextColor(0);
 
-  document.text(`FINORA ENTERPRISE - ${resolveBusinessReportTitle("Loan Statement")}`, PAGE_MARGIN_X, PAGE_TOP);
+  document.text(`PAISARULE - ${resolveBusinessReportTitle("Loan Statement")}`, PAGE_MARGIN_X, PAGE_TOP);
 
   document.setLineWidth(0.2);
 
@@ -278,6 +278,13 @@ interface PdfMetric {
   label: string;
 
   value: string;
+}
+
+function displayPaisaruleReportId(value: unknown): string {
+  return safeText(value).replace(
+    /^FIN-(?=(?:LOAN|CUS|RCP|COL)-)/i,
+    "PAISA-",
+  );
 }
 
 function drawMetricGrid(
@@ -504,13 +511,13 @@ function getLoanMeta(statement: LoanReportStatement): PdfMetric[] {
     {
       label: "Loan Number",
 
-      value: statement.loanNumber,
+      value: displayPaisaruleReportId(statement.loanNumber),
     },
 
     {
       label: "Customer ID",
 
-      value: statement.customerId,
+      value: displayPaisaruleReportId(statement.customerId),
     },
 
     {
@@ -612,7 +619,7 @@ function drawEmiSchedule(
     {
       label: "EMI",
 
-      width: 18,
+      width: 12,
 
       align: "center",
     },
@@ -620,13 +627,13 @@ function drawEmiSchedule(
     {
       label: "Due Date",
 
-      width: 33,
+      width: 25,
     },
 
     {
       label: "Amount",
 
-      width: 38,
+      width: 25,
 
       align: "right",
     },
@@ -634,7 +641,7 @@ function drawEmiSchedule(
     {
       label: "Paid",
 
-      width: 35,
+      width: 23,
 
       align: "right",
     },
@@ -642,7 +649,7 @@ function drawEmiSchedule(
     {
       label: "Status",
 
-      width: 30,
+      width: 27,
 
       align: "center",
     },
@@ -650,7 +657,7 @@ function drawEmiSchedule(
     {
       label: "Receipt",
 
-      width: 26,
+      width: 68,
 
       align: "center",
     },
@@ -702,7 +709,7 @@ function drawEmiSchedule(
 
         safeText(installment.status).toUpperCase(),
 
-        safeText(installment.receiptNumber),
+        displayPaisaruleReportId(installment.receiptNumber),
       ],
       y,
       8,
@@ -732,19 +739,19 @@ function drawCollectionHistory(
     {
       label: "Date",
 
-      width: 29,
+      width: 24,
     },
 
     {
       label: "Receipt",
 
-      width: 34,
+      width: 66,
     },
 
     {
       label: "Mode",
 
-      width: 24,
+      width: 19,
 
       align: "center",
     },
@@ -752,7 +759,7 @@ function drawCollectionHistory(
     {
       label: "Collected",
 
-      width: 34,
+      width: 27,
 
       align: "right",
     },
@@ -760,7 +767,7 @@ function drawCollectionHistory(
     {
       label: "Discount",
 
-      width: 29,
+      width: 22,
 
       align: "right",
     },
@@ -768,7 +775,7 @@ function drawCollectionHistory(
     {
       label: "Balance*",
 
-      width: 30,
+      width: 22,
 
       align: "right",
     },
@@ -822,7 +829,7 @@ function drawCollectionHistory(
       [
         formatDate(collection.receiptDate),
 
-        safeText(collection.receiptNumber),
+        displayPaisaruleReportId(collection.receiptNumber),
 
         safeText(collection.paymentMethod).toUpperCase(),
 
@@ -933,11 +940,11 @@ async function addFinoraLoanStatementCenterLogo(
   try {
     await image.decode();
   } catch {
-    throw new Error("Unable to load FINORA Loan Statement logo.");
+    throw new Error("Unable to load PAISARULE Loan Statement logo.");
   }
 
   if (!image.naturalWidth || !image.naturalHeight) {
-    throw new Error("FINORA Loan Statement logo dimensions invalid.");
+    throw new Error("PAISARULE Loan Statement logo dimensions invalid.");
   }
 
   const canvas = window.document.createElement("canvas");
@@ -947,9 +954,23 @@ async function addFinoraLoanStatementCenterLogo(
   const context = canvas.getContext("2d");
 
   if (!context) {
-    throw new Error("FINORA Loan Statement logo canvas unavailable.");
+    throw new Error("PAISARULE Loan Statement logo canvas unavailable.");
   }
 
+  // PAISARULE_PDF_LOGO_ROUNDED_CORNERS
+  const paisaruleLogoRadius = Math.min(canvas.width, canvas.height) * 0.12;
+  context.beginPath();
+  context.moveTo(paisaruleLogoRadius, 0);
+  context.lineTo(canvas.width - paisaruleLogoRadius, 0);
+  context.quadraticCurveTo(canvas.width, 0, canvas.width, paisaruleLogoRadius);
+  context.lineTo(canvas.width, canvas.height - paisaruleLogoRadius);
+  context.quadraticCurveTo(canvas.width, canvas.height, canvas.width - paisaruleLogoRadius, canvas.height);
+  context.lineTo(paisaruleLogoRadius, canvas.height);
+  context.quadraticCurveTo(0, canvas.height, 0, canvas.height - paisaruleLogoRadius);
+  context.lineTo(0, paisaruleLogoRadius);
+  context.quadraticCurveTo(0, 0, paisaruleLogoRadius, 0);
+  context.closePath();
+  context.clip();
   context.drawImage(image, 0, 0, 256, 256);
 
   const png = canvas.toDataURL("image/png");
@@ -1107,7 +1128,7 @@ export async function buildLoanStatementPdf(loanId: string): Promise<jsPDF> {
   const generatedAt = getReportGeneratedAt();
 
   const document = createFinoraPdf({
-    fileName: `FINORA_Loan_Statement_${statement.loanNumber}.pdf`,
+    fileName: `PAISARULE_Loan_Statement_${displayPaisaruleReportId(statement.loanNumber)}.pdf`,
 
     title: resolveBusinessReportTitle("Loan Statement"),
 
@@ -1177,7 +1198,7 @@ async function getLoanStatementFileName(loanId: string): Promise<string> {
     throw new Error("Unable to find the selected loan.");
   }
 
-  return `FINORA_Loan_Statement_${statement.loanNumber}.pdf`;
+  return `PAISARULE_Loan_Statement_${displayPaisaruleReportId(statement.loanNumber)}.pdf`;
 }
 
 // ============================================================
@@ -1226,12 +1247,12 @@ export async function shareLoanStatementPdf(loanId: string): Promise<void> {
   await shareFinoraPdf(
     document,
 
-    `FINORA_Loan_Statement_${statement.loanNumber}.pdf`,
+    `PAISARULE_Loan_Statement_${displayPaisaruleReportId(statement.loanNumber)}.pdf`,
 
     {
-      title: "FINORA Loan Statement",
+      title: "PAISARULE Loan Statement",
 
-      text: `Loan Statement - ${statement.loanNumber}`,
+      text: `Loan Statement - ${displayPaisaruleReportId(statement.loanNumber)}`,
 
       dialogTitle: "Share Loan Statement",
     },

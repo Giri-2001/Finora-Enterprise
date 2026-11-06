@@ -26,6 +26,8 @@
 // 7. returns authenticated restore material + digest evidence.
 // ============================================================
 
+import { countPaisaruleSnapshotEntitiesV1 } from "./paisaruleSnapshotEntityCountsV1.js";
+import type { PaisaruleSnapshotEntityCountsV1 } from "./paisaruleSnapshotEntityCountsV1.js";
 import type {
   FinoraFullBranchBackupFileV3,
   FinoraFullBranchBackupScopeV2,
@@ -221,6 +223,9 @@ export interface FinoraFullBranchRestoreArtifactSuccess {
 
   snapshot:
     FinoraFullBranchRealSnapshotV1;
+
+  entityCounts:
+    PaisaruleSnapshotEntityCountsV1;
 
   snapshotRecordCount:
     number;
@@ -866,6 +871,21 @@ export async function prepareFinoraFullBranchRestoreArtifact(
     );
   }
 
+  // PAISARULE_C117_R128_COUNTS
+  // Execute only after all artifact authority checks pass.
+  // This does not authorize or perform any Restore write.
+  let entityCounts: PaisaruleSnapshotEntityCountsV1;
+
+  try {
+    entityCounts = countPaisaruleSnapshotEntitiesV1(snapshot);
+  }
+  catch {
+    return failure(
+      "REAL_SNAPSHOT_INVALID",
+      "FINORA verified snapshot entity counts are invalid.",
+    );
+  }
+
   return {
     success:
       true,
@@ -904,6 +924,9 @@ export async function prepareFinoraFullBranchRestoreArtifact(
         structuredClone(
           snapshot,
         ),
+
+      entityCounts:
+        entityCounts,
 
       snapshotRecordCount:
         snapshot.recordCount,

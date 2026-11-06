@@ -716,23 +716,22 @@ export function getLoginStyles(
     display:
       "block",
 
-    width:
-      "4em",
+    width: "calc(2.5em + 5px)",
 
-    height:
-      "4em",
+    height: "calc(2.5em + 5px)",
 
     maxWidth:
       "100%",
 
     objectFit:
       "contain",
+    borderRadius: "12px",
+    marginLeft: "auto",
+    marginRight: "auto",
 
-    marginTop:
-      0,
+    marginTop: 3,
 
-    marginBottom:
-      0,
+    marginBottom: 3,
 
   };
 

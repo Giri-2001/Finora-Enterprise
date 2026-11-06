@@ -12198,9 +12198,30 @@ private boolean isValidEntitlement(
 
         getBridge().execute(() -> {
             try {
+                // PAISARULE_R161_OWNER_TOUCH_ROTATION
+                // Never trigger rotation from background timers.
+                // Native touch finishes before native rotation starts.
+                org.json.JSONObject touchResult =
+                    FinoraNativeWalletSession.touchAndroidReception(handle);
+
+                // Release gate remains closed until backend deployment,
+                // response-contract tests and session-race tests PASS.
+                final boolean ownerWalletRotationEnabled = false;
+
+                if (ownerWalletRotationEnabled &&
+                    touchResult.optBoolean("success", false)) {
+                    try {
+                        // No credentials or rotation response reach JS.
+                        FinoraNativeWalletSession
+                            .rotateAndroidOwnerWalletIfDue(handle);
+                    } catch (Exception ignoredRotation) {
+                        // Preserve original Business Touch result.
+                    }
+                }
+
                 call.resolve(
                     com.getcapacitor.JSObject.fromJSONObject(
-                        FinoraNativeWalletSession.touchAndroidReception(handle)
+                        touchResult
                     )
                 );
             } catch (Exception ignored) {
@@ -12667,6 +12688,244 @@ private boolean isValidEntitlement(
         }
     }
 
+    // PAISARULE R172-B13
+    // Only one native Backup Save As operation at a time.
+    // Encrypted contents remain in Android process memory.
+    private boolean paisaruleBackupExportBusy = false;
+
+    private PaisaruleAndroidStorageBackupExport.Result
+        pendingPaisaruleBackupExport = null;
+
+    /**
+     * Export the authenticated USB Business Backup V1.
+     *
+     * No renderer-supplied encryption key, USB path,
+     * Owner identity, or Backup contents are accepted.
+     */
+    @PluginMethod
+    public void exportPaisaruleBusinessBackup(
+        PluginCall call
+    ) {
+        if (call == null) {
+            return;
+        }
+
+        synchronized (this) {
+            if (paisaruleBackupExportBusy) {
+                call.reject("BACKUP_EXPORT_BUSY");
+                return;
+            }
+
+            paisaruleBackupExportBusy = true;
+            pendingPaisaruleBackupExport = null;
+        }
+
+        getBridge().execute(() -> {
+            try {
+                com.finora.enterprise.usb.FinoraUsbStorage storage =
+                    new com.finora.enterprise.usb.FinoraUsbStorage(
+                        getContext()
+                    );
+
+                // Revalidates the live Business Session,
+                // Owner scope, generation and native key.
+                PaisaruleAndroidStorageBackupExport.Result prepared =
+                    FinoraNativeWalletSession
+                        .preparePaisaruleAndroidBusinessBackup(
+                            storage
+                        );
+
+                synchronized (this) {
+                    if (!paisaruleBackupExportBusy) {
+                        throw new IllegalStateException(
+                            "BACKUP_EXPORT_CANCELLED"
+                        );
+                    }
+
+                    pendingPaisaruleBackupExport = prepared;
+                }
+
+                String filename =
+                    "Backup_PAISARULE_" +
+                    new java.text.SimpleDateFormat(
+                        "dd-MM-yyyy_hh.mma",
+                        java.util.Locale.US
+                    ).format(new java.util.Date()) +
+                    ".paisarule";
+
+                android.content.Intent intent =
+                    new android.content.Intent(
+                        android.content.Intent.ACTION_CREATE_DOCUMENT
+                    );
+
+                intent.addCategory(
+                    android.content.Intent.CATEGORY_OPENABLE
+                );
+
+                intent.setType("application/octet-stream");
+
+                intent.putExtra(
+                    android.content.Intent.EXTRA_TITLE,
+                    filename
+                );
+
+                intent.addFlags(
+                    android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                );
+
+                getActivity().runOnUiThread(() -> {
+                    try {
+                        startActivityForResult(
+                            call,
+                            intent,
+                            "completePaisaruleBusinessBackupSaveAs"
+                        );
+                    } catch (Exception error) {
+                        synchronized (this) {
+                            pendingPaisaruleBackupExport = null;
+                            paisaruleBackupExportBusy = false;
+                        }
+
+                        call.reject("BACKUP_SAVE_PICKER_FAILED");
+                    }
+                });
+            } catch (Exception error) {
+                synchronized (this) {
+                    pendingPaisaruleBackupExport = null;
+                    paisaruleBackupExportBusy = false;
+                }
+
+                call.reject("BACKUP_EXPORT_PREPARATION_FAILED");
+            }
+        });
+    }
+
+    @com.getcapacitor.annotation.ActivityCallback
+    private void completePaisaruleBusinessBackupSaveAs(
+        PluginCall call,
+        androidx.activity.result.ActivityResult result
+    ) {
+        final PaisaruleAndroidStorageBackupExport.Result prepared;
+
+        synchronized (this) {
+            prepared = pendingPaisaruleBackupExport;
+            pendingPaisaruleBackupExport = null;
+        }
+
+        if (call == null) {
+            synchronized (this) {
+                paisaruleBackupExportBusy = false;
+            }
+            return;
+        }
+
+        if (
+            result == null ||
+            result.getResultCode() !=
+                android.app.Activity.RESULT_OK ||
+            result.getData() == null ||
+            result.getData().getData() == null
+        ) {
+            synchronized (this) {
+                paisaruleBackupExportBusy = false;
+            }
+
+            JSObject cancelled = new JSObject();
+            cancelled.put("success", true);
+            cancelled.put("cancelled", true);
+            cancelled.put("data", JSONObject.NULL);
+            call.resolve(cancelled);
+            return;
+        }
+
+        if (prepared == null) {
+            synchronized (this) {
+                paisaruleBackupExportBusy = false;
+            }
+
+            call.reject("BACKUP_PREPARED_DATA_UNAVAILABLE");
+            return;
+        }
+
+        final android.net.Uri destination =
+            result.getData().getData();
+
+        getBridge().execute(() -> {
+            try {
+                if (!"content".equals(destination.getScheme())) {
+                    throw new IllegalStateException(
+                        "BACKUP_DESTINATION_INVALID"
+                    );
+                }
+
+                // Confirm the actual provider-selected extension.
+                String savedName = null;
+
+                try (
+                    android.database.Cursor cursor =
+                        getContext()
+                            .getContentResolver()
+                            .query(
+                                destination,
+                                new String[] {
+                                    android.provider.OpenableColumns
+                                        .DISPLAY_NAME
+                                },
+                                null,
+                                null,
+                                null
+                            )
+                ) {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        savedName = cursor.getString(0);
+                    }
+                }
+
+                if (
+                    savedName == null ||
+                    !savedName.toLowerCase(
+                        java.util.Locale.ROOT
+                    ).endsWith(".paisarule")
+                ) {
+                    throw new IllegalStateException(
+                        "BACKUP_EXTENSION_INVALID"
+                    );
+                }
+
+                // Writer revalidates the server AFTER picker.
+                // Login generation and branch key must match.
+                JSONObject response =
+                    FinoraNativeWalletSession
+                        .savePaisaruleAndroidBusinessBackup(
+                            getContext(),
+                            destination,
+                            prepared
+                        );
+
+                JSONObject data = response.optJSONObject("data");
+
+                if (data == null ||
+                    !response.optBoolean("success", false)) {
+                    throw new IllegalStateException(
+                        "BACKUP_SAVE_NOT_CONFIRMED"
+                    );
+                }
+
+                data.put("fileName", savedName);
+
+                call.resolve(
+                    JSObject.fromJSONObject(response)
+                );
+            } catch (Exception error) {
+                call.reject("BACKUP_SAVE_FAILED");
+            } finally {
+                synchronized (this) {
+                    pendingPaisaruleBackupExport = null;
+                    paisaruleBackupExportBusy = false;
+                }
+            }
+        });
+    }
     // FINORA_AP04_R028_RECEIPT_GALLERY_SAVE
     // Save customer-facing PNG images to an Android Gallery album.
     // Never writes branch storage, wallet, or server records.

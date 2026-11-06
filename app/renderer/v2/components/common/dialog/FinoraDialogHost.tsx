@@ -219,7 +219,7 @@ export default function FinoraDialogHost() {
           aria-describedby="finora-dialog-message"
         >
           <div style={brandTitleStyle}>
-            FINORA
+            PAISARULE
           </div>
 
           <div style={titleDividerStyle} />

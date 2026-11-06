@@ -149,6 +149,30 @@ import {
   paginationEllipsisStyle,
 } from "./CollectionsOffice.styles";
 
+// PAISARULE B08-R2B: receipt display/export only.
+// Keep original stored record identities unchanged.
+function displayPaisaruleReceiptIdentityB08(
+  value: string | null | undefined,
+): string {
+  return String(value ?? "").replace(
+    /^FIN-(CUS|LOAN|RCP|COL)-/i,
+    "PAISA-$1-",
+  );
+}
+
+
+// PAISARULE B07-R3D: UI-only presentation.
+// Stored collection, loan and receipt IDs remain unchanged.
+function displayPaisaruleCollectionTableId(
+  value: string | null | undefined,
+): string {
+  return String(value ?? "").replace(
+    /^FIN-(RCP|LOAN)-/i,
+    "PAISA-$1-",
+  );
+}
+
+
 // ============================================================
 // TYPES
 // ============================================================
@@ -181,7 +205,7 @@ function getAuthenticatedStorageMode(): StorageMode {
   try {
     storedMode = window.sessionStorage.getItem(STORAGE_MODE_SESSION_KEY);
   } catch {
-    throw new Error("FINORA authenticated storage mode is unavailable.");
+    throw new Error("PAISARULE authenticated storage mode is unavailable.");
   }
 
   if (
@@ -192,7 +216,7 @@ function getAuthenticatedStorageMode(): StorageMode {
     return storedMode as StorageMode;
   }
 
-  throw new Error("FINORA authenticated storage mode is missing or invalid.");
+  throw new Error("PAISARULE authenticated storage mode is missing or invalid.");
 }
 
 // ============================================================
@@ -535,18 +559,18 @@ export default function CollectionsOffice({
         const expectedMode = getAuthenticatedStorageMode();
 
         if (!storageManager.isInitialized()) {
-          throw new Error("FINORA authenticated storage is not initialized.");
+          throw new Error("PAISARULE authenticated storage is not initialized.");
         }
 
         if (storageManager.getStorageMode() !== expectedMode) {
-          throw new Error("FINORA active storage mode mismatch.");
+          throw new Error("PAISARULE active storage mode mismatch.");
         }
 
         const verifiedRevision = storageManager.getLifecycleRevision();
         const verifiedAdapter = storageManager.getActiveAdapter();
 
         if (!verifiedAdapter) {
-          throw new Error("FINORA active storage adapter is unavailable.");
+          throw new Error("PAISARULE active storage adapter is unavailable.");
         }
 
         const storageStatus = await verifiedAdapter.getStatus();
@@ -555,7 +579,7 @@ export default function CollectionsOffice({
           storageStatus.availability !== StorageAvailability.READY ||
           storageStatus.mode !== expectedMode
         ) {
-          throw new Error("FINORA authenticated storage is not ready.");
+          throw new Error("PAISARULE authenticated storage is not ready.");
         }
 
         if (
@@ -564,7 +588,7 @@ export default function CollectionsOffice({
           storageManager.getStorageMode() !== expectedMode ||
           storageManager.getActiveAdapter() !== verifiedAdapter
         ) {
-          throw new Error("FINORA storage context changed during verification.");
+          throw new Error("PAISARULE storage context changed during verification.");
         }
 
         const [records, loanRecords] = await Promise.all([
@@ -976,7 +1000,7 @@ const [receiptWorkspaceOpen, setReceiptWorkspaceOpen] = useState(() =>
                   letterSpacing: 1.1,
                 }}
               >
-                FINORA COLLECTIONS
+                PAISARULE COLLECTIONS
               </div>
 
               <h1
@@ -1272,7 +1296,7 @@ const [receiptWorkspaceOpen, setReceiptWorkspaceOpen] = useState(() =>
 
                         if (!bridge?.copyPng) {
                           throw new Error(
-                            "Electron native clipboard unavailable. Restart FINORA Enterprise.",
+                            "Electron native clipboard unavailable. Restart PAISARULE.",
                           );
                         }
 
@@ -1348,7 +1372,7 @@ const saved = await Filesystem.writeFile({
 
                         try {
                           await Share.share({
-                            title: "FINORA Collection Receipt",
+                            title: "PAISARULE Collection Receipt",
                             files: [saved.uri],
                             dialogTitle: "Share collection receipt photo",
                           });
@@ -1449,7 +1473,7 @@ const saved = await Filesystem.writeFile({
                             kind: "success",
                             heading: "Receipt Saved Successfully",
                             message:
-                              `Gallery Folder: ${saveResult.album ?? "Finora Collection Receipts"}\n` +
+                              `Gallery Folder: ${saveResult.album ?? "Paisarule Collection Receipts"}\n` +
                               `Image: ${saveResult.filename ?? filename}`,
                             confirmLabel: "Done",
                           });
@@ -1483,7 +1507,7 @@ return;
 
                         if (!picturesBridge?.savePng) {
                           throw new Error(
-                            "Windows Pictures saving is unavailable. Restart the latest FINORA Enterprise EXE.",
+                            "Windows Pictures saving is unavailable. Restart the latest PAISARULE EXE.",
                           );
                         }
 
@@ -1570,8 +1594,8 @@ return;
 
                           await navigator.share({
                             files: [file],
-                            title: "FINORA Payment Receipt",
-                            text: `Receipt ${receipt.receiptNumber}`,
+                            title: "PAISARULE Payment Receipt",
+                            text: `Receipt ${displayPaisaruleReceiptIdentityB08(receipt.receiptNumber)}`,
                           });
                           return;
                         } catch (error) {
@@ -1597,7 +1621,7 @@ return;
                       }
                     } catch (error) {
                       // FINORA_AP04_R037_COLLECTION_RED_ERROR
-                      console.error("FINORA RECEIPT IMAGE ERROR:", error);
+                      console.error("PAISARULE RECEIPT IMAGE ERROR:", error);
 
                       if (action === "download") {
                         const reason =
@@ -1638,7 +1662,7 @@ return;
                         </strong>
 
                         <span>
-                          {receipt.receiptNumber || "--"}
+                          {displayPaisaruleReceiptIdentityB08(receipt.receiptNumber || "--")}
                         </span>
 
                         <small>
@@ -1717,7 +1741,7 @@ return;
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={`Preview Receipt ${receipt.receiptNumber}`}
+        aria-label={`Preview Receipt ${displayPaisaruleReceiptIdentityB08(receipt.receiptNumber)}`}
         tabIndex={-1}
         onKeyDown={(event) => {
           if (event.key === "Escape") {
@@ -1757,7 +1781,7 @@ return;
                 fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
               }}
             >
-              FINORA Receipt Preview
+              PAISARULE Receipt Preview
             </strong>
             <span
               style={{
@@ -1768,7 +1792,7 @@ return;
                 overflowWrap: "anywhere",
               }}
             >
-              {receipt.receiptNumber}
+              {displayPaisaruleReceiptIdentityB08(receipt.receiptNumber)}
             </span>
           </div>
           <button
@@ -1804,7 +1828,7 @@ return;
         >
           <img
             src={shareReceiptPreviewUrl}
-            alt={`FINORA receipt ${receipt.receiptNumber}`}
+            alt={`PAISARULE receipt ${displayPaisaruleReceiptIdentityB08(receipt.receiptNumber)}`}
             style={{
               display: "block",
               width: "100%",
@@ -2699,7 +2723,7 @@ return;
 
                             <div style={receiptIdentityStyle}>
                               <div style={receiptNumberStyle}>
-                                {collection.receiptNumber || "--"}
+                                {displayPaisaruleCollectionTableId(collection.receiptNumber || "--")}
                               </div>
                             </div>
 
@@ -2715,7 +2739,7 @@ return;
 
                             <div style={loanIdentityStyle}>
                               <div style={loanNumberStyle}>
-                                {collection.loanNumber || "--"}
+                                {displayPaisaruleCollectionTableId(collection.loanNumber || "--")}
                               </div>
                             </div>
 
@@ -3241,7 +3265,7 @@ async function finoraR161CreateReceiptImage(
 
   ctx.fillStyle = "#E9BF69";
   ctx.font = "bold 44px Arial, sans-serif";
-  drawText("F I N O R A", 450, 72, 820, "center");
+  drawText("P A I S A R U L E", 450, 72, 820, "center");
 
   ctx.fillStyle = "#ffffff";
   ctx.font = "23px Arial, sans-serif";
@@ -3291,8 +3315,8 @@ async function finoraR161CreateReceiptImage(
   // Customer and receipt metadata
   const details: Array<[string, string]> = [
     ["Customer", safeText(receipt.customerName)],
-    ["Receipt Number", safeText(receipt.receiptNumber)],
-    ["Collection Number", safeText(receipt.collectionNumber)],
+    ["Receipt Number", displayPaisaruleReceiptIdentityB08(safeText(receipt.receiptNumber))],
+    ["Collection Number", displayPaisaruleReceiptIdentityB08(safeText(receipt.collectionNumber))],
     [
       "Collection Date",
       formatReceiptDateOnly(receipt.receiptDate),
@@ -3459,7 +3483,7 @@ async function finoraR161CreateReceiptImage(
   );
 
   const filename =
-    "FINORA_" +
+    "PAISARULE_" +
     String(receipt.receiptNumber || "RECEIPT")
       .replace(/[^A-Za-z0-9_-]/g, "_") +
     ".png";

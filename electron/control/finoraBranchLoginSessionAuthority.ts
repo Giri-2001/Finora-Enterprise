@@ -1965,7 +1965,7 @@ export async function resolveFinoraBranchOperationalSessionContext(
         "SESSION_NOT_FOUND",
 
       error:
-        "FINORA login session is unavailable.",
+        "PAISARULE login session is unavailable.",
     };
   }
 
@@ -1987,7 +1987,7 @@ export async function resolveFinoraBranchOperationalSessionContext(
         "SESSION_EXPIRED",
 
       error:
-        "FINORA login session has expired.",
+        "PAISARULE login session has expired.",
     };
   }
 
@@ -2042,7 +2042,7 @@ export async function resolveFinoraBranchOperationalSessionContext(
         "SESSION_INVALID",
 
       error:
-        "FINORA login session credential is no longer valid.",
+        "PAISARULE login session credential is no longer valid.",
     };
   }
 
@@ -2190,7 +2190,7 @@ export function touchFinoraBranchLoginSession(
         "SESSION_NOT_FOUND",
 
       error:
-        "FINORA login session is unavailable.",
+        "PAISARULE login session is unavailable.",
     };
   }
 
@@ -2215,7 +2215,7 @@ export function touchFinoraBranchLoginSession(
         "SESSION_EXPIRED",
 
       error:
-        "FINORA login session has expired.",
+        "PAISARULE login session has expired.",
     };
   }
 

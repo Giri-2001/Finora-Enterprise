@@ -34,7 +34,7 @@ import { formatFinoraDate } from "../../../shared/finoraDateTimeDisplay";
 
 import { getBusinessContext } from "../business/businessContextService";
 import { loadFinoraServerSettingsIdentity } from "../business/finoraServerSettingsIdentity";
-import finoraOutstandingLogoUrl from "../../app/assets/finoraenterprise.png";
+import finoraOutstandingLogoUrl from "../../app/assets/paisarule_official_brand.png";
 
 import type { jsPDF } from "jspdf";
 
@@ -127,11 +127,11 @@ async function addFinoraOutstandingCenterLogo(
   try {
     await image.decode();
   } catch {
-    throw new Error("Unable to load FINORA Outstanding Loans logo.");
+    throw new Error("Unable to load PAISARULE Outstanding Loans logo.");
   }
 
   if (!image.naturalWidth || !image.naturalHeight) {
-    throw new Error("FINORA Outstanding Loans logo dimensions invalid.");
+    throw new Error("PAISARULE Outstanding Loans logo dimensions invalid.");
   }
 
   const canvas = window.document.createElement("canvas");
@@ -141,9 +141,23 @@ async function addFinoraOutstandingCenterLogo(
   const context = canvas.getContext("2d");
 
   if (!context) {
-    throw new Error("FINORA Outstanding Loans logo canvas unavailable.");
+    throw new Error("PAISARULE Outstanding Loans logo canvas unavailable.");
   }
 
+  // PAISARULE_PDF_LOGO_ROUNDED_CORNERS
+  const paisaruleLogoRadius = Math.min(canvas.width, canvas.height) * 0.12;
+  context.beginPath();
+  context.moveTo(paisaruleLogoRadius, 0);
+  context.lineTo(canvas.width - paisaruleLogoRadius, 0);
+  context.quadraticCurveTo(canvas.width, 0, canvas.width, paisaruleLogoRadius);
+  context.lineTo(canvas.width, canvas.height - paisaruleLogoRadius);
+  context.quadraticCurveTo(canvas.width, canvas.height, canvas.width - paisaruleLogoRadius, canvas.height);
+  context.lineTo(paisaruleLogoRadius, canvas.height);
+  context.quadraticCurveTo(0, canvas.height, 0, canvas.height - paisaruleLogoRadius);
+  context.lineTo(0, paisaruleLogoRadius);
+  context.quadraticCurveTo(0, 0, paisaruleLogoRadius, 0);
+  context.closePath();
+  context.clip();
   context.drawImage(image, 0, 0, 256, 256);
 
   const size = 30;
@@ -264,7 +278,7 @@ function addContinuationPage(document: jsPDF): number {
   document.setTextColor(0);
 
   document.text(
-    `FINORA ENTERPRISE - ${resolveBusinessReportTitle("Outstanding Loans")}`,
+    `PAISARULE - ${resolveBusinessReportTitle("Outstanding Loans")}`,
     PAGE_MARGIN_X,
     PAGE_TOP,
   );
@@ -728,7 +742,7 @@ function drawOutstandingLoansTable(
     document.setFontSize(8);
 
     document.text(
-      "No active outstanding loans are currently stored in FINORA.",
+      "No active outstanding loans are currently stored in PAISARULE.",
       PAGE_MARGIN_X,
       y,
     );
@@ -755,7 +769,7 @@ function drawOutstandingLoansTable(
 
         safeText(loan.customerMobile),
 
-        safeText(loan.loanNumber),
+        safeText(loan.loanNumber).replace(/^FIN-(?=LOAN-)/i, "PAISA-"),
 
         formatDate(loan.loanDate),
 
@@ -862,7 +876,7 @@ export async function buildOutstandingLoansPdf(): Promise<jsPDF> {
 
   const generatedAt = getReportGeneratedAt();
   const document = createFinoraPdf({
-    fileName: "FINORA_Outstanding_Loans.pdf",
+    fileName: "PAISARULE_Outstanding_Loans.pdf",
 
     title: "Outstanding Loans",
 
@@ -926,7 +940,7 @@ export async function downloadOutstandingLoansPdf(): Promise<void> {
 
   addFinoraPdfFooters(document);
 
-  downloadFinoraPdf(document, "FINORA_Outstanding_Loans.pdf");
+  downloadFinoraPdf(document, "PAISARULE_Outstanding_Loans.pdf");
 }
 
 // ============================================================
@@ -955,10 +969,10 @@ export async function shareOutstandingLoansPdf(): Promise<void> {
   await shareFinoraPdf(
     document,
 
-    "FINORA_Outstanding_Loans.pdf",
+    "PAISARULE_Outstanding_Loans.pdf",
 
     {
-      title: "FINORA Outstanding Loans",
+      title: "PAISARULE Outstanding Loans",
 
       text: `Outstanding Loans - ${report.loanCount} Loans - ${formatMoney(
         report.totalOutstanding,

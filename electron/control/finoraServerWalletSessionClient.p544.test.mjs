@@ -25,7 +25,7 @@ function challenge() {
 function session() {
   return {
     ok: true, tokenType: "Bearer", accessToken: "c".repeat(64),
-    expiresAt: new Date(Date.now() + 1800000).toISOString(),
+    expiresAt: new Date(Date.now() + 3600000).toISOString(),
   };
 }
 function response(body, status = 200) {
@@ -99,7 +99,7 @@ test("malformed token, token type and expiry never produce session success", asy
     { accessToken: "c".repeat(64) + "\n" },
     { tokenType: "OTHER" },
     { expiresAt: "invalid" },
-    { expiresAt: new Date(Date.now() + 3600000).toISOString() },
+    { expiresAt: new Date(Date.now() + 7200000).toISOString() },
   ]) {
     let calls = 0;
     const login = createClient(async () => response(

@@ -592,7 +592,7 @@ export async function clearLoanDocumentDrafts(
     );
   } catch (error) {
     console.error(
-      "FINORA LOAN DOCUMENT DRAFT CLEAR ERROR:",
+      "PAISARULE LOAN DOCUMENT DRAFT CLEAR ERROR:",
       error,
     );
   } finally {

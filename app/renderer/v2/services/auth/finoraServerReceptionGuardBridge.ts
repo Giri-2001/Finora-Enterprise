@@ -34,6 +34,7 @@ export type FinoraReceptionValidationResponse = {
   sessionId?: string;
   principal?: ServerPrincipal;
   sessionView?: ServerSessionView;
+  expiresAt?: string;
   businessDataAccess?: boolean;
   receptionCommitRequired?: boolean;
   errorCode?: string;
@@ -43,6 +44,7 @@ export type FinoraReceptionGuardCandidate =
   | {
       success: true;
       data: FinoraLoginSessionView;
+      expiresAt?: string;
       businessDataAccess: false;
     }
   | {
@@ -173,6 +175,19 @@ export function mapFinoraServerReceptionGuardCandidate(
     };
   }
 
+  // PAISARULE C85-P0-S28: expiry is server evidence, not login authority.
+  // Missing expiry is compatible with the older backend response.
+  if (
+    response.expiresAt !== undefined &&
+    (
+      typeof response.expiresAt !== "string" ||
+      !Number.isFinite(Date.parse(response.expiresAt)) ||
+      Date.parse(response.expiresAt) <= Date.now()
+    )
+  ) {
+    return { success: false, errorCode: "INVALID_SERVER_RESPONSE" };
+  }
+
   const data: FinoraLoginSessionView = {
     sessionId: v.sessionId,
     userId: v.userId,
@@ -194,6 +209,7 @@ export function mapFinoraServerReceptionGuardCandidate(
   return {
     success: true,
     data,
+    expiresAt: response.expiresAt,
     businessDataAccess: false,
   };
 }

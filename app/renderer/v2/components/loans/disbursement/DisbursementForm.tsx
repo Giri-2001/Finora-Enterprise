@@ -132,7 +132,7 @@ export default function DisbursementForm({
             <div style={inputWrapperStyle}>
               <div
                 className="finora-disbursement-date-compact"
-                title="This date is locked to the active FINORA Login Date."
+                title="This date is locked to the active PAISARULE Login Date."
               >
                 <FinoraCalendar
                   value={disbursementDate}
@@ -198,7 +198,7 @@ export default function DisbursementForm({
             <FormField label="Disbursement Date" required labelTextStyle={formLabelTextStyle}>
               <div style={inputWrapperStyle}>
                 <div
-                  title="This date is locked to the active FINORA Login Date."
+                  title="This date is locked to the active PAISARULE Login Date."
                 >
                   <FinoraCalendar
                     value={disbursementDate}

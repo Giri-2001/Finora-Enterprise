@@ -501,7 +501,7 @@ function ContextLoadingScreen() {
   return (
     <div style={loadingStyle}>
       <div style={contentStyle}>
-        <div style={titleStyle}>FINORA Enterprise</div>
+        <div style={titleStyle}>PAISARULE</div>
 
         <div style={messageStyle}>Establishing secure business context...</div>
       </div>
@@ -695,7 +695,7 @@ function BranchActivationGate({
 
   const [message, setMessage] =
     useState<string>(
-      "Checking secure FINORA branch activation...",
+      "Checking secure PAISARULE branch activation...",
     );
 
   const [retryNonce, setRetryNonce] =
@@ -769,7 +769,7 @@ function BranchActivationGate({
           );
 
           setMessage(
-            "Set up this device for a new FINORA branch.",
+            "Set up this device for a new PAISARULE branch.",
           );
         }
 
@@ -782,7 +782,7 @@ function BranchActivationGate({
         );
 
         setMessage(
-          "Checking secure FINORA branch activation...",
+          "Checking secure PAISARULE branch activation...",
         );
       }
 
@@ -800,7 +800,7 @@ function BranchActivationGate({
 
         setMessage(
           installationResult.error ??
-            "FINORA secure installation identity could not be verified.",
+            "PAISARULE secure installation identity could not be verified.",
         );
 
         return;
@@ -815,7 +815,7 @@ function BranchActivationGate({
         );
 
         setMessage(
-          "This FINORA installation has not yet been provisioned for a registered business branch.",
+          "This PAISARULE installation has not yet been provisioned for a registered business branch.",
         );
 
         return;
@@ -839,7 +839,7 @@ function BranchActivationGate({
 
         setMessage(
           activationResult.error ??
-            "FINORA branch activation could not be verified.",
+            "PAISARULE branch activation could not be verified.",
         );
 
         return;
@@ -858,14 +858,14 @@ function BranchActivationGate({
 
         if (!activation) {
           setMessage(
-            "This FINORA installation does not have an active branch activation.",
+            "This PAISARULE installation does not have an active branch activation.",
           );
 
           return;
         }
 
         setMessage(
-          `FINORA branch activation status is ${activation.status}. An ACTIVE branch activation is required before signing in.`,
+          `PAISARULE branch activation status is ${activation.status}. An ACTIVE branch activation is required before signing in.`,
         );
 
         return;
@@ -898,9 +898,9 @@ function BranchActivationGate({
 
           setMessage(
             recipientTrustResult.success
-              ? "FINORA recipient trust must be bootstrapped before signed Control Bundles can be imported."
+              ? "PAISARULE recipient trust must be bootstrapped before signed Control Bundles can be imported."
               : recipientTrustResult.error ??
-                  "FINORA recipient trust could not be verified.",
+                  "PAISARULE recipient trust could not be verified.",
           );
 
           return;
@@ -978,7 +978,7 @@ function BranchActivationGate({
           "function"
       ) {
         setEnrollmentExportMessage(
-          "FINORA Installation Enrollment Request export is unavailable in this application build.",
+          "PAISARULE Installation Enrollment Request export is unavailable in this application build.",
         );
 
         return;
@@ -990,7 +990,7 @@ function BranchActivationGate({
       if (!result.success) {
         setEnrollmentExportMessage(
           result.error ??
-            "Unable to export the FINORA Installation Enrollment Request.",
+            "Unable to export the PAISARULE Installation Enrollment Request.",
         );
 
         return;
@@ -1005,13 +1005,13 @@ function BranchActivationGate({
       }
 
       setEnrollmentExportMessage(
-        "Enrollment Request saved as " + result.fileName + ". Transfer this .finora file to FINORA Control Center for approval.",
+        "Enrollment Request saved as " + result.fileName + ". Transfer this .finora file to PAISARULE Control Center for approval.",
       );
     } catch (error) {
       setEnrollmentExportMessage(
         error instanceof Error
           ? error.message
-          : "Unable to export the FINORA Installation Enrollment Request.",
+          : "Unable to export the PAISARULE Installation Enrollment Request.",
       );
     } finally {
       setEnrollmentExporting(
@@ -1055,7 +1055,7 @@ function BranchActivationGate({
           "function"
       ) {
         setEnrollmentImportMessage(
-          "FINORA trusted Installation Enrollment Response import is unavailable in this application build.",
+          "PAISARULE trusted Installation Enrollment Response import is unavailable in this application build.",
         );
 
         return;
@@ -1087,7 +1087,7 @@ function BranchActivationGate({
         ) {
           setEnrollmentImportMessage(
             trustResult.error ??
-              "Unable to initialize FINORA release-pinned Control Center trust.",
+              "Unable to initialize PAISARULE release-pinned Control Center trust.",
           );
 
           return;
@@ -1102,7 +1102,7 @@ function BranchActivationGate({
       if (!result.success) {
         setEnrollmentImportMessage(
           result.error ??
-            "Unable to import the FINORA Installation Enrollment Response.",
+            "Unable to import the PAISARULE Installation Enrollment Response.",
         );
 
         return;
@@ -1121,7 +1121,7 @@ function BranchActivationGate({
           result.businessCode +
           " / " +
           result.branchCode +
-          ". Continue with the signed FINORA Control Bundle, then check activation.",
+          ". Continue with the signed PAISARULE Control Bundle, then check activation.",
       );
 
       handleRetry();
@@ -1130,7 +1130,7 @@ function BranchActivationGate({
       setEnrollmentImportMessage(
         error instanceof Error
           ? error.message
-          : "Unable to import the FINORA Installation Enrollment Response.",
+          : "Unable to import the PAISARULE Installation Enrollment Response.",
       );
 
     } finally {
@@ -1168,7 +1168,7 @@ function BranchActivationGate({
           "function"
       ) {
         setControlBundleImportMessage(
-          "FINORA Control Bundle import is unavailable in this application build.",
+          "PAISARULE Control Bundle import is unavailable in this application build.",
         );
 
         return;
@@ -1180,7 +1180,7 @@ function BranchActivationGate({
       if (!result.success) {
         setControlBundleImportMessage(
           result.error ??
-            "Unable to import the FINORA Control Bundle.",
+            "Unable to import the PAISARULE Control Bundle.",
         );
 
         return;
@@ -1188,14 +1188,14 @@ function BranchActivationGate({
 
       if (result.cancelled) {
         setControlBundleImportMessage(
-          "FINORA Control Bundle import was cancelled.",
+          "PAISARULE Control Bundle import was cancelled.",
         );
 
         return;
       }
 
       setControlBundleImportMessage(
-        "FINORA Control Bundle " +
+        "PAISARULE Control Bundle " +
           result.fileName +
           " was verified and applied. Rechecking branch activation.",
       );
@@ -1213,7 +1213,7 @@ function BranchActivationGate({
       setControlBundleImportMessage(
         error instanceof Error
           ? error.message
-          : "Unable to import the FINORA Control Bundle.",
+          : "Unable to import the PAISARULE Control Bundle.",
       );
 
     } finally {
@@ -1269,7 +1269,7 @@ function BranchActivationGate({
       }
 
       setCredentialAuthorizationImportMessage(
-        `FINORA Credential Authorization ${String(result.fileName ?? "")} was verified and applied.`,
+        `PAISARULE Credential Authorization ${String(result.fileName ?? "")} was verified and applied.`,
       );
     }
     catch (error) {
@@ -1331,7 +1331,7 @@ function BranchActivationGate({
       }
 
       setPricingUpdateImportMessage(
-        `FINORA Pricing Update ${String(result.fileName ?? "")} was verified and applied.`,
+        `PAISARULE Pricing Update ${String(result.fileName ?? "")} was verified and applied.`,
       );
     }
     catch (error) {
@@ -1565,7 +1565,7 @@ function AuthenticatedApplication() {
 
       if (!session.sessionId) {
         await rejectUnverifiedSession(
-          "The persisted FINORA session does not contain a secure session ID.",
+          "The persisted PAISARULE session does not contain a secure session ID.",
         );
 
         return;
@@ -1625,7 +1625,7 @@ function AuthenticatedApplication() {
           "function"
       ) {
         await rejectUnverifiedSession(
-          "FINORA secure login-session validation is unavailable in this application build.",
+          "PAISARULE secure login-session validation is unavailable in this application build.",
         );
 
         return;
@@ -1669,7 +1669,7 @@ if (!validationResult) {
   setContextReady(false);
 
   setContextError(
-    "FINORA secure session could not be revalidated after renderer reload. Please retry the reload.",
+    "PAISARULE secure session could not be revalidated after renderer reload. Please retry the reload.",
   );
 
   return;
@@ -1737,7 +1737,7 @@ if (!validationResult) {
             String(validationResult.errorCode ?? "UNKNOWN") +
             "]. " +
             (validationResult.error ??
-              "The persisted FINORA login session is no longer valid."),
+              "The persisted PAISARULE login session is no longer valid."),
         );
 
         return;
@@ -1846,7 +1846,7 @@ if (!validationResult) {
 
       if (!persistedRevalidatedSession) {
         await rejectUnverifiedSession(
-          "The authoritative FINORA login session could not be reconciled with the renderer session.",
+          "The authoritative PAISARULE login session could not be reconciled with the renderer session.",
         );
 
         return;
@@ -2110,7 +2110,7 @@ if (!validationResult) {
 
       if (accessGrant.storageMode !== legacyStorageMode) {
         await denyAuthenticatedBranchAccess(
-          "FINORA signed Branch Access storage entitlement mismatch."
+          "PAISARULE signed Branch Access storage entitlement mismatch."
         );
         return;
       }
@@ -2164,9 +2164,9 @@ if (!validationResult) {
 
         setContextReady(true);
 
-        setContextError("Authenticated FINORA storage mode is missing or invalid.");
+        setContextError("Authenticated PAISARULE storage mode is missing or invalid.");
         setLoginRejectionError(
-          "Authenticated FINORA storage mode is missing or invalid.",
+          "Authenticated PAISARULE storage mode is missing or invalid.",
         );
 
         window.sessionStorage.setItem(
@@ -2194,7 +2194,7 @@ if (!validationResult) {
       /*
        * MAIN-PROCESS SESSION AUTHORITY OWNS STORAGE ENTITLEMENT.
        *
-       * At this point the opaque FINORA login session has already been
+       * At this point the opaque PAISARULE login session has already been
        * revalidated by Electron main. The main login/session authority
        * verifies the signed Branch Access Grant, exact branch scope and
        * logical LOCAL/USB storage entitlement.
@@ -2229,7 +2229,7 @@ if (!validationResult) {
 
         setContextError(
           storageResult.error ??
-            "Unable to restore the authenticated FINORA storage mode.",
+            "Unable to restore the authenticated PAISARULE storage mode.",
         );
 
         return;
@@ -2360,7 +2360,7 @@ if (!validationResult) {
           setContextReady(false);
 
           setContextError(
-            "FINORA legacy USB tenant-scope migration capability is unavailable.",
+            "PAISARULE legacy USB tenant-scope migration capability is unavailable.",
           );
 
           return;
@@ -2385,7 +2385,7 @@ if (!validationResult) {
 
             setContextError(
               migrationResult.error ||
-                "Unable to establish the authenticated FINORA USB tenant scope.",
+                "Unable to establish the authenticated PAISARULE USB tenant scope.",
             );
 
             return;
@@ -2471,7 +2471,7 @@ if (!validationResult) {
           storageManager.setAuthenticatedSessionId(undefined);
           setContextReady(false);
           setContextError(
-            "FINORA server-verified USB session handoff failed."
+            "PAISARULE server-verified USB session handoff failed."
           );
           return;
         }
@@ -3251,7 +3251,7 @@ function AuthenticatedV2Application({
             !branchId
           ) {
             void finoraError(
-              "Please recharge your wallet to unlock this button.",
+              "An ACTIVE PAISARULE subscription is required.",
             );
 
             return;
@@ -3267,7 +3267,7 @@ function AuthenticatedV2Application({
           if (!gateResult.canEnter) {
             void finoraError(
               gateResult.message ??
-                "Please recharge your wallet to unlock this button.",
+                "An ACTIVE PAISARULE subscription is required.",
             );
 
             return;
@@ -3281,7 +3281,7 @@ function AuthenticatedV2Application({
           );
 
           void finoraError(
-            "Please recharge your wallet to unlock this button.",
+            "An ACTIVE PAISARULE subscription is required.",
           );
         }
       })();
@@ -3368,7 +3368,7 @@ function AuthenticatedV2Application({
           if (!gateResult.canEnter) {
             void finoraError(
               gateResult.message ??
-                "Please recharge your wallet to unlock this button.",
+                "An ACTIVE PAISARULE subscription is required.",
             );
             return;
           }
@@ -3712,7 +3712,7 @@ function AuthenticatedV2Application({
               collectionCreateGate?.canEnter
                 ? undefined
                 : collectionCreateGate?.message ??
-                  "Please recharge your wallet to unlock this button."
+                  "An ACTIVE PAISARULE subscription is required."
             }
           />
         )}
@@ -3754,7 +3754,7 @@ function AuthenticatedV2Application({
         {page === "settings" && <SettingsPage />}
 
         {/* ==================================================
-            FINORA WALLET
+            PAISARULE WALLET
         ================================================== */}
 
         {page === "wallet" && (

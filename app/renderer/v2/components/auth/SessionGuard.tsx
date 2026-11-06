@@ -41,7 +41,7 @@ import { getFinoraLoginSessionBridge } from "../../services/auth/loginSessionBri
 // IMPORTS
 // ============================================================
 
-import { useEffect, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 
 import {
   getSession,
@@ -58,11 +58,20 @@ type SessionGuardProps = {
   children: React.ReactNode;
 };
 
+// PAISARULE C85-P0-S32: display evidence only, never auth.
+export type PaisaruleSessionExpiryEvidence = {
+  sessionId: string;
+  expiresAt: string | null;
+} | null;
+
+export const PaisaruleSessionExpiryContext =
+  createContext<PaisaruleSessionExpiryEvidence>(null);
+
 const FINORA_MAIN_SESSION_TOUCH_THROTTLE_MS =
   30_000;
 
 const FINORA_MAIN_SESSION_VALIDATE_INTERVAL_MS =
-  600_000;
+  60_000;
 
 // ============================================================
 // COMPONENT
@@ -78,12 +87,17 @@ export default function SessionGuard({
   // A rejected session locks the UI without automatic logout/reload.
   const [sessionSecurityLocked, setSessionSecurityLocked] =
     useState(false);
+  const [sessionFailureReason, setSessionFailureReason] = useState<string | null>(null);
+
+  const [sessionExpiryEvidence, setSessionExpiryEvidence] =
+    useState<PaisaruleSessionExpiryEvidence>(null);
 
   // ==========================================================
   // SESSION ACTIVITY / EXPIRATION MONITOR
   // ==========================================================
 
   useEffect(() => {
+    console.warn("[PAISARULE A16 GUARD MOUNT]");
     const activityEvents = [
       // FINORA_R195_C3_R1_ACTIVITY
       "click",
@@ -113,11 +127,14 @@ export default function SessionGuard({
         "SERVER_UNAVAILABLE",
         "SERVER_REVALIDATION_FAILED",
         "SERVER_TOUCH_UNAVAILABLE",
+        "INVALID_SERVER_RESPONSE",
         "ANDROID_SERVER_REVALIDATION_FAILED",
       ].includes(code);
 
     function lockForNetworkRecovery(): void {
       if (!forcedExit) {
+        console.warn("[PAISARULE A16 NETWORK LOCK]");
+        setSessionExpiryEvidence(null);
         setServerTemporarilyUnavailable(true);
       }
     }
@@ -138,6 +155,7 @@ export default function SessionGuard({
 
       forcedExit =
         true;
+      setSessionExpiryEvidence(null);
 
       // FINORA_P1_707I_SECURE_SESSION_EXIT
       // Clear the renderer USB authority before removing the session.
@@ -157,7 +175,8 @@ export default function SessionGuard({
       // Preserve the window and login view; do not automatically
       // navigate or reload after a rejected security session.
       // Protected children stay unmounted until user reauthenticates.
-      setSessionSecurityLocked(true);
+      setSessionFailureReason(/^[A-Z][A-Z0-9_]{0,90}$/.test(reason) ? reason : "UNCLASSIFIED");
+        setSessionSecurityLocked(true);
     }
 
     // --------------------------------------------------------
@@ -220,6 +239,30 @@ export default function SessionGuard({
             getSession()?.sessionId !== session.sessionId
           ) {
             forceSessionExit();
+          } else {
+            // PAISARULE C85-P0-S37-A13
+            // A missing expiry must not erase still-valid
+            // evidence for the exact same session.
+            // This is display-only, never authorization.
+            setSessionExpiryEvidence(previous => {
+              const previousExpiry =
+                previous?.sessionId === session.sessionId
+                  ? previous.expiresAt
+                  : null;
+              const previousExpiryMs = previousExpiry
+                ? Date.parse(previousExpiry)
+                : NaN;
+              const retainedExpiry =
+                Number.isFinite(previousExpiryMs) &&
+                previousExpiryMs > Date.now()
+                  ? previousExpiry
+                  : null;
+
+              return {
+                sessionId: session.sessionId,
+                expiresAt: result.expiresAt ?? retainedExpiry,
+              };
+            });
           }
         } catch {
           lockForNetworkRecovery();
@@ -356,6 +399,29 @@ export default function SessionGuard({
           if (!persisted) {
             forceSessionExit();
           } else {
+            // PAISARULE C85-P0-S37-A13
+            // A missing expiry must not erase still-valid
+            // evidence for the exact same session.
+            // This is display-only, never authorization.
+            setSessionExpiryEvidence(previous => {
+              const previousExpiry =
+                previous?.sessionId === session.sessionId
+                  ? previous.expiresAt
+                  : null;
+              const previousExpiryMs = previousExpiry
+                ? Date.parse(previousExpiry)
+                : NaN;
+              const retainedExpiry =
+                Number.isFinite(previousExpiryMs) &&
+                previousExpiryMs > Date.now()
+                  ? previousExpiry
+                  : null;
+
+              return {
+                sessionId: session.sessionId,
+                expiresAt: result.expiresAt ?? retainedExpiry,
+              };
+            });
             setServerTemporarilyUnavailable(false);
           }
         } catch {
@@ -489,6 +555,15 @@ export default function SessionGuard({
     // PERIODIC AUTHORITATIVE SESSION CHECK
     // --------------------------------------------------------
 
+    // PAISARULE C85-P0-S37-A9-R2
+    // Initial read-only verification; never touch.
+    // Only an already authenticated server session qualifies.
+    const initialSession = getSession();
+
+    if (initialSession && /^[a-f0-9]{64}$/.test(initialSession.sessionId)) {
+      void validateMainSession();
+    }
+
     const interval =
       window.setInterval(
         () => {
@@ -502,6 +577,7 @@ export default function SessionGuard({
     // --------------------------------------------------------
 
     return () => {
+      console.warn("[PAISARULE A16 GUARD UNMOUNT]");
       activityEvents.forEach(
         (event) => {
           window.removeEventListener(
@@ -541,13 +617,13 @@ export default function SessionGuard({
         fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
       }}
     >
-      <strong>FINORA - Session verification required</strong>
+      <strong>PAISARULE - Session verification required{sessionFailureReason ? ` [${sessionFailureReason}]` : ""}</strong>
       <span>
         The active session could not be authorized.
         Protected operations are locked.
       </span>
       <span>
-        FINORA will not automatically log out or reload this window.
+        PAISARULE will not automatically log out or reload this window.
       </span>
       <button
         type="button"
@@ -590,14 +666,16 @@ export default function SessionGuard({
         padding: 24,
       }}
     >
-      <strong>FINORA - Connection verification required</strong>
+      <strong>PAISARULE - Connection verification required</strong>
       <span>
         Server unavailable. Reception is temporarily locked.
       </span>
       <span>Automatic session verification retries every 60 seconds.</span>
     </div>
   ) : (
-    <>{children}</>
+    <PaisaruleSessionExpiryContext.Provider value={sessionExpiryEvidence}>
+      {children}
+    </PaisaruleSessionExpiryContext.Provider>
   );
 
 }

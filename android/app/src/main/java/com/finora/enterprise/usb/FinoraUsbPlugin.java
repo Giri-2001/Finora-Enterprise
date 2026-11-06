@@ -808,4 +808,538 @@ public final class FinoraUsbPlugin
 
         return error.getMessage();
     }
+
+    // ========================================================
+    // PAISARULE_R175_C3
+    //
+    // Restore-specific Android SAF tree selection.
+    //
+    // Does not change the currently configured USB.
+    // Does not write business data or initiate restore.
+    // ========================================================
+
+    private android.net.Uri paisarulePendingRestoreUsbUri;
+
+    @PluginMethod
+    public void requestPaisaruleRestoreUsb(
+        PluginCall call
+    ) {
+        try {
+            paisarulePendingRestoreUsbUri = null;
+
+            android.content.Intent intent =
+                new android.content.Intent(
+                    android.content.Intent.ACTION_OPEN_DOCUMENT_TREE
+                );
+
+            intent.addFlags(
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION |
+                android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION |
+                android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION |
+                android.content.Intent.FLAG_GRANT_PREFIX_URI_PERMISSION
+            );
+
+            startActivityForResult(
+                call,
+                intent,
+                "paisaruleRestoreUsbSelected"
+            );
+
+        } catch (Exception error) {
+            call.reject(
+                "RESTORE_USB_PICKER_UNAVAILABLE"
+            );
+        }
+    }
+
+    @ActivityCallback
+    private void paisaruleRestoreUsbSelected(
+        PluginCall call,
+        androidx.activity.result.ActivityResult result
+    ) {
+        if (call == null) {
+            return;
+        }
+
+        paisarulePendingRestoreUsbUri = null;
+
+        if (
+            result == null ||
+            result.getResultCode() !=
+                android.app.Activity.RESULT_OK
+        ) {
+            call.reject(
+                "RESTORE_USB_SELECTION_CANCELLED"
+            );
+            return;
+        }
+
+        android.content.Intent data =
+            result.getData();
+
+        if (data == null || data.getData() == null) {
+            call.reject(
+                "RESTORE_USB_SELECTION_MISSING"
+            );
+            return;
+        }
+
+        android.net.Uri selectedUri = data.getData();
+
+        int flags = data.getFlags();
+
+        int permissionFlags =
+            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION |
+            android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
+
+        if ((flags & permissionFlags) != permissionFlags) {
+            call.reject(
+                "RESTORE_USB_READ_WRITE_PERMISSION_REQUIRED"
+            );
+            return;
+        }
+
+        boolean alreadyPersisted = false;
+        boolean newlyPersisted = false;
+        boolean verified = false;
+
+        try {
+            // Identify whether this exact tree already has
+            // a persisted read/write grant. Never revoke an
+            // existing grant owned by another app workflow.
+
+            java.util.List<android.content.UriPermission> grants =
+                getContext().getContentResolver()
+                    .getPersistedUriPermissions();
+
+            if (grants != null) {
+                for (android.content.UriPermission grant : grants) {
+                    if (
+                        selectedUri.equals(grant.getUri()) &&
+                        grant.isReadPermission() &&
+                        grant.isWritePermission()
+                    ) {
+                        alreadyPersisted = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!alreadyPersisted) {
+                getContext().getContentResolver()
+                    .takePersistableUriPermission(
+                        selectedUri,
+                        permissionFlags
+                    );
+
+                newlyPersisted = true;
+            }
+
+            // This verifies:
+            // 1. externalstorage SAF tree authority
+            // 2. root-level removable volume UUID
+            // 3. persisted read/write permission
+            // 4. matching mounted removable StorageVolume
+            // 5. completely empty selected USB root
+
+            com.finora.enterprise.usb
+                .PaisaruleRestoreUsbVerifier
+                .requireNewEmptyRemovableRoot(
+                    getContext(),
+                    selectedUri
+                );
+
+            // In-memory candidate only. No saved USB
+            // preferences are modified.
+            paisarulePendingRestoreUsbUri = selectedUri;
+
+            verified = true;
+
+            com.getcapacitor.JSObject response =
+                new com.getcapacitor.JSObject();
+
+            response.put("verified", true);
+            response.put("emptyRoot", true);
+            response.put("restoreExecuted", false);
+
+            call.resolve(response);
+
+        } catch (Exception error) {
+            paisarulePendingRestoreUsbUri = null;
+
+            call.reject(
+                "RESTORE_USB_VERIFICATION_FAILED",
+                error
+            );
+
+        } finally {
+            // If verification failed, release only the
+            // newly acquired permission.
+            //
+            // Permissions that existed before this picker
+            // must remain untouched.
+
+            if (
+                !verified &&
+                newlyPersisted &&
+                !alreadyPersisted
+            ) {
+                try {
+                    getContext().getContentResolver()
+                        .releasePersistableUriPermission(
+                            selectedUri,
+                            permissionFlags
+                        );
+                } catch (Exception ignored) {
+                    // Never mask the original verification error.
+                }
+            }
+        }
+    }
+
+    // ========================================================
+    // PAISARULE_R175_C4
+    //
+    // User-selected encrypted .paisarule file.
+    //
+    // No plaintext is read or sent to JavaScript.
+    // No persisted URI grants, USB writes or restore.
+    //
+    // A subsequent privileged restore operation must
+    // authenticate the Owner, check the live session
+    // and verify the selected backup's branch scope.
+    // ========================================================
+
+    private android.net.Uri paisarulePendingBackupUri;
+
+    private static final long PAISARULE_MAX_BACKUP_BYTES =
+        96L * 1024L * 1024L;
+
+    // ========================================================
+    // PAISARULE_R175_C26
+    // Selected Backup + USB verification only.
+    // No Restore write. No credentials supplied by JS.
+    // ========================================================
+
+    @PluginMethod
+    public void verifyPaisaruleRestoreSelection(
+        PluginCall call
+    ) {
+        android.net.Uri selectedUsb =
+            paisarulePendingRestoreUsbUri;
+
+        android.net.Uri selectedBackup =
+            paisarulePendingBackupUri;
+
+        if (
+            selectedUsb == null ||
+            selectedBackup == null
+        ) {
+            call.reject(
+                "RESTORE_SELECTION_REQUIRED"
+            );
+            return;
+        }
+
+        try {
+            // Recheck the user-selected new empty USB.
+            // This must not use the active business USB.
+            PaisaruleRestoreUsbVerifier
+                .requireNewEmptyRemovableRoot(
+                    getContext(),
+                    selectedUsb
+                );
+
+            // Recheck the selected encrypted backup,
+            // current server-authorized Owner session,
+            // scope, encryption tag and file hashes.
+            //
+            // Returns no plaintext or key to JS.
+            com.finora.enterprise.control
+                .PaisaruleRestoreSessionBridge
+                .verifySelectedBackup(
+                    getContext(),
+                    selectedBackup
+                );
+
+            com.getcapacitor.JSObject response =
+                new com.getcapacitor.JSObject();
+
+            response.put("verified", true);
+            response.put("restoreWritten", false);
+
+            call.resolve(response);
+
+        } catch (Exception error) {
+            // A failed validation invalidates the selection.
+            // The user must explicitly select both again.
+            paisarulePendingRestoreUsbUri = null;
+            paisarulePendingBackupUri = null;
+
+            // Do not expose crypto or identity details.
+            call.reject(
+                "RESTORE_VERIFICATION_FAILED"
+            );
+        }
+    }
+    // ========================================================
+    // PAISARULE_R175_C31
+    // Explicitly confirmed Restore to newly selected USB.
+    // ========================================================
+
+    @PluginMethod
+    public void commitPaisaruleRestoreToNewUsb(
+        PluginCall call
+    ) {
+        String confirmation =
+            call.getString("confirmation", "");
+
+        if (!"RESTORE_TO_NEW_EMPTY_USB".equals(
+            confirmation
+        )) {
+            call.reject("RESTORE_CONFIRMATION_REQUIRED");
+            return;
+        }
+
+        android.net.Uri selectedUsb =
+            paisarulePendingRestoreUsbUri;
+
+        android.net.Uri selectedBackup =
+            paisarulePendingBackupUri;
+
+        if (
+            selectedUsb == null ||
+            selectedBackup == null
+        ) {
+            call.reject("RESTORE_SELECTION_REQUIRED");
+            return;
+        }
+
+        // One-shot selection: no accidental repeated commits.
+        paisarulePendingRestoreUsbUri = null;
+        paisarulePendingBackupUri = null;
+
+        try {
+            // Authenticated native session re-verification,
+            // AES-GCM verification, original file hashes,
+            // new removable empty USB validation and
+            // read-back verified writes happen downstream.
+            com.finora.enterprise.control
+                .PaisaruleRestoreSessionBridge
+                .commitSelectedBackup(
+                    getContext(),
+                    selectedBackup,
+                    selectedUsb
+                );
+
+            com.getcapacitor.JSObject response =
+                new com.getcapacitor.JSObject();
+
+            response.put("success", true);
+            response.put("restoreWritten", true);
+
+            call.resolve(response);
+
+        } catch (Exception error) {
+            // Never expose secrets, scope or file contents.
+            call.reject("RESTORE_COMMIT_FAILED");
+        }
+    }
+    @PluginMethod
+    public void requestPaisaruleRestoreBackup(
+        PluginCall call
+    ) {
+        paisarulePendingBackupUri = null;
+
+        try {
+            android.content.Intent intent =
+                new android.content.Intent(
+                    android.content.Intent.ACTION_OPEN_DOCUMENT
+                );
+
+            intent.addCategory(
+                android.content.Intent.CATEGORY_OPENABLE
+            );
+
+            intent.setType("*/*");
+
+            intent.addFlags(
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            );
+
+            startActivityForResult(
+                call,
+                intent,
+                "paisaruleRestoreBackupSelected"
+            );
+
+        } catch (Exception error) {
+            call.reject(
+                "RESTORE_BACKUP_PICKER_UNAVAILABLE"
+            );
+        }
+    }
+
+    @ActivityCallback
+    private void paisaruleRestoreBackupSelected(
+        PluginCall call,
+        androidx.activity.result.ActivityResult result
+    ) {
+        if (call == null) {
+            return;
+        }
+
+        paisarulePendingBackupUri = null;
+
+        if (
+            result == null ||
+            result.getResultCode() !=
+                android.app.Activity.RESULT_OK
+        ) {
+            call.reject(
+                "RESTORE_BACKUP_SELECTION_CANCELLED"
+            );
+            return;
+        }
+
+        android.content.Intent data =
+            result.getData();
+
+        if (data == null || data.getData() == null) {
+            call.reject(
+                "RESTORE_BACKUP_SELECTION_MISSING"
+            );
+            return;
+        }
+
+        android.net.Uri uri = data.getData();
+
+        if (
+            !"content".equals(uri.getScheme()) ||
+            (data.getFlags() &
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                == 0
+        ) {
+            call.reject(
+                "RESTORE_BACKUP_READ_PERMISSION_REQUIRED"
+            );
+            return;
+        }
+
+        String displayName = null;
+        long fileSize = -1L;
+
+        try (
+            android.database.Cursor cursor =
+                getContext().getContentResolver().query(
+                    uri,
+                    new String[] {
+                        android.provider.OpenableColumns.DISPLAY_NAME,
+                        android.provider.OpenableColumns.SIZE
+                    },
+                    null,
+                    null,
+                    null
+                )
+        ) {
+            if (
+                cursor == null ||
+                !cursor.moveToFirst()
+            ) {
+                throw new IllegalStateException(
+                    "RESTORE_BACKUP_METADATA_UNAVAILABLE"
+                );
+            }
+
+            int nameColumn = cursor.getColumnIndex(
+                android.provider.OpenableColumns.DISPLAY_NAME
+            );
+
+            int sizeColumn = cursor.getColumnIndex(
+                android.provider.OpenableColumns.SIZE
+            );
+
+            if (
+                nameColumn < 0 ||
+                sizeColumn < 0 ||
+                cursor.isNull(nameColumn) ||
+                cursor.isNull(sizeColumn)
+            ) {
+                throw new IllegalStateException(
+                    "RESTORE_BACKUP_METADATA_INCOMPLETE"
+                );
+            }
+
+            displayName = cursor.getString(nameColumn);
+            fileSize = cursor.getLong(sizeColumn);
+
+        } catch (Exception error) {
+            call.reject(
+                "RESTORE_BACKUP_METADATA_INVALID"
+            );
+            return;
+        }
+
+        if (
+            displayName == null ||
+            !displayName.toLowerCase(
+                java.util.Locale.ROOT
+            ).endsWith(".paisarule") ||
+            fileSize <= 0L ||
+            fileSize > PAISARULE_MAX_BACKUP_BYTES
+        ) {
+            call.reject(
+                "RESTORE_BACKUP_FILE_INVALID"
+            );
+            return;
+        }
+
+        // Metadata is only an initial preflight.
+        // A future restore operation MUST read with
+        // strict byte limits and verify AES-GCM,
+        // payload schema, scope and SHA256 again.
+        //
+        // Keep the URI private to native memory.
+        // Never return URI, key, or file contents to JS.
+
+        paisarulePendingBackupUri = uri;
+
+        com.getcapacitor.JSObject response =
+            new com.getcapacitor.JSObject();
+
+        response.put("selected", true);
+        // PAISARULE_R175_C79_R2
+        // Filename only; never expose content URI or storage path.
+        String paisaruleSafeFileName =
+            displayName.replace('\\', '/');
+
+        int paisaruleSlash =
+            paisaruleSafeFileName.lastIndexOf('/');
+
+        if (paisaruleSlash >= 0) {
+            paisaruleSafeFileName =
+                paisaruleSafeFileName.substring(
+                    paisaruleSlash + 1
+                );
+        }
+
+        paisaruleSafeFileName =
+            paisaruleSafeFileName.replaceAll(
+                "[\\p{Cntrl}]",
+                ""
+            );
+
+        if (paisaruleSafeFileName.length() > 160) {
+            paisaruleSafeFileName =
+                paisaruleSafeFileName.substring(
+                    paisaruleSafeFileName.length() - 160
+                );
+        }
+        response.put("fileName", paisaruleSafeFileName);
+        response.put("fileType", "paisarule");
+        response.put("fileSizeBytes", fileSize);
+        response.put("restoreExecuted", false);
+
+        call.resolve(response);
+    }
 }

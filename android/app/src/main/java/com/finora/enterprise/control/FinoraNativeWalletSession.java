@@ -13,6 +13,10 @@ final class FinoraNativeWalletSession {
 
     // Volatile process memory only: never WebView, disk, USB or logs.
     private static String bearerToken;
+    private static java.time.Instant walletExpiresAt;
+    private static long walletSessionGeneration = 0L;
+    private static boolean walletRotationInFlight = false;
+    private static long walletRotationFlightGeneration = -1L;
     // FINORA_P1_720X2
     // Session credentials stay in native process memory.
     private static String verifiedBusinessSessionId;
@@ -58,7 +62,12 @@ final class FinoraNativeWalletSession {
     }
 
     static synchronized void clear() {
+        PaisaruleAndroidBackupKeyAuthority.clear();
         bearerToken = null;
+        walletExpiresAt = null;
+        walletSessionGeneration++;
+        walletRotationInFlight = false;
+        walletRotationFlightGeneration = -1L;
         authenticatedLoginUsername = null;
         verifiedBusinessSessionId = null;
         receptionHandle = null;
@@ -89,7 +98,27 @@ final class FinoraNativeWalletSession {
             return failure("INVALID_SERVER_TOKEN");
         }
 
+        // PAISARULE R155: Server-issued Wallet expiry authority.
+        // Never derive Wallet expiry from the Android login clock.
+        final String walletExpiryText = server.optString("expiresAt", "");
+        final java.time.Instant validatedWalletExpiry;
+        try {
+            validatedWalletExpiry = java.time.Instant.parse(walletExpiryText);
+        } catch (Exception invalidExpiry) {
+            return failure("WALLET_EXPIRY_INVALID");
+        }
+
+        final java.time.Instant walletExpiryCheckNow =
+            java.time.Instant.now();
+
+        if (!validatedWalletExpiry.isAfter(walletExpiryCheckNow) ||
+            validatedWalletExpiry.isAfter(
+                walletExpiryCheckNow.plusSeconds(3900L))) {
+            return failure("WALLET_EXPIRY_INVALID");
+        }
+
         bearerToken = token;
+        walletExpiresAt = validatedWalletExpiry;
         JSONObject wallet = fetchBalance();
 
         if (wallet == null) {
@@ -141,6 +170,14 @@ final class FinoraNativeWalletSession {
             result.optBoolean("businessSessionVerified", false)
                 ? username.trim()
                 : null;
+
+        if (result.optBoolean("businessSessionVerified", false)) {
+            PaisaruleAndroidBackupKeyAuthority.captureVerifiedLogin(
+                password,
+                verifiedBusinessPrincipal,
+                walletSessionGeneration
+            );
+        }
 
         return result;
     }
@@ -416,6 +453,506 @@ final class FinoraNativeWalletSession {
     }
     // FINORA_P1_720X2_SERVER_REVALIDATION
     // No credential or bearer token returned to JavaScript.
+    /**
+     * PAISARULE R172-B9
+     *
+     * Native-only authorized Business Backup preparation.
+     *
+     * Must never be exposed as a renderer-facing method.
+     * Only the later trusted native Save As handler may call it.
+     *
+     * No plaintext, encryption key, or server credential
+     * is returned to JavaScript.
+     */
+
+    // PAISARULE_R175_C25_AUTHENTICATED_RESTORE
+    // Native-only verified Restore preparation.
+    // Does not write files or expose decrypted data to JS.
+    // ========================================================
+    // PAISARULE_R175_C27_AUTHENTICATED_COMMIT
+    //
+    // Native internal use only.
+    // Not exposed through a Capacitor PluginMethod.
+    //
+    // Session lock spans verification, decryption and
+    // the entire USB transaction.
+    // ========================================================
+
+    static synchronized void
+    commitPaisaruleAndroidRestoreToNewUsb(
+        android.content.Context context,
+        android.net.Uri selectedBackupUri,
+        android.net.Uri selectedUsbUri
+    ) throws Exception {
+
+        if (
+            context == null ||
+            selectedBackupUri == null ||
+            selectedUsbUri == null
+        ) {
+            throw new IllegalArgumentException(
+                "RESTORE_SELECTION_REQUIRED"
+            );
+        }
+
+        byte[][] verifiedFiles = null;
+
+        try {
+            // This method revalidates the server-backed
+            // Owner business session, scoped key and
+            // encrypted backup payload.
+            verifiedFiles =
+                preparePaisaruleAndroidRestoreVerifiedFiles(
+                    context,
+                    selectedBackupUri
+                );
+
+            if (
+                verifiedFiles == null ||
+                verifiedFiles.length != 2 ||
+                verifiedFiles[0] == null ||
+                verifiedFiles[1] == null
+            ) {
+                throw new IllegalStateException(
+                    "RESTORE_VERIFIED_FILES_INVALID"
+                );
+            }
+
+            // Revalidate the removable target and commit
+            // under the same native session lock.
+            com.finora.enterprise.usb
+                .PaisaruleRestoreUsbCommitBridge
+                .commitVerifiedFiles(
+                    context,
+                    selectedUsbUri,
+                    verifiedFiles
+                );
+
+        } finally {
+            // Clear decrypted original storage bytes,
+            // including when USB write or readback fails.
+            if (verifiedFiles != null) {
+                for (byte[] file : verifiedFiles) {
+                    if (file != null) {
+                        java.util.Arrays.fill(
+                            file,
+                            (byte) 0
+                        );
+                    }
+                }
+            }
+        }
+    }
+    static synchronized byte[][]
+    preparePaisaruleAndroidRestoreVerifiedFiles(
+        android.content.Context context,
+        android.net.Uri selectedBackupUri
+    ) throws Exception {
+
+        if (context == null ||
+            selectedBackupUri == null ||
+            !"content".equals(selectedBackupUri.getScheme())) {
+            throw new IllegalArgumentException(
+                "RESTORE_BACKUP_INPUT_INVALID"
+            );
+        }
+
+        final long expectedGeneration = walletSessionGeneration;
+
+        if (expectedGeneration <= 0L ||
+            verifiedBusinessSessionId == null ||
+            verifiedBusinessPrincipal == null ||
+            verifiedWalletPrincipal == null) {
+            throw new IllegalStateException(
+                "RESTORE_BUSINESS_SESSION_REQUIRED"
+            );
+        }
+
+        org.json.JSONObject authority = verifiedBusinessAuthority();
+
+        if (!authority.optBoolean("success", false) ||
+            !"BUSINESS_RECEPTION".equals(
+                authority.optString("sessionType", "")) ||
+            !authority.optBoolean("businessDataAccess", false)) {
+            PaisaruleAndroidBackupKeyAuthority.clear();
+            throw new IllegalStateException(
+                "RESTORE_SERVER_SESSION_INVALID"
+            );
+        }
+
+        if (walletSessionGeneration != expectedGeneration) {
+            throw new IllegalStateException(
+                "RESTORE_LOGIN_CHANGED"
+            );
+        }
+
+        org.json.JSONObject principal =
+            authority.optJSONObject("principal");
+
+        if (principal == null ||
+            !"OWNER".equals(principal.optString("role", "")) ||
+            !"USB".equalsIgnoreCase(
+                principal.optString("storageMode", ""))) {
+            throw new IllegalStateException(
+                "RESTORE_OWNER_NOT_AUTHORIZED"
+            );
+        }
+
+        byte[] scopedKey =
+            PaisaruleAndroidBackupKeyAuthority
+                .copyForVerifiedScope(
+                    principal,
+                    expectedGeneration
+                );
+
+        if (scopedKey == null || scopedKey.length != 32) {
+            if (scopedKey != null) {
+                java.util.Arrays.fill(scopedKey, (byte) 0);
+            }
+            throw new IllegalStateException(
+                "RESTORE_SCOPED_KEY_UNAVAILABLE"
+            );
+        }
+
+        try {
+            byte[][] files =
+                PaisaruleAndroidBackupRestorePrepare
+                    .prepareSelectedBackup(
+                        context,
+                        selectedBackupUri,
+                        scopedKey,
+                        principal
+                    );
+
+            if (walletSessionGeneration != expectedGeneration) {
+                for (byte[] file : files) {
+                    if (file != null) {
+                        java.util.Arrays.fill(file, (byte) 0);
+                    }
+                }
+                throw new IllegalStateException(
+                    "RESTORE_LOGIN_CHANGED"
+                );
+            }
+
+            return files;
+        } finally {
+            java.util.Arrays.fill(scopedKey, (byte) 0);
+        }
+    }
+    static synchronized PaisaruleAndroidStorageBackupExport.Result
+    preparePaisaruleAndroidBusinessBackup(
+        com.finora.enterprise.usb.FinoraUsbStorage storage
+    ) throws Exception {
+
+        if (storage == null) {
+            throw new IllegalStateException(
+                "BACKUP_USB_STORAGE_REQUIRED"
+            );
+        }
+
+        final long expectedGeneration =
+            walletSessionGeneration;
+
+        if (verifiedBusinessSessionId == null ||
+            verifiedBusinessPrincipal == null ||
+            verifiedWalletPrincipal == null) {
+            PaisaruleAndroidBackupKeyAuthority.clear();
+
+            throw new IllegalStateException(
+                "BACKUP_BUSINESS_SESSION_REQUIRED"
+            );
+        }
+
+        // Reverify against the authoritative server.
+        // This does not grant access merely because the
+        // local Wallet session previously succeeded.
+        JSONObject authority = verifiedBusinessAuthority();
+
+        if (!authority.optBoolean("success", false) ||
+            !"BUSINESS_RECEPTION".equals(
+                authority.optString("sessionType", "")
+            ) ||
+            !authority.optBoolean("businessDataAccess", false)) {
+
+            PaisaruleAndroidBackupKeyAuthority.clear();
+
+            throw new IllegalStateException(
+                "BACKUP_SERVER_SESSION_INVALID"
+            );
+        }
+
+        if (walletSessionGeneration != expectedGeneration) {
+            PaisaruleAndroidBackupKeyAuthority.clear();
+
+            throw new IllegalStateException(
+                "BACKUP_LOGIN_CHANGED"
+            );
+        }
+
+        JSONObject principal = authority.optJSONObject("principal");
+
+        if (principal == null ||
+            !"OWNER".equals(principal.optString("role", "")) ||
+            !"USB".equalsIgnoreCase(
+                principal.optString("storageMode", "")
+            )) {
+
+            PaisaruleAndroidBackupKeyAuthority.clear();
+
+            throw new IllegalStateException(
+                "BACKUP_OWNER_NOT_AUTHORIZED"
+            );
+        }
+
+        byte[] scopedKey =
+            PaisaruleAndroidBackupKeyAuthority
+                .copyForVerifiedScope(
+                    principal,
+                    expectedGeneration
+                );
+
+        if (scopedKey == null || scopedKey.length != 32) {
+            if (scopedKey != null) {
+                java.util.Arrays.fill(scopedKey, (byte) 0);
+            }
+
+            throw new IllegalStateException(
+                "BACKUP_SESSION_KEY_UNAVAILABLE"
+            );
+        }
+
+        try {
+            // This creates encrypted contents in native memory.
+            // It does not write to disk or return data to WebView.
+            return PaisaruleAndroidStorageBackupExport.prepare(
+                storage,
+                principal,
+                scopedKey,
+                expectedGeneration
+            );
+        } finally {
+            java.util.Arrays.fill(scopedKey, (byte) 0);
+        }
+    }
+    /**
+     * PAISARULE R172-B12
+     *
+     * Save a previously encrypted Backup V1 result.
+     *
+     * The destination URI MUST come from Android's trusted
+     * ACTION_CREATE_DOCUMENT result, never renderer input.
+     *
+     * Synchronized across native login/logout transitions:
+     * the active login cannot switch between authorization
+     * verification and destination write.
+     *
+     * This method does not read, modify or recover USB data.
+     */
+    static synchronized JSONObject savePaisaruleAndroidBusinessBackup(
+        android.content.Context context,
+        android.net.Uri destination,
+        PaisaruleAndroidStorageBackupExport.Result prepared
+    ) throws Exception {
+
+        if (context == null ||
+            destination == null ||
+            prepared == null ||
+            prepared.encryptedContents == null ||
+            prepared.encryptedContents.isEmpty()) {
+            throw new IllegalArgumentException(
+                "BACKUP_SAVE_INPUT_INVALID"
+            );
+        }
+
+        if (prepared.loginGeneration <= 0L ||
+            prepared.loginGeneration != walletSessionGeneration) {
+            throw new IllegalStateException(
+                "BACKUP_SAVE_LOGIN_CHANGED"
+            );
+        }
+
+        // Reverify server authority AFTER the Android picker.
+        JSONObject authority = verifiedBusinessAuthority();
+
+        if (!authority.optBoolean("success", false) ||
+            !"BUSINESS_RECEPTION".equals(
+                authority.optString("sessionType", "")
+            ) ||
+            !authority.optBoolean("businessDataAccess", false)) {
+            PaisaruleAndroidBackupKeyAuthority.clear();
+
+            throw new IllegalStateException(
+                "BACKUP_SAVE_SERVER_SESSION_INVALID"
+            );
+        }
+
+        JSONObject principal =
+            authority.optJSONObject("principal");
+
+        if (principal == null ||
+            !"OWNER".equals(principal.optString("role", "")) ||
+            !"USB".equalsIgnoreCase(
+                principal.optString("storageMode", "")
+            )) {
+            throw new IllegalStateException(
+                "BACKUP_SAVE_OWNER_NOT_AUTHORIZED"
+            );
+        }
+
+        // Check the original scoped key is still present.
+        // Never pass this key or encrypted contents to WebView.
+        byte[] scopedKey =
+            PaisaruleAndroidBackupKeyAuthority.copyForVerifiedScope(
+                principal,
+                prepared.loginGeneration
+            );
+
+        if (scopedKey == null || scopedKey.length != 32) {
+            if (scopedKey != null) {
+                java.util.Arrays.fill(scopedKey, (byte) 0);
+            }
+
+            throw new IllegalStateException(
+                "BACKUP_SAVE_KEY_UNAVAILABLE"
+            );
+        }
+
+        java.util.Arrays.fill(scopedKey, (byte) 0);
+
+        byte[] outputBytes = prepared.encryptedContents.getBytes(
+            java.nio.charset.StandardCharsets.UTF_8
+        );
+
+        try {
+            if (outputBytes.length == 0 ||
+                outputBytes.length > 96 * 1024 * 1024 ||
+                outputBytes.length != prepared.bytesWrittenWhenSaved) {
+                throw new IllegalStateException(
+                    "BACKUP_SAVE_CONTENT_INVALID"
+                );
+            }
+
+            // The synchronized lock prevents a native login
+            // generation change during this authorization/write.
+            if (prepared.loginGeneration != walletSessionGeneration) {
+                throw new IllegalStateException(
+                    "BACKUP_SAVE_LOGIN_CHANGED"
+                );
+            }
+
+            try (
+                java.io.OutputStream stream =
+                    context.getContentResolver().openOutputStream(
+                        destination,
+                        "wt"
+                    )
+            ) {
+                if (stream == null) {
+                    throw new java.io.IOException(
+                        "BACKUP_SAVE_DESTINATION_UNAVAILABLE"
+                    );
+                }
+
+                stream.write(outputBytes);
+                stream.flush();
+            }
+
+            // PAISARULE_R172_B17_READBACK
+            // Verify the actual selected SAF destination,
+            // not merely successful OutputStream.close().
+            byte[] expectedDigest = null;
+            byte[] actualDigest = null;
+
+            try {
+                java.security.MessageDigest digest =
+                    java.security.MessageDigest.getInstance(
+                        "SHA-256"
+                    );
+
+                expectedDigest = digest.digest(outputBytes);
+
+                digest.reset();
+
+                long actualLength = 0L;
+                byte[] buffer = new byte[65536];
+
+                try (
+                    java.io.InputStream input =
+                        context.getContentResolver()
+                            .openInputStream(destination)
+                ) {
+                    if (input == null) {
+                        throw new java.io.IOException(
+                            "BACKUP_READBACK_UNAVAILABLE"
+                        );
+                    }
+
+                    int bytesRead;
+
+                    while ((bytesRead = input.read(buffer)) != -1) {
+                        if (bytesRead == 0) {
+                            continue;
+                        }
+
+                        actualLength += bytesRead;
+
+                        if (actualLength > outputBytes.length) {
+                            throw new java.io.IOException(
+                                "BACKUP_READBACK_SIZE_MISMATCH"
+                            );
+                        }
+
+                        digest.update(buffer, 0, bytesRead);
+                    }
+                } finally {
+                    java.util.Arrays.fill(buffer, (byte) 0);
+                }
+
+                actualDigest = digest.digest();
+
+                if (
+                    actualLength != outputBytes.length ||
+                    !java.security.MessageDigest.isEqual(
+                        expectedDigest,
+                        actualDigest
+                    )
+                ) {
+                    throw new java.io.IOException(
+                        "BACKUP_READBACK_HASH_MISMATCH"
+                    );
+                }
+            } finally {
+                if (expectedDigest != null) {
+                    java.util.Arrays.fill(
+                        expectedDigest,
+                        (byte) 0
+                    );
+                }
+
+                if (actualDigest != null) {
+                    java.util.Arrays.fill(
+                        actualDigest,
+                        (byte) 0
+                    );
+                }
+            }
+
+            JSONObject data = new JSONObject();
+            data.put("createdAt", prepared.createdAt);
+            data.put("bytesWritten", outputBytes.length);
+
+            JSONObject result = new JSONObject();
+            result.put("success", true);
+            result.put("cancelled", false);
+            result.put("data", data);
+            result.put("errorCode", JSONObject.NULL);
+
+            return result;
+        } finally {
+            java.util.Arrays.fill(outputBytes, (byte) 0);
+        }
+    }
     static synchronized JSONObject verifiedBusinessAuthority() {
         try {
             if (verifiedBusinessSessionId == null ||
@@ -566,6 +1103,9 @@ final class FinoraNativeWalletSession {
             result.put("sessionId", receptionHandle);
             result.put("renewed", true);
             result.put("sessionType", "BUSINESS_RECEPTION");
+            // PAISARULE_R172_S5_EXPIRY
+            // Forward only the server-validated expiry.
+            result.put("expiresAt", expiresAt.toString());
             return result;
 
         } catch (java.io.IOException networkFailure) {
@@ -574,6 +1114,236 @@ final class FinoraNativeWalletSession {
             return failure("BUSINESS_RENEWAL_FAILED");
         } finally {
             if (connection != null) connection.disconnect();
+        }
+    }
+        // PAISARULE R158: Owner-only native Wallet rotation core.
+    // Invoke only after an authenticated Reception touch succeeds.
+    // Network I/O must run OUTSIDE the class monitor.
+    // This method is not connected to the Plugin until tested.
+    static JSONObject rotateAndroidOwnerWalletIfDue(String handle) {
+        final String oldToken;
+        final String businessId;
+        final JSONObject oldScope;
+        final java.time.Instant oldExpiry;
+        final long generation;
+
+        synchronized (FinoraNativeWalletSession.class) {
+            if (handle == null || receptionHandle == null ||
+                !java.security.MessageDigest.isEqual(
+                    handle.getBytes(StandardCharsets.UTF_8),
+                    receptionHandle.getBytes(StandardCharsets.UTF_8)) ||
+                bearerToken == null ||
+                verifiedBusinessSessionId == null ||
+                verifiedWalletPrincipal == null ||
+                verifiedBusinessPrincipal == null ||
+                walletExpiresAt == null) {
+                return failure("WALLET_ROTATION_NOT_AUTHORIZED");
+            }
+
+            java.time.Instant now = java.time.Instant.now();
+
+            if (!walletExpiresAt.isAfter(now)) {
+                return failure("WALLET_SESSION_EXPIRED");
+            }
+
+            if (java.time.Duration.between(
+                now, walletExpiresAt
+            ).toMillis() > 600000L) {
+                JSONObject skipped = new JSONObject();
+                try {
+                    skipped.put("success", true);
+                    skipped.put("rotated", false);
+                } catch (Exception ignored) {
+                    return failure("WALLET_ROTATION_FAILED");
+                }
+                return skipped;
+            }
+
+            for (String field : new String[]{
+                "userId", "ownerId", "businessId", "branchId"
+            }) {
+                String a = verifiedWalletPrincipal.optString(field, "");
+                String b = verifiedBusinessPrincipal.optString(field, "");
+                if (a.isEmpty() || !a.equals(b)) {
+                    return failure("WALLET_ROTATION_SCOPE_MISMATCH");
+                }
+            }
+
+            if (walletRotationInFlight) {
+                return failure("WALLET_ROTATION_IN_PROGRESS");
+            }
+
+            oldToken = bearerToken;
+            businessId = verifiedBusinessSessionId;
+            oldExpiry = walletExpiresAt;
+            generation = walletSessionGeneration;
+
+            try {
+                oldScope = new JSONObject(
+                    verifiedWalletPrincipal.toString()
+                );
+            } catch (Exception ignored) {
+                return failure("WALLET_ROTATION_SCOPE_INVALID");
+            }
+
+            walletRotationInFlight = true;
+            walletRotationFlightGeneration = generation;
+        }
+
+        // No synchronized monitor is held during HTTPS I/O.
+        HttpsURLConnection connection = null;
+
+        try {
+            connection = (HttpsURLConnection) new URL(
+                "https://api.finoraenterprise.com/owner/wallet/session/rotate"
+            ).openConnection();
+
+            connection.setRequestMethod("POST");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(10000);
+            connection.setInstanceFollowRedirects(false);
+            connection.setUseCaches(false);
+            connection.setDoOutput(true);
+            connection.setRequestProperty(
+                "Authorization", "Bearer " + oldToken
+            );
+            connection.setRequestProperty(
+                "x-finora-business-session", businessId
+            );
+            connection.setRequestProperty(
+                "Content-Type", "application/json"
+            );
+            connection.setRequestProperty(
+                "Cache-Control", "no-store"
+            );
+
+            try (java.io.OutputStream out =
+                     connection.getOutputStream()) {
+                out.write("{}".getBytes(StandardCharsets.UTF_8));
+            }
+
+            if (connection.getResponseCode() != 200) {
+                return failure("WALLET_ROTATION_UNAVAILABLE");
+            }
+
+            ByteArrayOutputStream output =
+                new ByteArrayOutputStream();
+
+            try (InputStream input = connection.getInputStream()) {
+                byte[] buffer = new byte[4096];
+                int count;
+                while ((count = input.read(buffer)) != -1) {
+                    if (output.size() + count > 16384) {
+                        return failure("WALLET_ROTATION_RESPONSE_INVALID");
+                    }
+                    output.write(buffer, 0, count);
+                }
+            }
+
+            JSONObject response = new JSONObject(
+                new String(
+                    output.toByteArray(),
+                    StandardCharsets.UTF_8
+                )
+            );
+
+            if (!response.optBoolean("ok", false)) {
+                return failure("WALLET_ROTATION_REJECTED");
+            }
+
+            String nextToken =
+                response.optString("accessToken", "");
+            String expiryText =
+                response.optString("expiresAt", "");
+
+            JSONObject nextScope =
+                response.optJSONObject("scope");
+
+            if (!nextToken.matches("^[a-fA-F0-9]{64}$") ||
+                nextToken.equalsIgnoreCase(oldToken) ||
+                nextScope == null) {
+                return failure("WALLET_ROTATION_RESPONSE_INVALID");
+            }
+
+            for (String field : new String[]{
+                "userId", "ownerId", "businessId", "branchId"
+            }) {
+                String expectedScope =
+                    oldScope.optString(field, "");
+                String receivedScope =
+                    nextScope.optString(field, "");
+
+                if (expectedScope.isEmpty() ||
+                    !expectedScope.equals(receivedScope)) {
+                    return failure("WALLET_ROTATION_SCOPE_MISMATCH");
+                }
+            }
+
+            java.time.Instant nextExpiry =
+                java.time.Instant.parse(expiryText);
+
+            java.time.Instant validationNow =
+                java.time.Instant.now();
+
+            if (!nextExpiry.isAfter(validationNow) ||
+                nextExpiry.isAfter(
+                    validationNow.plusSeconds(3605L))) {
+                return failure("WALLET_ROTATION_EXPIRY_INVALID");
+            }
+
+            synchronized (FinoraNativeWalletSession.class) {
+                if (generation != walletSessionGeneration ||
+                    !oldToken.equals(bearerToken) ||
+                    !businessId.equals(verifiedBusinessSessionId) ||
+                    !oldExpiry.equals(walletExpiresAt) ||
+                    receptionHandle == null ||
+                    !java.security.MessageDigest.isEqual(
+                        handle.getBytes(StandardCharsets.UTF_8),
+                        receptionHandle.getBytes(StandardCharsets.UTF_8)) ||
+                    !oldExpiry.isAfter(java.time.Instant.now()) ||
+                    verifiedWalletPrincipal == null ||
+                    verifiedBusinessPrincipal == null) {
+                    return failure("WALLET_ROTATION_SUPERSEDED");
+                }
+
+                for (String field : new String[]{
+                    "userId", "ownerId", "businessId", "branchId"
+                }) {
+                    String original =
+                        oldScope.optString(field, "");
+
+                    if (original.isEmpty() ||
+                        !original.equals(
+                            verifiedWalletPrincipal.optString(field, "")) ||
+                        !original.equals(
+                            verifiedBusinessPrincipal.optString(field, ""))) {
+                        return failure("WALLET_ROTATION_SUPERSEDED");
+                    }
+                }
+
+                bearerToken = nextToken;
+                walletExpiresAt = nextExpiry;
+            }
+
+            JSONObject result = new JSONObject();
+            result.put("success", true);
+            result.put("rotated", true);
+            return result;
+
+        } catch (Exception ignored) {
+            return failure("WALLET_ROTATION_UNAVAILABLE");
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+            synchronized (FinoraNativeWalletSession.class) {
+                if (walletRotationInFlight &&
+                    walletRotationFlightGeneration == generation &&
+                    walletSessionGeneration == generation) {
+                    walletRotationInFlight = false;
+                    walletRotationFlightGeneration = -1L;
+                }
+            }
         }
     }
     // FINORA_P1_720Z2_NATIVE_RECEPTION

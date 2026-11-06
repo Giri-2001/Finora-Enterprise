@@ -253,16 +253,21 @@ function ensureFinoraExtension(
   filePath:
     string,
 ): string {
-  return filePath
-    .toLowerCase()
-    .endsWith(
-      FINORA_PORTABLE_BRANCH_AUTH_BACKUP_FILE_EXTENSION,
-    )
-    ? filePath
-    : (
-        filePath +
-        FINORA_PORTABLE_BRANCH_AUTH_BACKUP_FILE_EXTENSION
-      );
+  const extension =
+    FINORA_PORTABLE_BRANCH_AUTH_BACKUP_FILE_EXTENSION;
+
+  const lower =
+    filePath.toLowerCase();
+
+  if (lower.endsWith(extension)) {
+    return filePath.slice(0, -extension.length) + extension;
+  }
+
+  if (lower.endsWith(".finora")) {
+    return filePath.slice(0, -".finora".length) + extension;
+  }
+
+  return filePath + extension;
 }
 
 // ============================================================
@@ -362,7 +367,7 @@ export async function exportFinoraPortableBranchAuthBackupFromNativeDialog(
         parentWindow,
         {
           title:
-            "Export FINORA Branch Backup",
+            "Export PAISARULE Branch Backup",
 
           defaultPath:
             createDefaultFileName(
@@ -372,10 +377,10 @@ export async function exportFinoraPortableBranchAuthBackupFromNativeDialog(
           filters: [
             {
               name:
-                "FINORA Branch Backup",
+                "PAISARULE Branch Backup",
 
               extensions: [
-                "finora",
+                "paisarule",
               ],
             },
           ],

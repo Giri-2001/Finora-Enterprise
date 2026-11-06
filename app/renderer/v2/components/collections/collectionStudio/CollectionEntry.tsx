@@ -981,7 +981,7 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
     console.log(
       allEligibleSelected
         ? "FINORA STEP 4 ALL ELIGIBLE EMIS DESELECTED"
-        : "FINORA STEP 4 ALL ELIGIBLE EMIS SELECTED",
+        : "PAISARULE STEP 4 ALL ELIGIBLE EMIS SELECTED",
     );
   }
 

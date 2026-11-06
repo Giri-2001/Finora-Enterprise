@@ -6,7 +6,7 @@ import {
 type Principal = FinoraServerReceptionPrincipal;
 
 type Verification =
-  | { success: true; principal: Principal }
+  | { success: true; principal: Principal; expiresAt?: string }
   | {
       success: false;
       errorCode?: string;
@@ -257,6 +257,7 @@ export async function validateFinoraServerReceptionSession(
     success: true as const,
     sessionId: entry.sessionId,
     principal: entry.principal,
+    expiresAt: verified.expiresAt,
     createdAt: entry.createdAt,
     lastActivity: entry.lastActivity,
   };
@@ -334,6 +335,7 @@ export async function touchFinoraServerReceptionSession(
     success: true as const,
     sessionId,
     principal: entry.principal,
+    expiresAt: renewed.expiresAt,
     createdAt: entry.createdAt,
     lastActivity: entry.lastActivity,
   };

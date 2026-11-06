@@ -443,7 +443,7 @@ export default function NumberingSeriesSettingsSection() {
 
       if (
         !normalizedInput ||
-        !/^[0-9]+$/.test(
+        !/^[0-9]{6}$/.test(
           normalizedInput,
         )
       ) {
@@ -578,7 +578,7 @@ export default function NumberingSeriesSettingsSection() {
 
     if (
       !normalizedInput ||
-      !/^[0-9]+$/.test(
+      !/^[0-9]{6}$/.test(
         normalizedInput,
       )
     ) {
@@ -767,7 +767,7 @@ export default function NumberingSeriesSettingsSection() {
           <SettingsFeedback
             kind="info"
             title="Checking Central Customer Numbering"
-            message="Reading the authorized PostgreSQL branch series."
+            message="Loading authorized branch series."
           />
         </div>
       );
@@ -851,7 +851,7 @@ export default function NumberingSeriesSettingsSection() {
         <SettingsFeedback
           kind="warning"
           title="Central Numbering Migration Required"
-          message="Existing branch Customer Series is preserved. Cross-device numbering is not active yet. New Series Lock and Customer Number allocation must remain disabled until PostgreSQL migration and verification are complete."
+          message="Existing branch Customer Series is preserved. Cross-device numbering is not active yet. New Series Lock and Customer Number allocation must remain disabled until server migration and verification are complete."
         />
       )}
       {feedback && (

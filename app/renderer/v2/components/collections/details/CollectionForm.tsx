@@ -37,7 +37,7 @@ export default function CollectionForm() {
     <div style={wrapperStyle}>
       <FormField label="Collection Date" required>
         <div
-          title="This date is locked to the active FINORA Login Date."
+          title="This date is locked to the active PAISARULE Login Date."
         >
           <FinoraCalendar
             value={reviewData.receiptDate}

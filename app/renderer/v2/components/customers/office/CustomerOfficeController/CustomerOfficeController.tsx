@@ -275,7 +275,7 @@ export default function CustomerOfficeController({
           }}
         >
           <SmartWallPanel
-            title={"FINORA Smart Customers Hub™"}
+            title={"PAISARULE Smart Customers Hub™"}
             /* =================================================
                  SMART WALL
               ================================================= */

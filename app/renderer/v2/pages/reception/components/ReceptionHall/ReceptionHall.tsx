@@ -175,7 +175,7 @@ export default function ReceptionHall({
 
             <h1 style={wallTitleStyle}>
 
-              FINORA ENTERPRISE
+              PAISARULE
 
             </h1>
 
@@ -192,7 +192,7 @@ export default function ReceptionHall({
 
             <p style={wallSubtitleStyle}>
 
-              Welcome back to FINORA
+              Welcome back to PAISARULE
 
             </p>
 

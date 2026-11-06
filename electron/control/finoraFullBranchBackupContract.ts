@@ -40,7 +40,7 @@ export const FINORA_FULL_BRANCH_BACKUP_LEGACY_RUNTIME_LESS_V2_MESSAGE =
   "This FINORA Full Branch Backup V2 is a legacy/incomplete backup and cannot be used for complete branch restore because it does not contain Runtime Authority." as const;
 
 export const FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION =
-  ".finora" as const;
+  ".paisarule" as const;
 
 export const FINORA_FULL_BRANCH_BACKUP_MAX_FILE_BYTES =
   256 * 1024 * 1024;

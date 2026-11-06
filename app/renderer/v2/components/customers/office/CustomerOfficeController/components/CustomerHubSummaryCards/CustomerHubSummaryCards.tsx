@@ -208,7 +208,7 @@ export default function CustomerHubSummaryCards({
           order: summaryStyles.totalCustomersOrder,
         }}
       >
-        <div style={titleStyle(summaryStyles)}>Total Customers</div>
+        <div style={{ ...titleStyle(summaryStyles), color: valueStyle(summaryStyles).color }}>Total Customers</div>
 
         <div style={valueStyle(summaryStyles)}>{totalCustomers}</div>
 
@@ -228,7 +228,7 @@ export default function CustomerHubSummaryCards({
           order: summaryStyles.activeCustomersOrder,
         }}
       >
-        <div style={titleStyle(summaryStyles)}>Active Customers</div>
+        <div style={{ ...titleStyle(summaryStyles), color: valueStyle(summaryStyles).color }}>Active Customers</div>
 
         <div style={valueStyle(summaryStyles)}>{activeCustomers}</div>
 
@@ -317,7 +317,7 @@ export default function CustomerHubSummaryCards({
           order: summaryStyles.workDeskOrder,
         }}
       >
-        <div style={titleStyle(summaryStyles)}>Work Desk</div>
+        <div style={{ ...titleStyle(summaryStyles), color: valueStyle(summaryStyles).color }}>Work Desk</div>
 
         <div style={valueStyle(summaryStyles)}>Open</div>
 
@@ -336,7 +336,7 @@ export default function CustomerHubSummaryCards({
         }}
         onClick={onOpenCustomerData}
       >
-        <div style={titleStyle(summaryStyles)}>Customer Data</div>
+        <div style={{ ...titleStyle(summaryStyles), color: valueStyle(summaryStyles).color }}>Customer Data</div>
 
         <div style={valueStyle(summaryStyles)}>View</div>
 

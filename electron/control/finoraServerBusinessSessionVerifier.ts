@@ -26,6 +26,7 @@ export type FinoraServerBusinessVerification =
   | {
       success: true;
       principal: FinoraVerifiedBusinessPrincipal;
+      expiresAt?: string;
     }
   | {
       success: false;
@@ -100,6 +101,26 @@ export async function verifyFinoraServerBusinessSession(
       };
     }
 
+    // PAISARULE C85-P0-S22: server-only expiry evidence.
+    // Missing expiry remains compatible until backend deployment.
+    const expiry = data.expiresAt;
+
+    // PAISARULE C85-P0-S37-A20
+    // Boolean-only diagnostic; never print expiry or credentials.
+    if (
+      expiry !== undefined &&
+      (
+        typeof expiry !== "string" ||
+        !Number.isFinite(Date.parse(expiry)) ||
+        Date.parse(expiry) <= Date.now()
+      )
+    ) {
+      return {
+        success: false,
+        errorCode: "INVALID_SERVER_RESPONSE",
+      };
+    }
+
     const principal =
       data.principal as Record<string, unknown>;
 
@@ -155,6 +176,7 @@ export async function verifyFinoraServerBusinessSession(
 
     return {
       success: true,
+      expiresAt: typeof expiry === "string" ? expiry : undefined,
       principal: {
         userId: principal.userId as string,
         ownerId: principal.ownerId as string,
@@ -262,7 +284,20 @@ export async function touchFinoraServerBusinessSession(
     // Successful renewal is not sufficient by itself.
     // Confirm the currently authorized server principal
     // using the existing strict verification contract.
-    return await verifyFinoraServerBusinessSession(sessionId);
+    const verified =
+      await verifyFinoraServerBusinessSession(sessionId);
+
+    // PAISARULE C85-P0-S37-A6
+    // Preserve the authenticated server touch expiry.
+    // Independent verification must still succeed.
+    if (!verified.success) {
+      return verified;
+    }
+
+    return {
+      ...verified,
+      expiresAt: verified.expiresAt ?? (data.expiresAt as string),
+    };
   } catch (error: unknown) {
     // FINORA_C80_AUTH_R104_TRANSPORT_DIAG
     // Error type only, no message/stack or credentials.

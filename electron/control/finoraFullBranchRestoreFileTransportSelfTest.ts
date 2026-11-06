@@ -9,6 +9,7 @@
 // No removable-drive write.
 // ============================================================
 
+import { countPaisaruleSnapshotEntitiesV1 } from "./paisaruleSnapshotEntityCountsV1.js";
 import assert from "node:assert/strict";
 
 import type {
@@ -153,6 +154,10 @@ const artifactSuccess:
         "RESTORED-RUNTIME-AUTHORITY",
 
       snapshot,
+
+      // PAISARULE_C117_R133_FIXTURE
+      entityCounts:
+        countPaisaruleSnapshotEntitiesV1(snapshot),
 
       snapshotRecordCount:
         1,
@@ -498,6 +503,92 @@ export async function runFinoraFullBranchRestoreFileTransportSelfTest():
 
   console.log(
     "PASS: Full V3 native transport authenticates, selects pinned target and executes transaction",
+  );
+
+  // ========================================================
+  // A29_NEW_PAISARULE_RESTORE
+  // NEW EXTENSION POSITIVE TRANSPORT REGRESSION
+  // ========================================================
+
+  let paisaruleFileSelections = 0;
+  let paisaruleReadCalls = 0;
+  let paisaruleParseCalls = 0;
+
+  const paisaruleSuccess =
+    await restoreFinoraFullBranchFromNativeBackup(
+      credentials,
+      baseDependencies({
+        selectBackupFile:
+          async () => {
+            paisaruleFileSelections += 1;
+            return "C:\\Downloads\\backup.paisarule";
+          },
+
+        readBackupFile:
+          async () => {
+            paisaruleReadCalls += 1;
+            return "FULL-V2-SELFTEST";
+          },
+
+        parseFullBackup:
+          (serialized: string) => {
+            paisaruleParseCalls += 1;
+            assert.equal(
+              serialized,
+              "FULL-V2-SELFTEST",
+            );
+            return parsedBackup;
+          },
+      }),
+    );
+
+  assert.equal(
+    paisaruleSuccess.success,
+    true,
+  );
+
+  assert.equal(
+    paisaruleSuccess.cancelled,
+    false,
+  );
+
+  if (
+    paisaruleSuccess.success &&
+    !paisaruleSuccess.cancelled
+  ) {
+    assert.equal(
+      paisaruleSuccess.data.fileName,
+      "backup.paisarule",
+    );
+
+    assert.equal(
+      paisaruleSuccess.data.backupId,
+      "FULL-P3C1-B2-001",
+    );
+
+    assert.equal(
+      paisaruleSuccess.data.storageMode,
+      "USB",
+    );
+  }
+
+  assert.equal(
+    paisaruleFileSelections,
+    1,
+  );
+
+  assert.equal(
+    paisaruleReadCalls,
+    1,
+  );
+
+  assert.equal(
+    paisaruleParseCalls,
+    1,
+  );
+
+  console.log(
+    "PASS: Full V3 new .paisarule Restore accepts file, reads exact bytes and succeeds",
   );
 
   // ========================================================

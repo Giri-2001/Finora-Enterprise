@@ -446,7 +446,7 @@ export default function ServerWalletLiveHistory({
             ...cell, padding: 22, textAlign: "center",
           }}>
             {state === "LOADING"
-              ? "Loading verified PostgreSQL history..."
+              ? "Loading verified wallet history..."
               : state === "ERROR"
                 ? error
                 : state === "WAITING"

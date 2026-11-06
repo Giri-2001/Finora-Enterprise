@@ -30,7 +30,7 @@ export default function DashboardPage() {
   return (
     <StudioLayout>
       <StudioHeader
-        title="FINORA OS™"
+        title="PAISARULE"
         subtitle="Enterprise Finance Operating System Dashboard"
       />
 

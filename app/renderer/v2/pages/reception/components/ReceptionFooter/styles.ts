@@ -50,10 +50,10 @@ export function createReceptionFooterStyles(
     CSSProperties = {
 
     width:
-      `calc(100% - ${tokens.layout.pageGutter * 2}px)`,
+      "calc(100% - 16px)",
 
     maxWidth:
-      `${tokens.layout.maxContentWidth}px`,
+      "none",
 
     minWidth:
       0,
@@ -62,9 +62,7 @@ export function createReceptionFooterStyles(
       `${tokens.footer.minHeight}px`,
 
     height:
-      isMobile
-        ? "auto"
-        : `${tokens.footer.height}px`,
+      "auto",
 
     padding:
       `${tokens.footer.paddingY}px ${tokens.footer.paddingX}px`,
@@ -103,6 +101,10 @@ export function createReceptionFooterStyles(
       "none",
   };
 
+  const compactFooter =
+    !isMobile &&
+    typeof window !== "undefined" &&
+    window.innerWidth < 1100;
   const contentStyle:
     CSSProperties = {
 
@@ -118,7 +120,9 @@ export function createReceptionFooterStyles(
     gridTemplateColumns:
       isMobile
         ? "minmax(0, 1fr)"
-        : "minmax(0, 1fr) auto minmax(0, 1fr)",
+        : compactFooter
+          ? "repeat(3, minmax(0, 1fr))"
+          : "repeat(5, minmax(0, 1fr))",
 
     alignItems:
       "center",
@@ -127,7 +131,7 @@ export function createReceptionFooterStyles(
       `${tokens.spacing.medium}px`,
 
     rowGap:
-      isMobile
+      isMobile || compactFooter
         ? `${tokens.spacing.small}px`
         : 0,
 

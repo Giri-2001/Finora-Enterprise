@@ -105,7 +105,7 @@ export function buildLoan(options: BuildLoanOptions): Loan {
 
   if (!authoritativeLoanNumber) {
     throw new Error(
-      "Authoritative FINORA Loan Number is required.",
+      "Authoritative PAISARULE Loan Number is required.",
     );
   }
 

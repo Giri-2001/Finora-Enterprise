@@ -418,7 +418,7 @@ export default function GlobalLoadingOverlay({
           aria-modal="true"
         >
           <div style={brandTitleStyle}>
-            FINORA
+            PAISARULE
           </div>
 
           <div style={titleDividerStyle} />
@@ -474,7 +474,7 @@ export default function GlobalLoadingOverlay({
           </p>
 
           <p style={waitTextStyle}>
-            Please wait while FINORA completes this action.
+            Please wait while PAISARULE completes this action.
           </p>
         </section>
       </div>

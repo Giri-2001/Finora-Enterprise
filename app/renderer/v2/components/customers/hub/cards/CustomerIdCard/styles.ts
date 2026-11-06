@@ -248,16 +248,19 @@ export function createLogoImageStyle(): CSSProperties {
   return {
 
     width:
-      "72%",
+      "100%",
 
     height:
-      "72%",
+      "100%",
 
     objectFit:
-      "contain",
+      "cover",
 
     objectPosition:
       "center",
+
+    borderRadius:
+      "50%",
 
     display:
       "block",
@@ -536,7 +539,10 @@ export function createBrandStyle(
       tokens.spacing.medium - 4,
 
     fontSize:
-      `${tokens.customerCards.brandSize}px`,
+      `${tokens.customerCards.brandSize + 1}px`,
+
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
 
     fontWeight:
       800,
@@ -596,7 +602,10 @@ export function createCompanyStyle(
       tokens.spacing.small,
 
     fontSize:
-      `${tokens.customerCards.brandSize}px`,
+      `${tokens.customerCards.brandSize + 1}px`,
+
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
 
     fontWeight:
       800,
@@ -638,13 +647,18 @@ export function createCompanyStyle(
   THEME.textPrimary,
 
     padding:
-      `${tokens.spacing.small}px ${tokens.spacing.inline}px`,
+      `2px ${tokens.spacing.inline}px`,
 
     textTransform:
       "uppercase",
 
     flexShrink:
       0,
+    paddingBottom: "2px",
+    minHeight: "27px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
 
   };
 
@@ -807,6 +821,9 @@ export function createNameStyle(
     fontSize:
       `${tokens.customerCards.nameSize}px`,
 
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
+
     fontWeight:
       600,
 
@@ -911,7 +928,7 @@ export function createCustomerIdStyle(
 
 
     fontSize:
-      `${tokens.customerCards.idSize}px`,
+      `${tokens.customerCards.idSize + 2}px`,
 
     fontFamily:
       "Inter, ui-sans-serif, system-ui, sans-serif",
@@ -978,6 +995,9 @@ export function createPhoneStyle(
 
     fontSize:
       `${tokens.customerCards.phoneSize + 4}px`,
+
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
 
     fontWeight:
       600,
@@ -1078,6 +1098,9 @@ export function createKycStyle(
 
     fontSize:
       `${tokens.customerCards.kycSize + 2}px`,
+
+    fontFamily:
+      "Inter, ui-sans-serif, system-ui, sans-serif",
 
     fontWeight:
       700,

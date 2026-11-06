@@ -749,7 +749,7 @@ export default function WalletPage({
 
       if (!sessionId) {
         setError(
-          "An active FINORA login session is required to download the Wallet Recharge Request.",
+          "An active PAISARULE login session is required to download the Wallet Recharge Request.",
         );
 
         return;

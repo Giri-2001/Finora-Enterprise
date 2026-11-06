@@ -109,4 +109,4 @@ export const DEFAULT_PAGE_SIZE = 20;
    EXPORT
 ========================================================== */
 
-export const CUSTOMER_EXPORT_FILE_NAME = "FINORA-Customers";
+export const CUSTOMER_EXPORT_FILE_NAME = "PAISARULE-Customers";

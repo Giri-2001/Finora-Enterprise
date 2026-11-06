@@ -137,6 +137,7 @@ export function createReceptionLogoStyles(
 
     filter:
       `drop-shadow(0 0 6px ${headerShadow})`,
+    borderRadius: "12px",
 
   };
 

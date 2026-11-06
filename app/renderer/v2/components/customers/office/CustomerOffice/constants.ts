@@ -10,7 +10,7 @@
 =========================================================== */
 
 export const OFFICE_TITLE =
-  "🖥 FINORA Work Desk™";
+  "🖥 PAISARULE Work Desk™";
 
 export const OFFICE_SUBTITLE =
   "Digital Customer Workspace";

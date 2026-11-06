@@ -37,7 +37,7 @@ export interface FinoraWalletEntryGateResult {
 
 // Retained for compatibility with existing imports.
 export const FINORA_WALLET_ENTRY_LOCK_MESSAGE =
-  "An ACTIVE FINORA subscription is required.";
+  "An ACTIVE PAISARULE subscription is required.";
 
 async function resolveSubscriptionEntryGate(
   scope: WalletScope,
@@ -67,7 +67,7 @@ async function resolveSubscriptionEntryGate(
     if (!decision.allowed) {
       return denied(
         decision.reason ||
-        "An ACTIVE FINORA subscription is required.",
+        "An ACTIVE PAISARULE subscription is required.",
       );
     }
 

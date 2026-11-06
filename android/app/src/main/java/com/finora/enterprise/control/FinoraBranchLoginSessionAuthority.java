@@ -793,7 +793,7 @@ public final class FinoraBranchLoginSessionAuthority {
         if (record == null) {
             return SessionResult.failure(
                 ERROR_SESSION_NOT_FOUND,
-                "FINORA login session is unavailable."
+                "PAISARULE login session is unavailable."
             );
         }
 
@@ -812,7 +812,7 @@ public final class FinoraBranchLoginSessionAuthority {
 
             return SessionResult.failure(
                 ERROR_SESSION_EXPIRED,
-                "FINORA login session has expired."
+                "PAISARULE login session has expired."
             );
         }
 
@@ -847,7 +847,7 @@ activeSessions.remove(
 
             return SessionResult.failure(
                 ERROR_SESSION_INVALID,
-                "FINORA login session credential is no longer valid."
+                "PAISARULE login session credential is no longer valid."
             );
         }
 
@@ -887,7 +887,7 @@ activeSessions.remove(
         if (record == null) {
             return TouchResult.failure(
                 ERROR_SESSION_NOT_FOUND,
-                "FINORA login session is unavailable."
+                "PAISARULE login session is unavailable."
             );
         }
 
@@ -906,7 +906,7 @@ activeSessions.remove(
 
             return TouchResult.failure(
                 ERROR_SESSION_EXPIRED,
-                "FINORA login session has expired."
+                "PAISARULE login session has expired."
             );
         }
 

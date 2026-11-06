@@ -944,7 +944,7 @@ export default function GlobalHeader({
 
 
         {/* ===================================================
-           FINORA WALLET
+           PAISARULE WALLET
         =================================================== */}
 
         <div
@@ -973,9 +973,9 @@ export default function GlobalHeader({
             onWalletClick?.();
           }}
 
-          aria-label="Open FINORA Wallet"
+          aria-label="Open PAISARULE Wallet"
 
-          title="FINORA Wallet"
+          title="PAISARULE Wallet"
 
           style={
             useTwoRowHeader

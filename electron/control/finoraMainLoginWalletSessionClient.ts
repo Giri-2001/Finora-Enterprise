@@ -229,7 +229,7 @@ export function createFinoraMainLoginWalletSessionClient(
       if (
         !Number.isFinite(remaining) ||
         remaining <= 0 ||
-        remaining > 1805000
+        remaining > 3605000
       ) {
         return {
           success: false,

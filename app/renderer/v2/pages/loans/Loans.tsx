@@ -166,6 +166,18 @@ import {
   paginationEllipsisStyle,
 } from "./LoansPage.styles";
 
+// PAISARULE B05: UI display only.
+// Keep original loanNumber for lookup, View, receipts and storage.
+function displayPaisarulePortfolioLoanNumber(
+  loanNumber: string,
+): string {
+  return loanNumber.replace(
+    /^FIN-LOAN-(\d{6})-(\d{3})$/i,
+    "PAISA-LOAN-$1-$2",
+  );
+}
+
+
 // ============================================================
 // HELPERS
 // ============================================================
@@ -943,7 +955,7 @@ export default function Loans({
         if (!storageActivated.success) {
           throw new Error(
             storageActivated.error ??
-              `Unable to restore FINORA ${storageMode} storage.`,
+              `Unable to restore PAISARULE ${storageMode} storage.`,
           );
         }
       }
@@ -2105,7 +2117,7 @@ const saved = await filesystem.writeFile({
         stopFinoraProcessing(nativeProcessingId);
 
         await share.share({
-          title: "FINORA Loan Receipt",
+          title: "PAISARULE Loan Receipt",
           files: [saved.uri],
           dialogTitle: "Share receipt photo",
         });
@@ -2173,7 +2185,7 @@ const saved = await filesystem.writeFile({
 
         if (!bridge?.copyPng) {
           throw new Error(
-            "Electron native clipboard unavailable. Restart FINORA Enterprise.",
+            "Electron native clipboard unavailable. Restart PAISARULE.",
           );
         }
 
@@ -2216,7 +2228,24 @@ const saved = await filesystem.writeFile({
         );
       }
     };
-    const createLoanReceiptPng = async (
+
+  // PAISARULE B06-R3: Receipt presentation only.
+  // Never alter stored Customer IDs or Loan Numbers.
+  function paisaruleLoanReceiptDisplayId(
+    value: string,
+  ): string {
+    return value
+      .replace(
+        /^FIN-CUS-(\d{6})$/i,
+        "PAISA-CUS-$1",
+      )
+      .replace(
+        /^FIN-LOAN-(\d{6})-(\d{3})$/i,
+        "PAISA-LOAN-$1-$2",
+      );
+  }
+
+const createLoanReceiptPng = async (
       loan: Record<string, unknown>,
     ): Promise<{
       blob: Blob;
@@ -2255,7 +2284,7 @@ const saved = await filesystem.writeFile({
 
       ctx.fillStyle = "#E9BF69";
       ctx.font = "650 48px Arial, sans-serif";
-      draw("F I N O R A", 480, 80, 900, "center");
+      draw("P A I S A R U L E", 480, 80, 900, "center");
 
       ctx.fillStyle = "#FFFFFF";
       ctx.font = "500 25px Arial, sans-serif";
@@ -2368,11 +2397,11 @@ ctx.fillStyle = "#667085";
         ],
         [
           "Customer ID",
-          loanReceiptText(loan, ["customerId"]),
+          paisaruleLoanReceiptDisplayId(loanReceiptText(loan, ["customerId"])),
         ],
         [
           "Loan Number",
-          loanReceiptText(loan, ["loanNumber", "id"]),
+          paisaruleLoanReceiptDisplayId(loanReceiptText(loan, ["loanNumber", "id"])),
         ],
         [
           "Loan Date",
@@ -2431,7 +2460,7 @@ ctx.fillStyle = "#667085";
       ctx.fillStyle = "#E9BF69";
       ctx.font = "650 27px Arial, sans-serif";
       draw(
-        "THANK YOU FOR CHOOSING FINORA",
+        "THANK YOU FOR CHOOSING PAISARULE",
         480,
         1264,
         900,
@@ -2468,7 +2497,7 @@ ctx.fillStyle = "#667085";
       );
 
       const filename =
-        "FINORA_LOAN_" +
+        "PAISARULE_LOAN_" +
         identifier.replace(/[^A-Za-z0-9_-]/g, "_") +
         ".png";
 
@@ -2592,7 +2621,7 @@ ctx.fillStyle = "#667085";
               kind: "success",
               heading: "Receipt Saved Successfully",
               message:
-                `Gallery Folder: ${saveResult.album ?? "Finora Loan Receipts"}\n` +
+                `Gallery Folder: ${saveResult.album ?? "Paisarule Loan Receipts"}\n` +
                 `Image: ${saveResult.filename ?? filename}`,
               confirmLabel: "Done",
             });
@@ -2627,7 +2656,7 @@ ctx.fillStyle = "#667085";
 
           if (!windowsPictures?.savePng) {
             throw new Error(
-              "Windows Pictures saving is unavailable. Restart the latest FINORA Enterprise EXE.",
+              "Windows Pictures saving is unavailable. Restart the latest PAISARULE EXE.",
             );
           }
 
@@ -2706,8 +2735,8 @@ ctx.fillStyle = "#667085";
 
             await navigator.share({
               files: [file],
-              title: "FINORA Loan Receipt",
-              text: "FINORA Loan Disbursement Details",
+              title: "PAISARULE Loan Receipt",
+              text: "PAISARULE Loan Disbursement Details",
             });
             return;
           } catch (error) {
@@ -2729,7 +2758,7 @@ ctx.fillStyle = "#667085";
         );
       } catch (error) {
           // FINORA_AP04_R036_R1_LOAN_RED_ERROR
-          console.error("FINORA Loan Receipt:", error);
+          console.error("PAISARULE Loan Receipt:", error);
 
           if (action === "download") {
             const reason =
@@ -2934,7 +2963,72 @@ ctx.fillStyle = "#667085";
                   margin: 0;
                 }
               }
-            `}</style>
+
+              /* PAISARULE_B06_R4D_FILTER_MATCH */
+              .finora-r173-receipt .finora-r205-loan-filters input {
+                box-sizing: border-box;
+                min-width: 0;
+                max-width: 100%;
+              }
+
+              .finora-r173-receipt .finora-r205-loan-filters label {
+              display: grid;
+              gap: 7px;
+              min-width: 0;
+              font-size: 12px;
+              font-weight: 650;
+            }
+
+              .finora-r173-receipt .finora-r205-loan-filters input {
+              width: 100%;
+              min-width: 0;
+              min-height: 44px;
+              padding: 10px 12px;
+              border-radius: 10px;
+              border: 1px solid rgba(135,145,160,0.4);
+              background: rgba(125,135,155,0.08);
+              color: inherit;
+              font: inherit;
+              outline: none;
+              transition:
+                border-color 160ms ease,
+                background 160ms ease,
+                box-shadow 160ms ease;
+            }
+
+              .finora-r173-receipt .finora-r205-loan-filters input:focus-visible {
+              box-shadow: 0 0 0 3px rgba(135,145,160,0.18);
+            }
+
+              /* Apply uniformly across Loan Receipt filters. */
+              .finora-r173-receipt .finora-r205-loan-filters {
+                font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+              }
+
+              .finora-r173-receipt .finora-r205-loan-filters .finora-r206-date-label {
+                font-family: inherit;
+                font-size: 12px;
+                font-weight: 650;
+                line-height: 1.35;
+              }
+
+              .finora-r173-receipt .finora-r205-loan-filters .finora-r206-date-field {
+                gap: 7px;
+              }
+
+              /* Calendar icon only: keep date input border. */
+              .finora-r173-receipt .finora-r205-loan-filters .finora-calendar-icon-button {
+                background: transparent !important;
+                border: 0 !important;
+                box-shadow: none !important;
+              }
+
+              .finora-r173-receipt .finora-r205-loan-filters .finora-calendar-icon-button:focus-visible {
+                outline: 2px solid var(--finora-theme-info);
+                outline-offset: 2px;
+              }
+
+`}</style>
             <div className="finora-r205-loan-filters">
               {/* FINORA_R206_C1_SEARCH_INLINE */}
               <label
@@ -3023,7 +3117,7 @@ ctx.fillStyle = "#667085";
                       </strong>
 
                       <span style={{ fontSize: 12, opacity: 0.75 }}>
-                        {String(loan.loanNumber ?? loan.id ?? "--")}
+                        {paisaruleLoanReceiptDisplayId(String(loan.loanNumber ?? loan.id ?? "--"))}
                       </span>                      <span
                         style={{
                           fontSize: 12,
@@ -3192,7 +3286,7 @@ ctx.fillStyle = "#667085";
 
                   <img
                     src={loanSharePreview}
-                    alt="FINORA Loan Receipt Preview"
+                    alt="PAISARULE Loan Receipt Preview"
                     style={{
                       display: "block",
                       width: "auto",
@@ -4220,7 +4314,7 @@ return (
 
                           <div style={loanIdentityStyle}>
                             <div style={themedLoanNumberStyle}>
-                              {loan.loanNumber || loan.id || "--"}
+                              {displayPaisarulePortfolioLoanNumber(loan.loanNumber || loan.id || "--")}
                             </div>
 
                             <div style={themedLoanTitleStyle}>

@@ -506,6 +506,18 @@ export default function ViewLoanDetails({
 
   const loanNumber = loan.loanNumber || loan.id || "--";
 
+  // PAISARULE B05-R4: presentation only.
+  // Never replace authoritative Loan or Customer record IDs.
+  const displayLoanNumber = loanNumber.replace(
+    /^FIN-LOAN-(\d{6})-(\d{3})$/i,
+    "PAISA-LOAN-$1-$2",
+  );
+
+  const displayCustomerId = safeText(loan.customerId).replace(
+    /^FIN-CUS-(\d{6})$/i,
+    "PAISA-CUS-$1",
+  );
+
   const status = formatStatus(loan.status);
 
   const loanType = formatLoanType(loan);
@@ -633,7 +645,7 @@ export default function ViewLoanDetails({
         </div>
 
         <div className="finora-view-loan-header-meta" style={headerMetaStyle}>
-          <span style={loanNumberBadgeStyle}>{loanNumber}</span>
+          <span style={loanNumberBadgeStyle}>{displayLoanNumber}</span>
 
           <span
             style={{
@@ -692,7 +704,7 @@ export default function ViewLoanDetails({
               <div style={infoItemStyle}>
                 <span style={infoLabelStyle}>Customer ID</span>
 
-                <span style={infoValueStyle}>{safeText(loan.customerId)}</span>
+                <span style={infoValueStyle}>{displayCustomerId}</span>
               </div>
 
               <div style={infoItemStyle}>
@@ -704,7 +716,7 @@ export default function ViewLoanDetails({
               <div style={infoItemStyle}>
                 <span style={infoLabelStyle}>Loan Number</span>
 
-                <span style={infoValueStyle}>{loanNumber}</span>
+                <span style={infoValueStyle}>{displayLoanNumber}</span>
               </div>
             </div>
           </section>

@@ -424,7 +424,7 @@ export function clearLoanWorkspaceDraft(
     }
   } catch (error) {
     console.error(
-      "FINORA LOAN DRAFT CLEANUP ERROR",
+      "PAISARULE LOAN DRAFT CLEANUP ERROR",
       error,
     );
 

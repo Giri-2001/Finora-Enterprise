@@ -7,7 +7,7 @@
 =========================================================== */
 
 export const APP_TITLE =
-  "FINORA ENTERPRISE";
+  "PAISARULE";
 
 export const DEFAULT_DEPARTMENT =
   "Reception";

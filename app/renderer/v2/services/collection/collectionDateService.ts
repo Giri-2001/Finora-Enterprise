@@ -241,7 +241,7 @@ export function validateCollectionDate(
     activeBusinessDate
   ) {
     throw new Error(
-      "Collection Date cannot be later than the active FINORA Login Date.",
+      "Collection Date cannot be later than the active PAISARULE Login Date.",
     );
   }
 

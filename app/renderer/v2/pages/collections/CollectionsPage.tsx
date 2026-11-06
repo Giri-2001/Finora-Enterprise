@@ -50,6 +50,12 @@ import {
   finoraWarning,
 } from "../../components/common/dialog/finoraDialog.service";
 
+import {
+  resolveCollectionCreateWalletEntryGate,
+} from "../../services/wallet/walletEntryGateService";
+import type {
+  FinoraWalletEntryGateResult,
+} from "../../services/wallet/walletEntryGateService";
 import CollectionStudio from "../../components/customers/office/CustomerOffice/components/CollectionStudio";
 
 import type {
@@ -130,6 +136,18 @@ import {
   tableShowingStyle,
   responsiveMediaQuery,
 } from "./CollectionsPage.styles";
+
+// PAISARULE B07-R3D: UI-only presentation.
+// Stored collection, loan and receipt IDs remain unchanged.
+function displayPaisaruleCollectionTableId(
+  value: string | null | undefined,
+): string {
+  return String(value ?? "").replace(
+    /^FIN-(RCP|LOAN)-/i,
+    "PAISA-$1-",
+  );
+}
+
 
 /* ============================================================
    TYPES
@@ -384,6 +402,44 @@ function PlusIcon() {
 ============================================================ */
 
 export default function CollectionsPage() {
+  const [collectionCreateGate, setCollectionCreateGate] =
+    useState<FinoraWalletEntryGateResult | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    void (async () => {
+      try {
+        const session = getSession();
+
+        const ownerId = String(session?.ownerId ?? "").trim();
+        const businessId = String(session?.businessId ?? "").trim();
+        const branchId = String(session?.branchId ?? "").trim();
+
+        if (!ownerId || !businessId || !branchId) {
+          return;
+        }
+
+        const gate = await resolveCollectionCreateWalletEntryGate({
+          ownerId,
+          businessId,
+          branchId,
+        });
+
+        if (active) {
+          setCollectionCreateGate(gate);
+        }
+      } catch {
+        if (active) {
+          setCollectionCreateGate(null);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
   /* ==========================================================
      ERP BUSINESS DATE
   ========================================================== */
@@ -845,10 +901,34 @@ export default function CollectionsPage() {
      NEW COLLECTION
   ========================================================== */
 
-  function handleNewCollection(): void {
-    setPageMode(
-      "studio",
-    );
+  async function handleNewCollection(): Promise<void> {
+    try {
+      const session = getSession();
+
+      const ownerId = String(session?.ownerId ?? "").trim();
+      const businessId = String(session?.businessId ?? "").trim();
+      const branchId = String(session?.branchId ?? "").trim();
+
+      if (!ownerId || !businessId || !branchId) {
+        return;
+      }
+
+      const gate = await resolveCollectionCreateWalletEntryGate({
+        ownerId,
+        businessId,
+        branchId,
+      });
+
+      setCollectionCreateGate(gate);
+
+      if (!gate.canEnter) {
+        return;
+      }
+
+      setPageMode("studio");
+    } catch {
+      setCollectionCreateGate(null);
+    }
   }
 
   /* ==========================================================
@@ -944,6 +1024,13 @@ export default function CollectionsPage() {
             type="button"
             onClick={
               handleNewCollection
+            }
+            disabled={!collectionCreateGate?.canEnter}
+            title={
+              collectionCreateGate?.canEnter
+                ? "New Collection"
+                : collectionCreateGate?.message ??
+                  "Checking subscription..."
             }
             style={
               createButtonStyle
@@ -1457,8 +1544,8 @@ export default function CollectionsPage() {
                                 receiptNumberStyle
                               }
                             >
-                              {collection.receiptNumber ||
-                                "--"}
+                              {displayPaisaruleCollectionTableId(collection.receiptNumber ||
+                                "--")}
                             </div>
 
                             <div
@@ -1506,8 +1593,8 @@ export default function CollectionsPage() {
                                 loanNumberStyle
                               }
                             >
-                              {collection.loanNumber ||
-                                "--"}
+                              {displayPaisaruleCollectionTableId(collection.loanNumber ||
+                                "--")}
                             </div>
 
                             <div
@@ -1617,7 +1704,7 @@ export default function CollectionsPage() {
                                  * next implementation step.
                                  */
                                 console.log(
-                                  "FINORA VIEW COLLECTION",
+                                  "PAISARULE VIEW COLLECTION",
                                   collection,
                                 );
                               }}

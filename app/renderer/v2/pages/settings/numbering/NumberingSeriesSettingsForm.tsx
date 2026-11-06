@@ -132,6 +132,8 @@ export default function NumberingSeriesSettingsForm({
       );
   }
 
+  const validSixDigitSeries = /^\d{6}$/.test(startingCustomerNumber) && Number(startingCustomerNumber) >= CUSTOMER_NUMBER_MIN && Number(startingCustomerNumber) <= 990999;
+
   const customerPreview =
     locked
       ? nextPreview?.customerId ?? ""
@@ -153,7 +155,7 @@ export default function NumberingSeriesSettingsForm({
 
     event.preventDefault();
 
-    if (controlsDisabled) {
+    if (controlsDisabled || !validSixDigitSeries) {
       return;
     }
 
@@ -195,11 +197,11 @@ export default function NumberingSeriesSettingsForm({
               value={businessCode}
               readOnly
               aria-readonly="true"
-              placeholder="Provisioned by FINORA"
+              placeholder="Provisioned by PAISARULE"
             />
 
             <span className="finora-settings-form__helper">
-              Immutable code assigned during FINORA business provisioning.
+              Immutable code assigned during PAISARULE business provisioning.
             </span>
           </label>
 
@@ -214,17 +216,17 @@ export default function NumberingSeriesSettingsForm({
               value={branchCode}
               readOnly
               aria-readonly="true"
-              placeholder="Provisioned by FINORA"
+              placeholder="Provisioned by PAISARULE"
             />
 
             <span className="finora-settings-form__helper">
-              Immutable code assigned during FINORA branch provisioning.
+              Immutable code assigned during PAISARULE branch provisioning.
             </span>
           </label>
 
           <label className="finora-settings-form__field">
             <span className="finora-settings-form__label">
-              Starting Customer Number
+              Permanent Customer ID Series
             </span>
 
             <input
@@ -233,11 +235,16 @@ export default function NumberingSeriesSettingsForm({
                   ? "finora-settings-form__input finora-settings-form__input--readonly"
                   : "finora-settings-form__input"
               }
-              type="number"
-              min={CUSTOMER_NUMBER_MIN}
-              max={CUSTOMER_NUMBER_MAX}
-              step={1}
+              type="text"
+              aria-invalid={!locked && startingCustomerNumber.length > 0 && !validSixDigitSeries}
+              style={!locked && startingCustomerNumber.length > 0 && !validSixDigitSeries ? { borderColor: "#DC2626", boxShadow: "0 0 0 1px #DC2626" } : undefined}
+              data-starting-series-min={CUSTOMER_NUMBER_MIN}
+              data-starting-series-max="990999"
               inputMode="numeric"
+              maxLength={6}
+              pattern="[0-9]{6}"
+              autoComplete="off"
+              placeholder="Enter 6 digits (000001–990999)"
               value={
                 locked
                   ? String(
@@ -249,15 +256,21 @@ export default function NumberingSeriesSettingsForm({
               disabled={!locked && (disabled || saving)}
               aria-readonly={locked}
               required={!locked}
-              onChange={(event) =>
-                onStartingCustomerNumberChange(
-                  event.currentTarget.value,
-                )
-              }
+              onChange={(event) => {
+                const digits = event.currentTarget.value
+                  .replace(/\D/g, "")
+                  .slice(0, 6);
+
+                if (digits.length === 6 && Number(digits) > 990999) {
+                  return;
+                }
+
+                onStartingCustomerNumberChange(digits);
+              }}
             />
 
             <span className="finora-settings-form__helper">
-              Choose once. Normal Settings cannot change this value after lock.
+              Choose exactly 6 digits (000001–990999). This number establishes your permanent branch Customer ID series for future Customers, Loans, Collections and Receipts. It cannot be changed after confirmation. Example: 100001 → PAISA-CUS-100001.
             </span>
           </label>
 
@@ -290,7 +303,7 @@ export default function NumberingSeriesSettingsForm({
               type="submit"
               className="finora-settings-form__submit"
               disabled={
-                controlsDisabled ||
+                controlsDisabled || !validSixDigitSeries ||
                 !setupPreview
               }
             >
@@ -334,7 +347,7 @@ export default function NumberingSeriesSettingsForm({
             <input
               className="finora-settings-form__input finora-settings-form__input--readonly"
               type="text"
-              value={loanExample}
+              value={loanExample.replace(/^FIN-(?=LOAN-)/, "PAISA-")}
               readOnly
               aria-readonly="true"
               placeholder="Available after numbering codes resolve"
@@ -353,7 +366,7 @@ export default function NumberingSeriesSettingsForm({
             <input
               className="finora-settings-form__input finora-settings-form__input--readonly"
               type="text"
-              value={collectionExample}
+              value={collectionExample.replace(/^FIN-(?=COL-)/, "PAISA-")}
               readOnly
               aria-readonly="true"
               placeholder="Available after numbering codes resolve"
@@ -372,7 +385,7 @@ export default function NumberingSeriesSettingsForm({
             <input
               className="finora-settings-form__input finora-settings-form__input--readonly"
               type="text"
-              value={receiptExample}
+              value={receiptExample.replace(/^FIN-(?=RCP-)/, "PAISA-")}
               readOnly
               aria-readonly="true"
               placeholder="Available after numbering codes resolve"

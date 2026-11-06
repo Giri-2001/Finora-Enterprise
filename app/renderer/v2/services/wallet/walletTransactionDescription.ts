@@ -95,7 +95,7 @@ export function resolveWalletTransactionTitle(
 ): string {
   switch (type) {
     case "WALLET_RECHARGE":
-      return "FINORA Wallet Recharge";
+      return "PAISARULE Wallet Recharge";
 
     case "LOAN_DISBURSEMENT_PLATFORM_FEE":
       return "Loan Disbursement Platform Fee";
@@ -116,10 +116,10 @@ export function resolveWalletTransactionTitle(
       return "Customer ID Card Generation Fee";
 
     case "OTHER_PLATFORM_FEE":
-      return "FINORA Platform Fee";
+      return "PAISARULE Platform Fee";
 
     default:
-      return "FINORA Wallet Transaction";
+      return "PAISARULE Wallet Transaction";
   }
 }
 

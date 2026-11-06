@@ -1,4 +1,4 @@
-﻿// ============================================================
+﻿﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // ENTERPRISE SETTINGS
@@ -96,7 +96,7 @@ export default function BranchSettingsForm({
             </h2>
 
             <p className="finora-settings-form__section-subtitle">
-              Active FINORA business and branch identity for this workspace.
+              Active PAISARULE business and branch identity for this workspace.
             </p>
           </div>
         </div>

@@ -209,7 +209,7 @@ export default function CustomerDepartmentPage({
             );
           } catch (error) {
             console.error(
-              "[FINORA CUSTOMER DEPARTMENT] Unable to refresh Customer Wallet Entry Gate:",
+              "[PAISARULE CUSTOMER DEPARTMENT] Unable to refresh Customer Wallet Entry Gate:",
               error,
             );
           }

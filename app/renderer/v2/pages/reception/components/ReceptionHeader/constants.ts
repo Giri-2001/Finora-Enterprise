@@ -8,7 +8,7 @@
 =========================================================== */
 
 export const COMPANY_NAME =
-  "FINORA ENTERPRISE™";
+  "PAISARULE™";
 
 export const COMPANY_SUBTITLE =
   "Enterprise Reception Hall";

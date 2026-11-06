@@ -162,7 +162,7 @@ export default function CustomerPhotoUploader({
           style={descriptionStyle}
         >
 
-          Add a customer photo for the FINORA identity card.
+          Add a customer photo for the PAISARULE identity card.
 
         </p>
 

@@ -420,7 +420,7 @@ export const readOnlyInputStyle:
 =========================================================== */
 
 export const placeholderColor =
-  "var(--finora-theme-text-muted, rgba(255,255,255,.58))";
+  "var(--finora-theme-text-primary, #F5F2EA)";
 
 
 /* ===========================================================

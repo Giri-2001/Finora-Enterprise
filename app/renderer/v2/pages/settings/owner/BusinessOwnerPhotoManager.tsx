@@ -48,7 +48,7 @@ export default function BusinessOwnerPhotoManager({
   return (
     <SettingsPhotoField
       label="Business Owner Photos"
-      description="Add clear Business Owner identification photos for quick visual verification inside FINORA."
+      description="Add clear Business Owner identification photos for quick visual verification inside PAISARULE."
       photos={photos}
       maxPhotos={MAX_BUSINESS_OWNER_PHOTOS}
       photoAltPrefix="Business Owner photo"

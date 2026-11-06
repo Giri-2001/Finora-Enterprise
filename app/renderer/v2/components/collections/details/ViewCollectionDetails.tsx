@@ -58,6 +58,17 @@ import {
   responsiveCss,
 } from "./ViewCollectionDetails.styles";
 
+// PAISARULE B07-R2: display only. Preserve stored IDs.
+function displayPaisaruleCollectionIdentity(
+  value: string | null | undefined,
+): string {
+  return String(value ?? "").replace(
+    /^FIN-(CUS|LOAN|RCP|COL)-/i,
+    "PAISA-$1-",
+  );
+}
+
+
 // ============================================================
 // TYPES
 // ============================================================
@@ -192,7 +203,7 @@ export default function ViewCollectionDetails({
         </div>
 
         <span style={receiptBadgeStyle}>
-          {collection.receiptNumber || "No Receipt"}
+          {displayPaisaruleCollectionIdentity(collection.receiptNumber) || "No Receipt"}
         </span>
       </header>
 
@@ -209,7 +220,7 @@ export default function ViewCollectionDetails({
             >
               <Info label="Customer Name" value={collection.customerName} />
 
-              <Info label="Customer ID" value={collection.customerId} />
+              <Info label="Customer ID" value={displayPaisaruleCollectionIdentity(collection.customerId)} />
 
               <Info label="Phone Number" value={collection.customerPhone} />
 
@@ -227,7 +238,7 @@ export default function ViewCollectionDetails({
               className="finora-view-collection-info-grid"
               style={infoGridStyle}
             >
-              <Info label="Loan Number" value={collection.loanNumber} />
+              <Info label="Loan Number" value={displayPaisaruleCollectionIdentity(collection.loanNumber)} />
 
               <Info label="Loan ID" value={collection.loanId} />
 
@@ -355,7 +366,7 @@ export default function ViewCollectionDetails({
               className="finora-view-collection-info-grid"
               style={infoGridStyle}
             >
-              <Info label="Receipt Number" value={collection.receiptNumber} />
+              <Info label="Receipt Number" value={displayPaisaruleCollectionIdentity(collection.receiptNumber)} />
 
               <div style={infoItemStyle}>
                 <span style={labelStyle}>Status</span>

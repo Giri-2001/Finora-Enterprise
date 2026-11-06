@@ -49,7 +49,7 @@ import { formatFinoraDate } from "../../../shared/finoraDateTimeDisplay";
 
 import { getBusinessContext } from "../business/businessContextService";
 import { loadFinoraServerSettingsIdentity } from "../business/finoraServerSettingsIdentity";
-import finoraMonthlyLogoUrl from "../../app/assets/finoraenterprise.png";
+import finoraMonthlyLogoUrl from "../../app/assets/paisarule_official_brand.png";
 
 import type { jsPDF } from "jspdf";
 
@@ -221,7 +221,7 @@ function monthlyPdfFilename(monthKey: string): string {
 
   // FINORA_C80_B28_B6_CLEAN_MONTHLY_FILENAME
   // Filename reflects the selected report month and year only.
-  return `Finora_Monthly_Collections_${monthName}_${year}.pdf`;
+  return `PAISARULE_Monthly_Collections_${monthName}_${year}.pdf`;
 }
 // FINORA_C80_B28_B2_CENTER_LOGO
 // Center branding stays clear of left/right shared-header text.
@@ -232,11 +232,11 @@ async function drawMonthlyCenterLogo(document: jsPDF): Promise<void> {
   try {
     await image.decode();
   } catch {
-    throw new Error("Unable to load original FINORA Monthly PDF logo.");
+    throw new Error("Unable to load original PAISARULE Monthly PDF logo.");
   }
 
   if (!image.naturalWidth || !image.naturalHeight) {
-    throw new Error("Invalid FINORA Monthly PDF logo dimensions.");
+    throw new Error("Invalid PAISARULE Monthly PDF logo dimensions.");
   }
 
   const canvas = window.document.createElement("canvas");
@@ -245,7 +245,7 @@ async function drawMonthlyCenterLogo(document: jsPDF): Promise<void> {
 
   const context = canvas.getContext("2d");
   if (!context) {
-    throw new Error("Unable to render FINORA Monthly PDF logo.");
+    throw new Error("Unable to render PAISARULE Monthly PDF logo.");
   }
 
   // Preserve image proportions; avoid cropping or stretching.
@@ -256,6 +256,20 @@ async function drawMonthlyCenterLogo(document: jsPDF): Promise<void> {
   const imageWidth = image.naturalWidth * scale;
   const imageHeight = image.naturalHeight * scale;
 
+  // PAISARULE_PDF_LOGO_ROUNDED_CORNERS
+  const paisaruleLogoRadius = Math.min(canvas.width, canvas.height) * 0.12;
+  context.beginPath();
+  context.moveTo(paisaruleLogoRadius, 0);
+  context.lineTo(canvas.width - paisaruleLogoRadius, 0);
+  context.quadraticCurveTo(canvas.width, 0, canvas.width, paisaruleLogoRadius);
+  context.lineTo(canvas.width, canvas.height - paisaruleLogoRadius);
+  context.quadraticCurveTo(canvas.width, canvas.height, canvas.width - paisaruleLogoRadius, canvas.height);
+  context.lineTo(paisaruleLogoRadius, canvas.height);
+  context.quadraticCurveTo(0, canvas.height, 0, canvas.height - paisaruleLogoRadius);
+  context.lineTo(0, paisaruleLogoRadius);
+  context.quadraticCurveTo(0, 0, paisaruleLogoRadius, 0);
+  context.closePath();
+  context.clip();
   context.drawImage(
     image,
     (canvas.width - imageWidth) / 2,
@@ -307,6 +321,13 @@ function formatMoney(value: number): string {
 // TEXT
 // ============================================================
 
+function displayMonthlyPaisaruleId(value: unknown): string {
+  return safeText(value).replace(
+    /^FIN-(?=(?:CUS|LOAN|RCP|COL)-)/i,
+    "PAISA-",
+  );
+}
+
 function safeText(value: unknown, fallback = "--"): string {
   const text = String(value ?? "").trim();
 
@@ -346,7 +367,7 @@ function addContinuationPage(document: jsPDF): number {
   document.setTextColor(0);
 
   document.text(
-    `FINORA ENTERPRISE - ${resolveBusinessReportTitle("Monthly Collections")}`,
+    `PAISARULE - ${resolveBusinessReportTitle("Monthly Collections")}`,
     PAGE_MARGIN_X,
     PAGE_TOP,
   );
@@ -915,11 +936,11 @@ function drawCollectionHistory(
       [
         formatDate(collection.receiptDate),
 
-        safeText(collection.receiptNumber),
+        displayMonthlyPaisaruleId(collection.receiptNumber),
 
-        safeText(collection.customerName || collection.customerId),
+        displayMonthlyPaisaruleId(collection.customerName || collection.customerId),
 
-        safeText(collection.loanNumber),
+        displayMonthlyPaisaruleId(collection.loanNumber),
 
         safeText(collection.paymentMethod).toUpperCase(),
 
@@ -934,7 +955,7 @@ function drawCollectionHistory(
     // Preserve every collection, including INR 1 transactions.
     // Additional details belong to the same receipt row.
     const receiptDetails = [
-      `Customer ID: ${safeText(collection.customerId)}`,
+      `Customer ID: ${displayMonthlyPaisaruleId(collection.customerId)}`,
       `Phone: ${safeText(collection.customerPhone)}`,
       `Collection Type: ${safeText(collection.collectionType)}`,
       `Status: ${safeText(collection.status)}`,
@@ -1189,7 +1210,7 @@ export async function shareMonthlyCollectionsPdf(
     monthlyPdfFilename(report.monthKey),
 
     {
-      title: "FINORA Monthly Collections",
+      title: "PAISARULE Monthly Collections",
 
       text: `Monthly Collections - ${report.monthLabel}`,
 

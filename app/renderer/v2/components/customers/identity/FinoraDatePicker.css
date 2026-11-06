@@ -124,7 +124,7 @@
 .finora-date-picker-input::placeholder {
 
   color:
-    var(--finora-theme-text-muted);
+    var(--finora-theme-text-primary);
 
 }
 
@@ -967,3 +967,8 @@
 /* ===========================================================
    END
 =========================================================== */
+/* PAISARULE C84-E3 - Customer Identity primary placeholders */
+.paisarule-identity-primary-input::placeholder {
+  color: var(--finora-theme-text-primary, #F5F2EA);
+  opacity: 1;
+}

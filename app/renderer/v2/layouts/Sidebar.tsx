@@ -39,7 +39,7 @@ export default function Sidebar({
         boxSizing: "border-box",
       }}
     >
-      <h2 style={{ marginTop: 0 }}>FINORA OS</h2>
+      <h2 style={{ marginTop: 0 }}>PAISARULE</h2>
 
       <p
         style={{

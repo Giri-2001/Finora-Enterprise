@@ -59,7 +59,7 @@ import {
 } from "./LoanCustomerCard.styles";
 
 import finoraLogo
-  from "../../../app/assets/finoraenterprise.png?url";
+  from "../../../app/assets/paisarule_official_brand.png?url";
 
 
 /* ===========================================================
@@ -78,6 +78,16 @@ export interface LoanCustomerOption {
   photo?: string;
 
 }
+
+// PAISARULE B03: UI presentation only.
+// Original ID remains authoritative for lookup and selection.
+function displayPaisaruleCustomerId(customerId: string): string {
+  return customerId.replace(
+    /^FIN-CUS-(\d{6})$/i,
+    "PAISA-CUS-$1",
+  );
+}
+
 
 
 interface LoanCustomerCardProps {
@@ -263,9 +273,9 @@ useEffect(() => {
 
               ||
 
-              customer.customerId
+              (customer.customerId
                 .toLowerCase()
-                .includes(query)
+                .includes(query) || displayPaisaruleCustomerId(customer.customerId).toLowerCase().includes(query))
 
               ||
 
@@ -578,7 +588,7 @@ onMouseLeave={() =>
                         >
 
                           {
-                            customer.customerId
+                            displayPaisaruleCustomerId(customer.customerId)
                           }
 
                           {"  •  "}
@@ -733,14 +743,12 @@ onMouseLeave={() =>
             }}
 
             title={
-              customerId ||
-              "--"
+              displayPaisaruleCustomerId(customerId || "--")
             }
           >
 
             {
-              customerId ||
-              "--"
+              displayPaisaruleCustomerId(customerId || "--")
             }
 
           </span>
@@ -963,9 +971,9 @@ onMouseLeave={() =>
                 finoraLogo
               }
 
-              alt="FINORA"
+              alt="PAISARULE"
 
-              style={{
+              style={{ borderRadius: "12px",
                 width: "58%",
 
                 height: "58%",

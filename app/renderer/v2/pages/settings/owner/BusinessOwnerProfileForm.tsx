@@ -97,7 +97,7 @@ export default function BusinessOwnerProfileForm({
             </h2>
 
             <p className="finora-settings-form__section-subtitle">
-              Authenticated FINORA user identity for the active Business Owner profile.
+              Authenticated PAISARULE user identity for the active Business Owner profile.
             </p>
           </div>
         </div>

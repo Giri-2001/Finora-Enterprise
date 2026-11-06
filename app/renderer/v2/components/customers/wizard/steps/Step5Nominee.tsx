@@ -471,7 +471,7 @@ export default function Step5Nominee({
 
 
         console.error(
-          "FINORA NOMINEE CUSTOMER LOOKUP ERROR:",
+          "PAISARULE NOMINEE CUSTOMER LOOKUP ERROR:",
           error,
         );
 

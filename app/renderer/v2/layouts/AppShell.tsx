@@ -142,7 +142,7 @@ export default function AppShell({
                       : page === "settings"
                         ? "Settings"
                         : page === "wallet"
-                          ? "FINORA Wallet"
+                          ? "PAISARULE Wallet"
                           : "Reception";
 
   // ==========================================================

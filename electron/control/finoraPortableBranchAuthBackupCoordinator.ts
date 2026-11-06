@@ -523,10 +523,29 @@ export async function createFinoraPortableBranchAuthBackup(
         principal.storageMode,
       );
   }
-  catch {
+  catch (error) {
+    // PAISARULE C85-P0-S41-A21
+    // Expose only allowlisted storage failure categories.
+    // Never disclose paths, credentials, or raw error text.
+    const storageCode =
+      error &&
+      typeof error === "object" &&
+      "code" in error
+        ? (error as { code?: unknown }).code
+        : null;
+
+    const safeCode =
+      storageCode === "STORAGE_UNAVAILABLE" ||
+      storageCode === "INVALID_STORAGE" ||
+      storageCode === "IO_FAILURE"
+        ? storageCode
+        : "UNEXPECTED_READ_FAILURE";
+
     return failure(
       "SOURCE_STORAGE_FAILED",
-      "Unable to read Portable Branch Auth for backup.",
+      "PAISARULE Portable Branch Auth read failed [" +
+        safeCode +
+        "].",
     );
   }
 

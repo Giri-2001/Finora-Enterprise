@@ -48,6 +48,18 @@ import {
   statusBadgeStyle,
 } from "../LoansPage.styles";
 
+// PAISARULE B05: UI display only.
+// Keep original loanNumber for lookup, View, receipts and storage.
+function displayPaisarulePortfolioLoanNumber(
+  loanNumber: string,
+): string {
+  return loanNumber.replace(
+    /^FIN-LOAN-(\d{6})-(\d{3})$/i,
+    "PAISA-LOAN-$1-$2",
+  );
+}
+
+
 // ============================================================
 // TYPES
 // ============================================================
@@ -177,7 +189,7 @@ export default function LoanPortfolioResponsiveRecord({
             color: theme.colors.text.primary,
           }}
         >
-          {loan.loanNumber || loan.id || "--"}
+          {displayPaisarulePortfolioLoanNumber(loan.loanNumber || loan.id || "--")}
         </div>
         <div
           style={{

@@ -6,7 +6,7 @@ import type { FinoraReceptionGuardCandidate, FinoraReceptionValidationResponse }
 // FINORA_P1_707G_FIX_SERVER_SESSIONGUARD_LIFECYCLE
 // This bridge validates identity only; it does not grant Reception access.
 type Result =
-  | { success: true; sessionId: string }
+  | { success: true; sessionId: string; expiresAt?: string }
   | { success: false; errorCode: string };
 
 type ServerBridge = {
@@ -208,6 +208,7 @@ export async function touchFinoraServerGuardSession(
         renewed?: boolean;
         sessionId?: string;
         sessionType?: string;
+        expiresAt?: string;
         errorCode?: string;
       }>;
     };
@@ -254,7 +255,29 @@ export async function touchFinoraServerGuardSession(
       verified.success &&
       verified.data.sessionId === sessionId
     ) {
-      return { success: true, sessionId };
+      // PAISARULE_R172_S5_EXPIRY
+      // Display evidence must come from server renewal.
+      const expiry = renewal.expiresAt;
+      const expiryMs =
+        typeof expiry === "string"
+          ? Date.parse(expiry)
+          : NaN;
+
+      if (
+        !Number.isFinite(expiryMs) ||
+        expiryMs <= Date.now()
+      ) {
+        return {
+          success: false,
+          errorCode: "SERVER_EXPIRY_EVIDENCE_INVALID",
+        };
+      }
+
+      return {
+        success: true,
+        sessionId,
+        expiresAt: expiry,
+      };
     }
 
     return {
@@ -303,7 +326,23 @@ export async function touchFinoraServerGuardSession(
     if (raw.sessionId !== sessionId) {
       return { success: false, errorCode: "SERVER_TOUCH_DENIED" };
     }
-    return { success: true, sessionId };
+    // PAISARULE C85-P0-S30: only trusted IPC supplies expiry.
+    // Missing expiry means unverified, never a guessed timer.
+    if (
+      raw.expiresAt !== undefined &&
+      (
+        typeof raw.expiresAt !== "string" ||
+        !Number.isFinite(Date.parse(raw.expiresAt)) ||
+        Date.parse(raw.expiresAt) <= Date.now()
+      )
+    ) {
+      return { success: false, errorCode: "INVALID_SERVER_RESPONSE" };
+    }
+    return {
+      success: true,
+      sessionId,
+      expiresAt: raw.expiresAt as string | undefined,
+    };
   } catch {
     return { success: false, errorCode: "SERVER_TOUCH_UNAVAILABLE" };
   }

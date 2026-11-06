@@ -62,7 +62,7 @@ import {
 } from "../../loans/details/LoanCustomerCard.styles";
 
 import finoraLogo
-  from "../../../app/assets/finoraenterprise.png?url";
+  from "../../../app/assets/paisarule_official_brand.png?url";
 import type { CSSProperties } from "react";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -1177,7 +1177,7 @@ export default function CollectionStudioPage() {
     const releasedBy = session?.username?.trim() ?? "";
 
     if (!releasedBy) {
-      setGoldReleaseError("Authenticated FINORA user could not be resolved.");
+      setGoldReleaseError("Authenticated PAISARULE user could not be resolved.");
 
       return;
     }
@@ -1593,8 +1593,8 @@ export default function CollectionStudioPage() {
                   <div style={responsivePhotoPlaceholderStyle}>
                     <img
   src={finoraLogo}
-  alt="FINORA"
-  style={{
+  alt="PAISARULE"
+  style={{ borderRadius: "12px",
     width: "72%",
     height: "72%",
     objectFit: "contain",

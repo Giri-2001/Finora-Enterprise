@@ -139,7 +139,7 @@ export function formatCustomerId(
   );
 
   return joinNumberParts([
-    FINORA_NUMBER_PREFIX,
+    "PAISA",
     FINORA_CUSTOMER_PREFIX,
     formatNumericSegment(
       customerNumber,
@@ -178,7 +178,7 @@ export function formatLoanNumber(
   );
 
   return joinNumberParts([
-    FINORA_NUMBER_PREFIX,
+    "PAISA",
     FINORA_LOAN_PREFIX,
     formatNumericSegment(
       customerNumber,

@@ -134,7 +134,7 @@ export default function CustomerOffice({
 
 
       console.log(
-        "FINORA LOAN UPDATE RECEIVED",
+        "PAISARULE LOAN UPDATE RECEIVED",
       );
 
 

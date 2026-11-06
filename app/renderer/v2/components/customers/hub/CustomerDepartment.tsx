@@ -69,6 +69,7 @@ import { storageManager } from "../../../storage/storageManager";
 import { StorageMode } from "../../../storage/storage.types";
 
 import {
+  getBusinessContext,
   requireBusinessContext,
 } from "../../../services/business/businessContextService";
 
@@ -171,6 +172,63 @@ export default function CustomerDepartment({
 
   customerCreateGate,
 }: CustomerDepartmentProps) {
+  // Same server-verified identity source as Customer Step 1.
+  // Never reuse a name from a different authenticated scope.
+  const cardContext = getBusinessContext();
+  const cardOwnerId = cardContext?.ownerId?.trim() ?? "";
+  const cardBusinessId = cardContext?.businessId?.trim() ?? "";
+  const cardBranchId = cardContext?.branchId?.trim() ?? "";
+
+  const cardScopeKey = JSON.stringify([
+    cardOwnerId,
+    cardBusinessId,
+    cardBranchId,
+  ]);
+
+  const [verifiedCardBusiness, setVerifiedCardBusiness] = useState<{
+    scopeKey: string;
+    businessName: string;
+  } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setVerifiedCardBusiness(null);
+
+    if (!cardOwnerId || !cardBusinessId || !cardBranchId) {
+      return () => { active = false; };
+    }
+
+    void (async () => {
+      try {
+        const { loadFinoraServerSettingsIdentity } = await import(
+          "../../../services/business/finoraServerSettingsIdentity"
+        );
+
+        const result = await loadFinoraServerSettingsIdentity({
+          ownerId: cardOwnerId,
+          businessId: cardBusinessId,
+          branchId: cardBranchId,
+        });
+
+        if (!active || !result.success) return;
+
+        const businessName = result.data.businessName.trim();
+        if (!businessName) return;
+
+        setVerifiedCardBusiness({ scopeKey: cardScopeKey, businessName });
+      } catch {
+        // No unverified or hardcoded business-name fallback.
+      }
+    })();
+
+    return () => { active = false; };
+  }, [cardScopeKey]);
+
+  const resolvedCardCompanyName =
+    verifiedCardBusiness?.scopeKey === cardScopeKey
+      ? verifiedCardBusiness.businessName
+      : "";
+
   // ==========================================================
   // CUSTOMER WIZARD STATE
   // ==========================================================
@@ -437,7 +495,7 @@ export default function CustomerDepartment({
 
         if (!ownerId || !businessId || !branchId) {
           window.alert(
-            "Unable to verify FINORA commercial access.",
+            "Unable to verify PAISARULE commercial access.",
           );
           return;
         }
@@ -453,7 +511,7 @@ export default function CustomerDepartment({
         if (!gateResult.canEnter) {
           window.alert(
             gateResult.message ??
-              "Please recharge your wallet to unlock this button.",
+              "An ACTIVE PAISARULE subscription is required.",
           );
           return;
         }
@@ -469,12 +527,12 @@ export default function CustomerDepartment({
         );
       } catch (error) {
         console.error(
-          "[FINORA CUSTOMER] Unable to authorize Customer entry:",
+          "[PAISARULE CUSTOMER] Unable to authorize Customer entry:",
           error,
         );
 
         window.alert(
-          "Unable to verify FINORA commercial access.",
+          "Unable to verify PAISARULE commercial access.",
         );
       }
     })();
@@ -547,14 +605,14 @@ export default function CustomerDepartment({
           ) : (
             <CustomerOfficeController
               customers={customers}
-              companyName={companyName}
+              companyName={resolvedCardCompanyName}
               branchName={branchName}
               addCustomerDisabled={!customerCreateGate?.canEnter}
               addCustomerTitle={
                 customerCreateGate?.canEnter
                   ? "Add Customer"
                   : customerCreateGate?.message ??
-                    "Please recharge your wallet to unlock this button."
+                    "An ACTIVE PAISARULE subscription is required."
               }
               onOpenCustomerWizard={handleOpenCustomerWizard}
               onEditCustomer={handleEditCustomer}

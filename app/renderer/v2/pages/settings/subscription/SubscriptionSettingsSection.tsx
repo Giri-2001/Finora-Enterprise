@@ -84,7 +84,7 @@ export default function SubscriptionSettingsSection() {
         session.branchId !== context.branchId
       ) {
         if (active) {
-          setError("Verified FINORA branch session is unavailable.");
+          setError("Verified PAISARULE branch session is unavailable.");
           setLoading(false);
         }
         return;
@@ -126,7 +126,7 @@ export default function SubscriptionSettingsSection() {
           pricing.data.branchId !== scope.branchId
         ) {
           setError(
-            "Live PostgreSQL subscription unavailable or branch mismatch."
+            "Subscription unavailable or branch verification failed."
           );
           setLoading(false);
           return;
@@ -174,7 +174,7 @@ export default function SubscriptionSettingsSection() {
         <SettingsFeedback
           kind="info"
           title="Loading Server Subscription"
-          message="Verifying the active subscription from FINORA PostgreSQL."
+          message="Verifying the active subscription from PAISARULE Secure Server."
         />
       </section>
     );
@@ -208,7 +208,7 @@ export default function SubscriptionSettingsSection() {
               Current Server Subscription
             </h2>
             <p className="finora-settings-form__section-subtitle">
-              Verified PostgreSQL subscription for the active FINORA branch.
+              Verified subscription for the active PAISARULE branch.
             </p>
           </div>
 
@@ -279,7 +279,7 @@ export default function SubscriptionSettingsSection() {
         </div>
 
         <p className="finora-settings-subscription__authority">
-          Source: FINORA PostgreSQL Subscription.
+          Source: PAISARULE Secure Server.
           {plan ? ` Server observed at ${displayDate(plan.serverNow)}.` : ""}
         </p>
       </div>

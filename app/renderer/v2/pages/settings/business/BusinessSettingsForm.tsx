@@ -1,4 +1,4 @@
-﻿// ============================================================
+﻿﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // ENTERPRISE SETTINGS
@@ -106,7 +106,7 @@ export default function BusinessSettingsForm({
             </h2>
 
             <p className="finora-settings-form__section-subtitle">
-              Registered FINORA ownership, business and active branch identity.
+              Registered PAISARULE ownership, business and active branch identity.
             </p>
           </div>
         </div>

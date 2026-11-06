@@ -185,7 +185,7 @@ export function createFinoraUnifiedWalletSession(options: {
       !Number.isFinite(now) ||
       !Number.isFinite(expires) ||
       expires <= now ||
-      expires - now > 1805000
+      expires - now > 3605000
     ) {
       return deny("INVALID_SERVER_RESPONSE");
     }

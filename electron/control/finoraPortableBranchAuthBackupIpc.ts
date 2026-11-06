@@ -158,7 +158,12 @@ export interface FinoraPortableBranchAuthBackupIpcDependencies {
     >;
 
   exportBackup?:
-    typeof exportFinoraPortableBranchAuthBackupFromNativeDialog;
+    (
+      parentWindow: BrowserWindow,
+      input: FinoraPortableBranchAuthBackupIpcRequest,
+      portableStore: Pick<FinoraPortableBranchAuthStore, "read">,
+      event: IpcMainInvokeEvent,
+    ) => ReturnType<typeof exportFinoraPortableBranchAuthBackupFromNativeDialog>;
 }
 
 // ============================================================
@@ -360,7 +365,10 @@ function mapExportResult(
 
   return failure(
     result.errorCode,
-    "FINORA Portable Branch Auth backup export failed.",
+    (
+      result.error ||
+      "PAISARULE Portable Branch Auth backup export failed."
+    ).replace(/\bFINORA\b/g, "PAISARULE"),
   );
 }
 
@@ -435,6 +443,7 @@ export function createFinoraPortableBranchAuthBackupIpcHandler(
           parentWindow,
           parsed,
           dependencies.portableStore,
+          event,
         );
 
       return mapExportResult(

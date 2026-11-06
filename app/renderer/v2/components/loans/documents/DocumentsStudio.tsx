@@ -355,7 +355,7 @@ export default function DocumentsStudio({
        * authoritative storage owner.
        */
       console.error(
-        "FINORA Documents Studio: document preparation failed.",
+        "PAISARULE Documents Studio: document preparation failed.",
         error,
       );
     } finally {

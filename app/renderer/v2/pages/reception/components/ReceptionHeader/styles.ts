@@ -98,6 +98,7 @@ export function createReceptionHeaderStyles(
 
     objectFit:
       "contain",
+    borderRadius: "12px",
 
   };
 

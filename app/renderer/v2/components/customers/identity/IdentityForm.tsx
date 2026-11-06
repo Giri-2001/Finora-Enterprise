@@ -718,7 +718,7 @@ export default function IdentityForm({
         ================================================= */}
 
         <Field
-          label="FINORA Customer ID"
+          label="PAISARULE Customer ID"
           fieldStyleOverride={resolvedFieldStyle}
           labelStyleOverride={resolvedLabelStyle}
           requiredStyleOverride={resolvedRequiredStyle}
@@ -730,9 +730,9 @@ export default function IdentityForm({
 
             <input
               style={resolvedIconReadOnlyInputStyle}
-              value={value.customerId}
+              value={value.customerId.replace(/^FIN-(?=CUS-)/i, "PAISA-")}
               readOnly
-              aria-label="FINORA Customer ID"
+              aria-label="PAISARULE Customer ID"
             />
           </div>
         </Field>
@@ -753,7 +753,7 @@ export default function IdentityForm({
               <UserRound style={resolvedFieldIconStyle} strokeWidth={2} />
             </span>
 
-            <input
+            <input className="paisarule-identity-primary-input"
               style={resolvedIconInputStyle}
               value={value.customerName}
               placeholder="Enter customer full name"
@@ -779,7 +779,7 @@ export default function IdentityForm({
               <Smartphone style={resolvedFieldIconStyle} strokeWidth={2} />
             </span>
 
-            <input
+            <input className="paisarule-identity-primary-input"
               style={resolvedIconInputStyle}
               value={value.mobileNumber}
               placeholder="Enter mobile number"
@@ -831,7 +831,7 @@ export default function IdentityForm({
               </span>
             </span>
 
-            <input
+            <input className="paisarule-identity-primary-input"
               style={resolvedIconInputStyle}
               type="email"
               value={value.email}
@@ -863,7 +863,7 @@ export default function IdentityForm({
               <MessageCircle style={resolvedFieldIconStyle} strokeWidth={2} />
             </span>
 
-            <input
+            <input className="paisarule-identity-primary-input"
               style={{
                 ...resolvedIconInputStyle,
 

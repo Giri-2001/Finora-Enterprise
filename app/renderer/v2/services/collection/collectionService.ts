@@ -293,7 +293,7 @@ export async function approveCollection(
 
   if (!activeBusinessDate) {
     throw new Error(
-      "A valid FINORA Login Date is required before Collection persistence.",
+      "A valid PAISARULE Login Date is required before Collection persistence.",
     );
   }
 

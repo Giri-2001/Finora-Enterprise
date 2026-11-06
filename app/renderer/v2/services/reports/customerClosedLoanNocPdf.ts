@@ -15,9 +15,10 @@
 
 import { jsPDF } from "jspdf";
 
-import finoraLogoUrl from "../../app/assets/finoraenterprise.png";
+import finoraLogoUrl from "../../app/assets/paisarule_official_brand.png";
 
 import { getBusinessContext } from "../business/businessContextService";
+import { loadFinoraServerSettingsIdentity } from "../business/finoraServerSettingsIdentity";
 
 import { buildClosedLoansReport } from "./closedLoansDataService";
 
@@ -44,6 +45,65 @@ function safeText(value: unknown, fallback = "--"): string {
   return result || fallback;
 }
 
+// PAISARULE R79: Reuse Loan Statement Settings Identity wiring.
+type NocIssuer = {
+  businessName: string;
+  branchName: string;
+};
+
+async function resolveNocIssuer(): Promise<NocIssuer> {
+  const context = getBusinessContext();
+
+  const scope =
+    context?.ownerId?.trim() &&
+    context.businessId?.trim() &&
+    context.branchId?.trim()
+      ? {
+          ownerId: context.ownerId.trim(),
+          businessId: context.businessId.trim(),
+          branchId: context.branchId.trim(),
+        }
+      : null;
+
+  let businessName = "Not recorded";
+  let branchName = "Not recorded";
+
+  if (scope) {
+    const serverIdentity =
+      await loadFinoraServerSettingsIdentity(scope);
+
+    if (serverIdentity.success) {
+      businessName = serverIdentity.data.businessName.trim();
+      branchName = serverIdentity.data.branchName.trim();
+    } else {
+      const profile = context?.businessProfile;
+
+      if (
+        profile &&
+        profile.ownerId === scope.ownerId &&
+        profile.businessId === scope.businessId &&
+        profile.branchId === scope.branchId &&
+        profile.businessName.trim() &&
+        profile.branchName.trim()
+      ) {
+        businessName = profile.businessName.trim();
+        branchName = profile.branchName.trim();
+      }
+    }
+  }
+
+  return { businessName, branchName };
+}
+
+function displayNocPaisaruleId(
+  value: string,
+): string {
+  return value.replace(
+    /^FIN-(CUS|LOAN|RCP|COL)-/i,
+    "PAISA-$1-",
+  );
+}
+
 function money(value: number): string {
   if (!Number.isFinite(value)) {
     throw new Error("Invalid NOC financial amount.");
@@ -63,8 +123,8 @@ function cleanFilePart(value: string, fallback: string): string {
 
 function makeFileName(loan: ClosedLoanReportRow): string {
   return (
-    `Finora_${cleanFilePart(loan.customerName, "Customer")}` +
-    `_Closed_Loan_NOC_${cleanFilePart(loan.loanNumber, "Loan")}.pdf`
+    `PAISARULE_${cleanFilePart(loan.customerName, "Customer")}` +
+    `_Closed_Loan_NOC_${cleanFilePart(displayNocPaisaruleId(loan.loanNumber), "Loan")}.pdf`
   );
 }
 
@@ -127,11 +187,11 @@ async function drawLogo(document: jsPDF): Promise<void> {
   try {
     await image.decode();
   } catch {
-    throw new Error("Unable to load original FINORA PNG logo.");
+    throw new Error("Unable to load original PAISARULE PNG logo.");
   }
 
   if (!image.naturalWidth || !image.naturalHeight) {
-    throw new Error("FINORA PNG logo has invalid dimensions.");
+    throw new Error("PAISARULE PNG logo has invalid dimensions.");
   }
 
   const canvas = window.document.createElement("canvas");
@@ -141,9 +201,23 @@ async function drawLogo(document: jsPDF): Promise<void> {
   const context = canvas.getContext("2d");
 
   if (!context) {
-    throw new Error("Unable to prepare FINORA logo.");
+    throw new Error("Unable to prepare PAISARULE logo.");
   }
 
+  // PAISARULE_PDF_LOGO_ROUNDED_CORNERS
+  const paisaruleLogoRadius = Math.min(canvas.width, canvas.height) * 0.12;
+  context.beginPath();
+  context.moveTo(paisaruleLogoRadius, 0);
+  context.lineTo(canvas.width - paisaruleLogoRadius, 0);
+  context.quadraticCurveTo(canvas.width, 0, canvas.width, paisaruleLogoRadius);
+  context.lineTo(canvas.width, canvas.height - paisaruleLogoRadius);
+  context.quadraticCurveTo(canvas.width, canvas.height, canvas.width - paisaruleLogoRadius, canvas.height);
+  context.lineTo(paisaruleLogoRadius, canvas.height);
+  context.quadraticCurveTo(0, canvas.height, 0, canvas.height - paisaruleLogoRadius);
+  context.lineTo(0, paisaruleLogoRadius);
+  context.quadraticCurveTo(0, 0, paisaruleLogoRadius, 0);
+  context.closePath();
+  context.clip();
   context.drawImage(image, 0, 0, 256, 256);
 
   const size = 30;
@@ -178,7 +252,7 @@ function drawBackground(document: jsPDF): void {
 
   document.setFontSize(32);
   document.setTextColor(246, 246, 247);
-  document.text("FINORA", 105, 179, { align: "center", angle: 30 });
+  document.text("PAISARULE", 105, 179, { align: "center", angle: 30 });
 }
 
 function labelValue(
@@ -200,6 +274,36 @@ function labelValue(
 
   const lines = document.splitTextToSize(value, width);
   document.text(lines.slice(0, 2), x, y + 6);
+}
+
+// Same typography and baseline as labelValue; right aligned.
+function labelValueRight(
+  document: jsPDF,
+  label: string,
+  value: string,
+  rightX: number,
+  y: number,
+  width = 78,
+): void {
+  document.setFont("helvetica", "normal");
+  document.setFontSize(8);
+  document.setTextColor(...GREY);
+  document.text(label, rightX, y, { align: "right" });
+
+  document.setFont("helvetica", "bold");
+  document.setFontSize(10);
+  document.setTextColor(...NAVY);
+
+  const lines: string[] = document.splitTextToSize(
+    value,
+    width,
+  );
+
+  lines.slice(0, 2).forEach((line, index) => {
+    document.text(line, rightX, y + 6 + index * 5, {
+      align: "right",
+    });
+  });
 }
 
 function sectionTitle(document: jsPDF, title: string, y: number): void {
@@ -226,7 +330,7 @@ function drawSeal(document: jsPDF, x: number, y: number): void {
   document.setTextColor(...NAVY);
   document.setFont("helvetica", "bold");
   document.setFontSize(6.7);
-  document.text("FINORA", x, y - 9.0, { align: "center" });
+  document.text("PAISARULE", x, y - 9.0, { align: "center" });
 
   document.setFontSize(12);
   document.setTextColor(...GREEN);
@@ -243,18 +347,14 @@ function drawCertificate(
   document: jsPDF,
   loan: ClosedLoanReportRow,
   issuedAt: string,
+  issuer: NocIssuer,
 ): void {
-  const businessContext = getBusinessContext();
-
-  const businessName = safeText(
-    businessContext?.businessProfile?.businessName,
-    "FINORA Enterprise",
-  );
+  const { businessName, branchName } = issuer;
 
   document.setFont("helvetica", "bold");
   document.setFontSize(9);
   document.setTextColor(...NAVY);
-  document.text("FINORA ENTERPRISE", 21, 24);
+  document.text("PAISARULE", 21, 24);
 
   document.setFont("helvetica", "normal");
   document.setFontSize(7.5);
@@ -291,12 +391,13 @@ function drawCertificate(
   );
 
   sectionTitle(document, "ISSUING BUSINESS", 86);
-  labelValue(document, "Business", businessName, 21, 96, 156);
+  labelValue(document, "Business Name", businessName, 21, 96, 78);
+  labelValueRight(document, "Branch Name", branchName, 189, 96, 78);
 
   sectionTitle(document, "CUSTOMER AND LOAN IDENTITY", 118);
   labelValue(document, "Customer Name", loan.customerName, 21, 129);
-  labelValue(document, "Customer ID", loan.customerId, 111, 129);
-  labelValue(document, "Loan Number", loan.loanNumber, 21, 149);
+  labelValue(document, "Customer ID", displayNocPaisaruleId(loan.customerId), 111, 129);
+  labelValue(document, "Loan Number", displayNocPaisaruleId(loan.loanNumber), 21, 149);
   labelValue(document, "Loan Status", "CLOSED", 111, 149);
 
   sectionTitle(document, "FINAL LOAN SETTLEMENT", 171);
@@ -352,7 +453,7 @@ function drawCertificate(
   document.setFontSize(7);
   document.setTextColor(...GREY);
   document.text(
-    "Generated from FINORA closed-loan records.",
+    "Generated from PAISARULE closed-loan records.",
     21,
     273,
   );
@@ -363,6 +464,7 @@ export async function buildCustomerClosedLoanNocPdf(
   loanId: string,
 ): Promise<{ document: jsPDF; fileName: string }> {
   const loan = await loadVerifiedClosedLoan(customerId, loanId);
+  const issuer = await resolveNocIssuer();
   const issuedAt = getReportGeneratedAt();
 
   const document = new jsPDF({
@@ -375,12 +477,12 @@ export async function buildCustomerClosedLoanNocPdf(
   // Strict layer order: watermark -> logo -> all foreground details.
   drawBackground(document);
   await drawLogo(document);
-  drawCertificate(document, loan, issuedAt);
+  drawCertificate(document, loan, issuedAt, issuer);
 
   document.setProperties({
-    title: `Loan Closure NOC - ${loan.loanNumber}`,
+    title: `Loan Closure NOC - ${displayNocPaisaruleId(loan.loanNumber)}`,
     subject: "Specific Loan Closure Confirmation",
-    author: "FINORA Enterprise",
+    author: "PAISARULE",
   });
 
   addFinoraPdfFooters(document);
@@ -414,7 +516,7 @@ export async function shareCustomerClosedLoanNocPdf(
   const result = await buildCustomerClosedLoanNocPdf(customerId, loanId);
 
   await shareFinoraPdf(result.document, result.fileName, {
-    title: "FINORA Loan Closure NOC",
+    title: "PAISARULE Loan Closure NOC",
     text: "Closed Loan / No Outstanding Confirmation",
     dialogTitle: "Share Loan Closure Certificate",
   });

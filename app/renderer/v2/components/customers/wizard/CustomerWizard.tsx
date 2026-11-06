@@ -1087,7 +1087,7 @@ export default function CustomerWizard({
       ) {
 
         console.error(
-          "FINORA CUSTOMER NUMBER PREVIEW FAILED:",
+          "PAISARULE CUSTOMER NUMBER PREVIEW FAILED:",
           result.error ??
             "Customer number preview is unavailable.",
         );

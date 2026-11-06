@@ -243,8 +243,7 @@ export default function CollectionPortfolioResponsiveRecord({
             textOverflow: "clip",
           }}
         >
-          {collection.receiptNumber ||
-            "--"}
+          {String(collection.receiptNumber || "--").replace(/^FIN-RCP-/i, "PAISA-RCP-")}
         </div>
       </div>,
       "receipt",
@@ -296,8 +295,7 @@ export default function CollectionPortfolioResponsiveRecord({
             textOverflow: "clip",
           }}
         >
-          {collection.loanNumber ||
-            "--"}
+          {String(collection.loanNumber || "--").replace(/^FIN-LOAN-/i, "PAISA-LOAN-")}
         </div>
       </div>,
       "loan",

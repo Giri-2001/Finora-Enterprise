@@ -256,8 +256,8 @@ export default function CustomerIdCardBack({
             CUSTOMER ID
         =================================================== */}
 
-        <div style={customerIdStyle} title={customerId}>
-          {safeText(customerId)}
+        <div style={customerIdStyle} title={customerId.replace(/^FIN-(?=CUS-)/i, "PAISA-")}>
+          {safeText(customerId.replace(/^FIN-(?=CUS-)/i, "PAISA-"))}
         </div>
 
         {/* ===================================================

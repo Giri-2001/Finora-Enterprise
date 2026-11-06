@@ -44,7 +44,7 @@ export default function FinoraSavedOwnerLoginPicker({
 
   return (
     <section
-      aria-label="Saved FINORA Owner accounts"
+      aria-label="Saved PAISARULE Owner accounts"
       style={{
         fontFamily,
         width: "100%",

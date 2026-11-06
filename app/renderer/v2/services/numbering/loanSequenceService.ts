@@ -122,7 +122,7 @@ function parseCanonicalCustomerNumber(
 
   if (
     (parts.length !== 3 && parts.length !== 4) ||
-    parts[0] !== "FIN" ||
+    (parts[0] !== "FIN" && parts[0] !== "PAISA") ||
     parts[1] !== "CUS"
   ) {
     return {
@@ -426,7 +426,7 @@ async function resolveNextLoanSequenceWithLoanBootstrap(
 
     const currentShape =
       parts.length === 5 &&
-      parts[0] === "FIN" &&
+      (parts[0] === "FIN" || parts[0] === "PAISA") &&
       parts[1] === "LOAN" &&
       parts[2] === scope.businessCode &&
       /^\d{6}$/.test(parts[3] ?? "") &&
@@ -434,7 +434,7 @@ async function resolveNextLoanSequenceWithLoanBootstrap(
 
     const previousCanonicalShape =
       parts.length === 6 &&
-      parts[0] === "FIN" &&
+      (parts[0] === "FIN" || parts[0] === "PAISA") &&
       parts[1] === "LOAN" &&
       parts[2] === scope.businessCode &&
       parts[3] === scope.branchCode &&

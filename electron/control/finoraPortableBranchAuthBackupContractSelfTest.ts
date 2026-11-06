@@ -110,9 +110,8 @@ function runSelfTest(): void {
   );
 
   assert(
-    FINORA_PORTABLE_BRANCH_AUTH_BACKUP_FILE_EXTENSION ===
-      ".finora",
-    "Backup extension must remain .finora.",
+    FINORA_PORTABLE_BRANCH_AUTH_BACKUP_FILE_EXTENSION === ".paisarule",
+    "Backup extension must be .paisarule.",
   );
 
   console.log(

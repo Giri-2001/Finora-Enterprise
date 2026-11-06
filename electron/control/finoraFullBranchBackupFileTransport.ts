@@ -26,6 +26,7 @@
 // ============================================================
 
 import {
+  app,
   dialog,
 } from "electron";
 
@@ -332,17 +333,18 @@ function ensureFinoraExtension(
   filePath:
     string,
 ): string {
-  return (
-    extname(
-      filePath,
-    ).toLowerCase() ===
-      FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION
-  )
-    ? filePath
-    : (
-        filePath +
-        FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION
-      );
+  const currentExtension = extname(filePath).toLowerCase();
+
+  if (currentExtension === FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION) {
+    return filePath;
+  }
+
+  if (currentExtension === ".finora") {
+    return filePath.slice(0, -7) +
+      FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION;
+  }
+
+  return filePath + FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION;
 }
 
 function failure(
@@ -912,11 +914,24 @@ export async function exportFinoraFullBranchBackupFromNativeDialog(
   // backup filename. They are not backup authorization.
   // ----------------------------------------------------------
 
-  let backupBusinessCodeToken =
-    "";
+  // PAISARULE C85-P0-S41-A14
+  // Display metadata only. Never authorize by filename.
+  const cleanBackupName = (
+    value: unknown,
+    fallback: string,
+  ): string => {
+    const cleaned = String(value ?? "")
+      .normalize("NFKC")
+      .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "")
+      .replace(/\s+/g, "")
+      .replace(/[. ]+$/g, "")
+      .slice(0, 48);
 
-  let backupBranchCodeToken =
-    "";
+    return cleaned || fallback;
+  };
+
+  let backupBusinessNameToken = "Business";
+  let backupBranchNameToken = "Branch";
 
   try {
     const profileResult =
@@ -926,60 +941,52 @@ export async function exportFinoraFullBranchBackupFromNativeDialog(
         fullBackup.data.branchScope.branchId,
       );
 
-    const profile =
-      profileResult.success
-        ? profileResult.data
-        : undefined;
+    const profile = profileResult.success
+      ? profileResult.data
+      : undefined;
 
     if (profile) {
-      backupBusinessCodeToken =
-        String(
-          profile.businessCode ?? "",
-        )
-          .trim()
-          .toUpperCase()
-          .replace(
-            /[^A-Z0-9]/g,
-            "",
-          )
-          .slice(
-            0,
-            16,
-          );
+      const metadata =
+        profile as unknown as Record<string, unknown>;
 
-      backupBranchCodeToken =
-        String(
-          profile.branchCode ?? "",
-        )
-          .trim()
-          .toUpperCase()
-          .replace(
-            /[^A-Z0-9]/g,
-            "",
-          )
-          .slice(
-            0,
-            16,
-          );
+      backupBusinessNameToken = cleanBackupName(
+        metadata.businessName ?? metadata.businessCode,
+        "Business",
+      );
+
+      backupBranchNameToken = cleanBackupName(
+        metadata.branchName ?? metadata.branchCode,
+        "Branch",
+      );
     }
-  }
-  catch {
-    /*
-     * Filename metadata lookup must never weaken or block
-     * the authenticated backup operation.
-     */
+  } catch {
+    // Metadata failure cannot weaken or block secure backup.
   }
 
-  const backupScopeFileNamePrefix =
-    backupBusinessCodeToken.length > 0 &&
-    backupBranchCodeToken.length > 0
-      ? (
-          backupBusinessCodeToken +
-          "-" +
-          backupBranchCodeToken +
-          "-"
-        )
-      : "";
+  const backupLocalTime = new Date();
+
+  const padBackupTime = (value: number): string =>
+    String(value).padStart(2, "0");
+
+  const backupDateTimeToken = [
+    padBackupTime(backupLocalTime.getDate()),
+    padBackupTime(backupLocalTime.getMonth() + 1),
+    String(backupLocalTime.getFullYear()),
+  ].join("-") +
+    "_" +
+    padBackupTime(backupLocalTime.getHours() % 12 || 12) +
+    "." +
+    padBackupTime(backupLocalTime.getMinutes()) +
+    (backupLocalTime.getHours() >= 12 ? "PM" : "AM");
+
+  const suggestedBackupFileName =
+    "Backup_" +
+    backupBusinessNameToken +
+    "_" +
+    backupBranchNameToken +
+    "_" +
+    backupDateTimeToken +
+    FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION;
 
   // ----------------------------------------------------------
   // 5. NATIVE DESTINATION SELECTION
@@ -1000,45 +1007,21 @@ export async function exportFinoraFullBranchBackupFromNativeDialog(
         parentWindow,
         {
           title:
-            "Save FINORA Branch Backup",
+            "Save PAISARULE Branch Backup",
 
           defaultPath:
-            (
-              "FINORA-BRANCH-BACKUP-" +
-              backupScopeFileNamePrefix +
-              fullBackup.data.backupId +
-              "_" +
-              (() => {
-                const now = new Date();
-
-                const pad =
-                  (value: number): string =>
-                    String(value).padStart(2, "0");
-
-                return (
-                  pad(now.getDate()) +
-                  "-" +
-                  pad(now.getMonth() + 1) +
-                  "-" +
-                  now.getFullYear() +
-                  "_" +
-                  pad(
-                    now.getHours() % 12 || 12,
-                  ) +
-                  "：" +
-                  pad(now.getMinutes())
-                );
-              })() +
-              FINORA_FULL_BRANCH_BACKUP_FILE_EXTENSION
+            join(
+              app.getPath("downloads"),
+              suggestedBackupFileName,
             ),
 
           filters: [
             {
               name:
-                "FINORA Branch Backup",
+                "PAISARULE Branch Backup",
 
               extensions: [
-                "finora",
+                "paisarule",
               ],
             },
           ],

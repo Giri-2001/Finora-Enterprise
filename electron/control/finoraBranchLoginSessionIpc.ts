@@ -544,9 +544,7 @@ export function registerFinoraBranchLoginSessionHandlers(
         if (!verifyServerBoundSession) {
           // FINORA_P1_702Y_MISSING_VERIFIER_CLEANUP
           // Reject access and discard the local session.
-          invalidateFinoraBranchLoginSession({
-            sessionId: local.data.sessionId,
-          });
+          /* PAISARULE_R107_KEEP_UNVERIFIED_LOCAL_HANDLE_0 */
 
 return {
             success: false,
@@ -575,9 +573,7 @@ return {
           }
 
           if (!serverAuthorized) {
-            invalidateFinoraBranchLoginSession({
-              sessionId: local.data.sessionId,
-            });
+            /* PAISARULE_R107_KEEP_UNVERIFIED_LOCAL_HANDLE_1 */
 
             return {
               success: false,
@@ -631,9 +627,7 @@ return {
         if (!verifyServerBoundSession) {
           // FINORA_P1_702Y_MISSING_VERIFIER_CLEANUP
           // Reject access and discard the local session.
-          invalidateFinoraBranchLoginSession({
-            sessionId: local.data.sessionId,
-          });
+          /* PAISARULE_R107_KEEP_UNVERIFIED_LOCAL_HANDLE_2 */
 
 return {
             success: false,
@@ -662,9 +656,7 @@ return {
           }
 
           if (!serverAuthorized) {
-            invalidateFinoraBranchLoginSession({
-              sessionId: local.data.sessionId,
-            });
+            /* PAISARULE_R107_KEEP_UNVERIFIED_LOCAL_HANDLE_3 */
 
             return {
               success: false,

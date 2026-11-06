@@ -419,7 +419,7 @@ export default function Step1Identity({
       } catch (error) {
         if (active) {
           console.error(
-            "[FINORA CUSTOMER] Server identity hydration failed:",
+            "[PAISARULE CUSTOMER] Server identity hydration failed:",
             error
           );
         }
@@ -754,7 +754,7 @@ export default function Step1Identity({
         }}
       >
         Create the customer's permanent
-        FINORA digital identity.
+        PAISARULE digital identity.
       </p>
 
     </div>

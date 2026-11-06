@@ -43,7 +43,7 @@ export default function useCustomerSearch(
       );
 
     console.log(
-      "FINORA CUSTOMER SEARCH:",
+      "PAISARULE CUSTOMER SEARCH:",
       searchText,
       result.length,
     );

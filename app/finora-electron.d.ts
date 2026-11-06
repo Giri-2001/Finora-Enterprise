@@ -1832,6 +1832,74 @@ interface FinoraElectronPortableBranchAuthBackupBridge {
     >;
 }
 // ============================================================
+interface FinoraElectronPaisaruleStorageBackupV1SuccessData {
+  fileName: string;
+  bytesWritten: number;
+  createdAt: string;
+}
+
+type FinoraElectronPaisaruleStorageBackupV1Result =
+  | {
+      success: true;
+      cancelled: true;
+      data: null;
+      errorCode: null;
+      error: null;
+    }
+  | {
+      success: true;
+      cancelled: false;
+      data: FinoraElectronPaisaruleStorageBackupV1SuccessData;
+      errorCode: null;
+      error: null;
+    }
+  | {
+      success: false;
+      cancelled: false;
+      data: null;
+      errorCode: string;
+      error: string;
+    };
+
+// ============================================================
+// PAISARULE_R175_C57
+// WINDOWS STORAGE BACKUP V1 - RESTORE VERIFICATION TYPES
+//
+// Verify only. No Restore commit or USB write API.
+// No renderer-supplied Owner scope or encryption key.
+// ============================================================
+
+type FinoraElectronPaisaruleStorageBackupV1RestoreVerifyResult =
+  | {
+      success: true;
+      cancelled: true;
+      verified: false;
+      createdAt: null;
+      errorCode: null;
+    }
+  | {
+      success: true;
+      cancelled: false;
+      verified: true;
+      createdAt: string;
+      fileName: string;
+      errorCode: null;
+    }
+  | {
+      success: false;
+      cancelled: false;
+      verified: false;
+      createdAt: null;
+      errorCode: string;
+    };
+
+interface FinoraElectronPaisaruleStorageBackupV1Bridge {
+  exportBackup():
+    Promise<FinoraElectronPaisaruleStorageBackupV1Result>;
+
+  restoreVerify():
+    Promise<FinoraElectronPaisaruleStorageBackupV1RestoreVerifyResult>;
+}
 // ROOT RENDERER BRIDGE
 // ============================================================
 // ============================================================
@@ -1991,6 +2059,8 @@ interface FinoraElectronRendererBridge {
 
   portableBranchAuthBackup:
     FinoraElectronPortableBranchAuthBackupBridge;
+  paisaruleStorageBackup:
+    FinoraElectronPaisaruleStorageBackupV1Bridge;
   /**
    * Privileged Portable Branch Auth recovery restore.
    *

@@ -83,7 +83,7 @@ function getActiveBusinessId(): string {
   const businessId = normalizeString(context.businessId ?? "");
 
   if (!businessId) {
-    throw new Error("Active FINORA Business ID is unavailable.");
+    throw new Error("Active PAISARULE Business ID is unavailable.");
   }
 
   return businessId;
@@ -195,7 +195,7 @@ export async function validateGoldStorageSettingsCustodyIntegrity(
       error:
         error instanceof Error
           ? error.message
-          : "Unable to resolve active FINORA Business Context.",
+          : "Unable to resolve active PAISARULE Business Context.",
     };
   }
 
@@ -394,7 +394,7 @@ export async function loadGoldStorageSettings(): Promise<
       error:
         error instanceof Error
           ? error.message
-          : "Unable to resolve active FINORA Business Context.",
+          : "Unable to resolve active PAISARULE Business Context.",
     };
   }
 
@@ -421,7 +421,7 @@ export async function saveGoldStorageSettings(
       error:
         error instanceof Error
           ? error.message
-          : "Unable to resolve active FINORA Business Context.",
+          : "Unable to resolve active PAISARULE Business Context.",
     };
   }
 
@@ -521,7 +521,7 @@ export async function deleteGoldStorageSettings(): Promise<
       error:
         error instanceof Error
           ? error.message
-          : "Unable to resolve active FINORA Business Context.",
+          : "Unable to resolve active PAISARULE Business Context.",
     };
   }
 

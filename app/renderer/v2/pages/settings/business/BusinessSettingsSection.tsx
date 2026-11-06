@@ -155,7 +155,7 @@ export default function BusinessSettingsSection() {
                 "Business Context Unavailable",
 
               message:
-                "No complete active FINORA Business Context is available.",
+                "No complete active PAISARULE Business Context is available.",
             });
 
             setLoading(
@@ -185,7 +185,7 @@ export default function BusinessSettingsSection() {
             kind: "danger",
             title: "Server Business Identity Unavailable",
             message:
-              "FINORA could not verify the active Business/Branch identity. " +
+              "PAISARULE could not verify the active Business/Branch identity. " +
               identityResult.errorCode,
           });
           setLoading(false);
@@ -396,7 +396,7 @@ export default function BusinessSettingsSection() {
         <SettingsFeedback
           kind="info"
           title="Loading Business Settings"
-          message="FINORA is loading the active business configuration."
+          message="PAISARULE is loading the active business configuration."
         />
       </section>
     );

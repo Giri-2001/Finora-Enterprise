@@ -53,7 +53,7 @@ import { formatFinoraDate } from "../../../shared/finoraDateTimeDisplay";
 
 import { getBusinessContext } from "../business/businessContextService";
 import { loadFinoraServerSettingsIdentity } from "../business/finoraServerSettingsIdentity";
-import finoraCustomerStatementLogoUrl from "../../app/assets/finoraenterprise.png";
+import finoraCustomerStatementLogoUrl from "../../app/assets/paisarule_official_brand.png";
 
 import type { jsPDF } from "jspdf";
 
@@ -153,7 +153,7 @@ function addContinuationPage(document: jsPDF): number {
   document.setTextColor(0);
 
   document.text(
-    `FINORA ENTERPRISE - ${resolveBusinessReportTitle("Customer Statement")}`,
+    `PAISARULE - ${resolveBusinessReportTitle("Customer Statement")}`,
     PAGE_MARGIN_X,
     PAGE_TOP,
   );
@@ -257,6 +257,13 @@ interface PdfMetric {
 // ============================================================
 // METRIC GRID
 // ============================================================
+
+function displayCustomerPdfPaisaruleId(value: unknown): string {
+  return safeText(value).replace(
+    /^FIN-(?=(?:CUS|LOAN|COL|RCP)-)/i,
+    "PAISA-",
+  );
+}
 
 function drawMetricGrid(
   document: jsPDF,
@@ -552,7 +559,7 @@ function getCustomerMetrics(statement: CustomerReportStatement): PdfMetric[] {
     {
       label: "Customer ID",
 
-      value: safeText(statement.customerId),
+      value: displayCustomerPdfPaisaruleId(statement.customerId),
     },
 
     {
@@ -875,7 +882,7 @@ function drawLoanStatement(
       document,
       columns,
       [
-        safeText(loan.loanNumber),
+        displayCustomerPdfPaisaruleId(loan.loanNumber),
 
         safeText(loan.status).toUpperCase(),
 
@@ -1021,9 +1028,9 @@ function drawCollectionHistory(
       [
         formatDate(collection.receiptDate),
 
-        safeText(collection.receiptNumber),
+        displayCustomerPdfPaisaruleId(collection.receiptNumber),
 
-        safeText(collection.loanNumber),
+        displayCustomerPdfPaisaruleId(collection.loanNumber),
 
         safeText(collection.paymentMethod).toUpperCase(),
 
@@ -1135,11 +1142,11 @@ async function addFinoraCustomerStatementCenterLogo(
   try {
     await image.decode();
   } catch {
-    throw new Error("Unable to load FINORA Customer Statement logo.");
+    throw new Error("Unable to load PAISARULE Customer Statement logo.");
   }
 
   if (!image.naturalWidth || !image.naturalHeight) {
-    throw new Error("Invalid FINORA Customer Statement logo.");
+    throw new Error("Invalid PAISARULE Customer Statement logo.");
   }
 
   const canvas = window.document.createElement("canvas");
@@ -1149,9 +1156,23 @@ async function addFinoraCustomerStatementCenterLogo(
   const context = canvas.getContext("2d");
 
   if (!context) {
-    throw new Error("FINORA Customer Statement logo canvas unavailable.");
+    throw new Error("PAISARULE Customer Statement logo canvas unavailable.");
   }
 
+  // PAISARULE_PDF_LOGO_ROUNDED_CORNERS
+  const paisaruleLogoRadius = Math.min(canvas.width, canvas.height) * 0.12;
+  context.beginPath();
+  context.moveTo(paisaruleLogoRadius, 0);
+  context.lineTo(canvas.width - paisaruleLogoRadius, 0);
+  context.quadraticCurveTo(canvas.width, 0, canvas.width, paisaruleLogoRadius);
+  context.lineTo(canvas.width, canvas.height - paisaruleLogoRadius);
+  context.quadraticCurveTo(canvas.width, canvas.height, canvas.width - paisaruleLogoRadius, canvas.height);
+  context.lineTo(paisaruleLogoRadius, canvas.height);
+  context.quadraticCurveTo(0, canvas.height, 0, canvas.height - paisaruleLogoRadius);
+  context.lineTo(0, paisaruleLogoRadius);
+  context.quadraticCurveTo(0, 0, paisaruleLogoRadius, 0);
+  context.closePath();
+  context.clip();
   context.drawImage(image, 0, 0, 256, 256);
 
   const logoSize = 30;
@@ -1271,7 +1292,7 @@ function buildFinoraCustomerStatementFileName(
     .replace(/[^a-zA-Z0-9]+/g, "")
     .slice(0, 60) || "Customer";
 
-  const safeId = String(customerId ?? "")
+  const safeId = displayCustomerPdfPaisaruleId(customerId)
     .trim()
     .replace(/[^a-zA-Z0-9-]+/g, "")
     .slice(0, 80);
@@ -1280,7 +1301,7 @@ function buildFinoraCustomerStatementFileName(
     throw new Error("Customer ID is required for PDF filename.");
   }
 
-  return `Finora_${safeName}_Customer_Statement_${safeId}.pdf`;
+  return `PAISARULE_${safeName}_Customer_Statement_${safeId}.pdf`;
 }
 export async function buildCustomerStatementPdf(
   customerId: string,
@@ -1432,9 +1453,9 @@ export async function shareCustomerStatementPdf(
     buildFinoraCustomerStatementFileName(statement.customerName, statement.customerId),
 
     {
-      title: "FINORA Customer Statement",
+      title: "PAISARULE Customer Statement",
 
-      text: `Customer Statement - ${statement.customerName} - ${statement.customerId}`,
+      text: `Customer Statement - ${statement.customerName} - ${displayCustomerPdfPaisaruleId(statement.customerId)}`,
 
       dialogTitle: "Share Customer Statement",
     },

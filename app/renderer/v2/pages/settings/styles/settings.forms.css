@@ -270,7 +270,7 @@
     var(--finora-theme-input-background);
 
   color:
-    var(--finora-theme-input-text);
+    var(--finora-theme-text-primary);
 
   font-family:
     inherit;
@@ -316,7 +316,7 @@
 .finora-settings-form__input::placeholder,
 .finora-settings-form__textarea::placeholder {
   color:
-    var(--finora-theme-input-placeholder);
+    var(--finora-theme-text-primary);
 }
 
 /* ===========================================================
@@ -361,7 +361,7 @@
     var(--finora-theme-surface-muted);
 
   color:
-    var(--finora-theme-text-secondary);
+    var(--finora-theme-text-primary);
 
   cursor:
     default;

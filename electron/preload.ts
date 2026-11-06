@@ -3720,6 +3720,219 @@ const portableBranchAuthBackupBridge:
 // ============================================================
 
 // ============================================================
+// PAISARULE STORAGE BACKUP V1 - ZERO ARGUMENT BRIDGE
+
+const PAISARULE_STORAGE_BACKUP_V1_EXPORT_CHANNEL =
+  "paisarule:storage-backup:export" as const;
+
+interface PaisaruleStorageBackupV1ExportSuccessData {
+  fileName: string;
+  bytesWritten: number;
+  createdAt: string;
+}
+
+type PaisaruleStorageBackupV1ExportResult =
+  | {
+      success: true;
+      cancelled: true;
+      data: null;
+      errorCode: null;
+      error: null;
+    }
+  | {
+      success: true;
+      cancelled: false;
+      data: PaisaruleStorageBackupV1ExportSuccessData;
+      errorCode: null;
+      error: null;
+    }
+  | {
+      success: false;
+      cancelled: false;
+      data: null;
+      errorCode: string;
+      error: string;
+    };
+
+// ============================================================
+// PAISARULE_R175_C55
+// WINDOWS RESTORE V1 - VERIFY ONLY PRELOAD BRIDGE
+//
+// No renderer-supplied scope, credentials, key or USB path.
+// Commit bridge exists; Electron Main remains fail-closed.
+// ============================================================
+
+const PAISARULE_STORAGE_BACKUP_V1_RESTORE_VERIFY_CHANNEL =
+  "paisarule:storage-backup:restore-verify" as const;
+
+type PaisaruleStorageBackupV1RestoreVerifyResult =
+  | {
+      success: true;
+      cancelled: true;
+      verified: false;
+      createdAt: null;
+      errorCode: null;
+    }
+  | {
+      success: true;
+      cancelled: false;
+      verified: true;
+      createdAt: string;
+      fileName: string;
+      // PAISARULE_C117_R195_VERIFIED_COUNTS
+      // Aggregate counts from authenticated primary backup.
+      entityCounts: PaisaruleV1PreviewCounts;
+      errorCode: null;
+    }
+  | {
+      success: false;
+      cancelled: false;
+      verified: false;
+      createdAt: null;
+      errorCode: string;
+    };
+
+// PAISARULE_C117_R184_B_PRELOAD
+// Metadata only. No USB path, data records, or key exposure.
+interface PaisaruleV1PreviewCounts {
+  customers: number;
+  loans: number;
+  collections: number;
+  goldLoans: number;
+  goldCustodyRecords: number;
+  businessRecords: number;
+  totalStorageRecords: number;
+}
+
+type PaisaruleV1PrepareBridgeResult =
+  | {
+      success: true;
+      cancelled: false;
+      data: {
+        token: string;
+        createdAt: string;
+        expiresAt: string;
+        entityCounts: PaisaruleV1PreviewCounts;
+      };
+      errorCode: null;
+    }
+  | {
+      success: false;
+      cancelled: false;
+      data: null;
+      errorCode: string;
+    };
+
+type PaisaruleV1DownloadBridgeResult =
+  | {
+      success: true;
+      cancelled: boolean;
+      data: {
+        fileName: string;
+        bytesWritten: number;
+        createdAt: string;
+      } | null;
+      errorCode: null;
+    }
+  | {
+      success: false;
+      cancelled: false;
+      data: null;
+      errorCode: string;
+    };
+interface PaisaruleStorageBackupV1Bridge {
+  // PAISARULE_C117_R272_R1_TYPED_COMMIT
+  // No renderer-supplied arguments.
+  restoreCommit(): Promise<{
+    success: boolean;
+    committed: boolean;
+    archiveSha256?: string;
+    backupRecordCount?: number;
+    finalRecordCount?: number;
+    preservedWalletRecords?: number;
+    errorCode: string | null;
+  }>;
+  // PAISARULE C117-R12-R1 - selection only.
+  selectNewUsb: () => Promise<{
+    success: boolean;
+    cancelled: boolean;
+    selected: boolean;
+    errorCode: string | null;
+  }>;
+  // Preview generates an encrypted artifact in trusted Electron Main.
+  prepareBackup(): Promise<PaisaruleV1PrepareBridgeResult>;
+
+  // Renderer supplies only the one-time token from Preview.
+  downloadPreparedBackup(
+    token: string,
+  ): Promise<PaisaruleV1DownloadBridgeResult>;
+  exportBackup(): Promise<PaisaruleStorageBackupV1ExportResult>;
+
+  restoreVerify(): Promise<PaisaruleStorageBackupV1RestoreVerifyResult>;
+}
+
+const paisaruleStorageBackupV1Bridge:
+  PaisaruleStorageBackupV1Bridge = {
+    // PAISARULE_C117_R184_B_PRELOAD
+    prepareBackup: () =>
+      ipcRenderer.invoke(
+        "paisarule:storage-backup:prepare",
+      ) as Promise<PaisaruleV1PrepareBridgeResult>,
+
+    downloadPreparedBackup: (token: string) => {
+      if (
+        typeof token !== "string" ||
+        !/^[a-f0-9]{48}$/.test(token)
+      ) {
+        return Promise.resolve({
+          success: false as const,
+          cancelled: false as const,
+          data: null,
+          errorCode: "BACKUP_DOWNLOAD_TOKEN_INVALID",
+        });
+      }
+
+      return ipcRenderer.invoke(
+        "paisarule:storage-backup:download",
+        token,
+      ) as Promise<PaisaruleV1DownloadBridgeResult>;
+    },
+    exportBackup: () =>
+      ipcRenderer.invoke(
+        PAISARULE_STORAGE_BACKUP_V1_EXPORT_CHANNEL,
+      ) as Promise<PaisaruleStorageBackupV1ExportResult>,
+
+    restoreVerify: () =>
+      ipcRenderer.invoke(
+        PAISARULE_STORAGE_BACKUP_V1_RESTORE_VERIFY_CHANNEL,
+      ) as Promise<PaisaruleStorageBackupV1RestoreVerifyResult>,
+
+    // PAISARULE_C117_R272_R1_COMMIT_METHOD
+    // Native-only, zero renderer arguments.
+    restoreCommit: () =>
+      ipcRenderer.invoke(
+        "paisarule:storage-backup:restore-commit",
+      ) as Promise<{
+        success: boolean;
+        committed: boolean;
+        archiveSha256?: string;
+        backupRecordCount?: number;
+        finalRecordCount?: number;
+        preservedWalletRecords?: number;
+        errorCode: string | null;
+      }>,
+    // PAISARULE C117-R12-R1
+    // No renderer-supplied USB paths or secrets.
+    selectNewUsb: () =>
+      ipcRenderer.invoke(
+        "paisarule:storage-backup:select-new-usb",
+      ) as Promise<{
+        success: boolean;
+        cancelled: boolean;
+        selected: boolean;
+        errorCode: string | null;
+      }>,
+  };
 // PORTABLE BRANCH AUTH RESTORE BRIDGE
 //
 // Renderer supplies only:
@@ -4096,6 +4309,8 @@ contextBridge.exposeInMainWorld(
 
     portableBranchAuthBackup:
       portableBranchAuthBackupBridge,
+    paisaruleStorageBackup:
+      paisaruleStorageBackupV1Bridge,
     portableBranchAuthRestore:
       portableBranchAuthRestoreBridge,
 
