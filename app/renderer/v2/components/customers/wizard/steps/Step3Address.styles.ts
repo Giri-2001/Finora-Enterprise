@@ -449,7 +449,7 @@ export function createStep3AddressStyles(
     .finora-address-input::placeholder {
 
       color:
-        ${theme.colors.text.muted} !important;
+        ${theme.colors.text.primary} !important;
 
       opacity:
         1 !important;

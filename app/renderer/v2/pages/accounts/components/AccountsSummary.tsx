@@ -39,6 +39,8 @@ import {
   ArrowUpRight,
   CircleDollarSign,
   ReceiptIndianRupee,
+  Coins,
+  Clock3,
 } from "lucide-react";
 
 /* ===========================================================
@@ -89,6 +91,8 @@ import {
    STYLESHEET
 =========================================================== */
 
+import type { AccountEntry } from "../../../types/accounts/accounts.types";
+import { calculateAccountsIncomeBreakdown } from "../../../calculations/accounts/accountsTotals";
 import "./AccountsSummary.css";
 
 /* ===========================================================
@@ -97,13 +101,14 @@ import "./AccountsSummary.css";
 
 export interface AccountsSummaryProps {
   summary: AccountsSummaryData;
+  entries: readonly AccountEntry[];
 }
 
 /* ===========================================================
    COMPONENT
 =========================================================== */
 
-export function AccountsSummary({ summary }: AccountsSummaryProps) {
+export function AccountsSummary({ summary, entries }: AccountsSummaryProps) {
   /* =========================================================
      PRESENTATION VALUES
 
@@ -112,6 +117,11 @@ export function AccountsSummary({ summary }: AccountsSummaryProps) {
 
      This component only formats them for display.
   ========================================================= */
+
+  // PAISARULE_C125_R126: filtered, source-derived income breakdown.
+  const income = calculateAccountsIncomeBreakdown(entries);
+  const feeIncomeDisplay = formatCurrency(income.processingFeeIncome);
+  const recordedPenaltyDisplay = formatCurrency(income.recordedPenaltyAmount);
 
   const moneyOutDisplay = formatCurrency(summary.totalMoneyOut);
 
@@ -323,6 +333,64 @@ export function AccountsSummary({ summary }: AccountsSummaryProps) {
           <div className={ACCOUNTS_SUMMARY_CLASSES.footer}>
             <p className={ACCOUNTS_SUMMARY_CLASSES.subtitle}>
               {ACCOUNTS_TRANSACTIONS_SUBTITLE}
+            </p>
+          </div>
+        </article>
+
+        {/* PAISARULE_C125_R126: PROCESSING FEE INCOME */}
+        <article className={ACCOUNTS_SUMMARY_VARIANT_CLASSES.moneyIn}>
+          <div className={ACCOUNTS_SUMMARY_CLASSES.cardHeader}>
+            <div className={ACCOUNTS_SUMMARY_CLASSES.identity}>
+              <span className={ACCOUNTS_SUMMARY_CLASSES.icon} aria-hidden="true">
+                <Coins
+                  className={ACCOUNTS_SUMMARY_ICON_CLASSES.moneyIn}
+                  strokeWidth={2}
+                />
+              </span>
+              <div className={ACCOUNTS_SUMMARY_CLASSES.headingGroup}>
+                <div className={ACCOUNTS_SUMMARY_CLASSES.titleRow}>
+                  <h2 className={ACCOUNTS_SUMMARY_CLASSES.title}>
+                    Processing Fee Income
+                  </h2>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className={ACCOUNTS_SUMMARY_VALUE_CLASSES.moneyIn}>
+            {feeIncomeDisplay}
+          </p>
+          <div className={ACCOUNTS_SUMMARY_CLASSES.footer}>
+            <p className={ACCOUNTS_SUMMARY_CLASSES.subtitle}>
+              Included in Money In
+            </p>
+          </div>
+        </article>
+
+        {/* PAISARULE_C125_R126: OVERDUE PENALTY ATTRIBUTION */}
+        <article className={ACCOUNTS_SUMMARY_VARIANT_CLASSES.transactions}>
+          <div className={ACCOUNTS_SUMMARY_CLASSES.cardHeader}>
+            <div className={ACCOUNTS_SUMMARY_CLASSES.identity}>
+              <span className={ACCOUNTS_SUMMARY_CLASSES.icon} aria-hidden="true">
+                <Clock3
+                  className={ACCOUNTS_SUMMARY_ICON_CLASSES.transactions}
+                  strokeWidth={2}
+                />
+              </span>
+              <div className={ACCOUNTS_SUMMARY_CLASSES.headingGroup}>
+                <div className={ACCOUNTS_SUMMARY_CLASSES.titleRow}>
+                  <h2 className={ACCOUNTS_SUMMARY_CLASSES.title}>
+                    Overdue Penalty
+                  </h2>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className={ACCOUNTS_SUMMARY_VALUE_CLASSES.transactions}>
+            {recordedPenaltyDisplay}
+          </p>
+          <div className={ACCOUNTS_SUMMARY_CLASSES.footer}>
+            <p className={ACCOUNTS_SUMMARY_CLASSES.subtitle}>
+              Late Fee Recorded
             </p>
           </div>
         </article>

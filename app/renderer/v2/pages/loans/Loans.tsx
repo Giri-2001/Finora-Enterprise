@@ -2254,7 +2254,7 @@ const createLoanReceiptPng = async (
     }> => {
       const canvas = document.createElement("canvas");
       canvas.width = 1920;
-      canvas.height = 2660; // FINORA_AP04_R008_READABLE_LOAN_PNG
+      canvas.height = 3300; // PAISARULE_C125_R109_FINANCIAL_RECEIPT
 
       const ctx = canvas.getContext("2d");
 
@@ -2277,7 +2277,7 @@ const createLoanReceiptPng = async (
       };
 
       ctx.fillStyle = "#FFFFFF";
-      ctx.fillRect(0, 0, 960, 1330);
+      ctx.fillRect(0, 0, 960, 1650);
 
       ctx.fillStyle = "#11243D";
       ctx.fillRect(0, 0, 960, 170);
@@ -2390,6 +2390,35 @@ ctx.fillStyle = "#667085";
         "center",
       );
 
+      // PAISARULE_C125_R109: Loan receipt disclosure only.
+      const receiptSafeAmount = (value: unknown): number => {
+        const parsed = Number(value ?? 0);
+        return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+      };
+
+      const receiptMoney = (value: unknown): string =>
+        `₹${Math.round(receiptSafeAmount(value)).toLocaleString("en-IN")}`;
+
+      const receiptProcessingFee = receiptSafeAmount(loan.processingFee);
+      const receiptAdvanceDeduction = receiptSafeAmount(loan.advanceDeduction);
+      const receiptConfiguredLateFee = receiptSafeAmount(loan.lateFee);
+
+      const receiptNetValue = loan.netDisbursement;
+      const receiptHasNet =
+        receiptNetValue !== null &&
+        receiptNetValue !== undefined &&
+        String(receiptNetValue).trim() !== "" &&
+        Number.isFinite(Number(receiptNetValue)) &&
+        Number(receiptNetValue) >= 0;
+
+      const receiptNetDisbursement = receiptHasNet
+        ? receiptSafeAmount(receiptNetValue)
+        : Math.max(
+            0,
+            receiptSafeAmount(loan.amount) -
+              receiptProcessingFee -
+              receiptAdvanceDeduction,
+          );
       const rows: Array<[string, string]> = [
         [
           "Customer",
@@ -2432,6 +2461,22 @@ ctx.fillStyle = "#667085";
           receiptEmiAmount(loan),
         ],
         [
+          "Processing Fee",
+          receiptMoney(receiptProcessingFee),
+        ],
+        [
+          "Advance Deduction",
+          receiptMoney(receiptAdvanceDeduction),
+        ],
+        [
+          "Net Disbursement",
+          receiptMoney(receiptNetDisbursement),
+        ],
+        [
+          "Late Fee (Configured)",
+          receiptMoney(receiptConfiguredLateFee),
+        ],
+        [
           "Loan Status",
           loanReceiptText(loan, ["status"]),
         ],
@@ -2455,14 +2500,14 @@ ctx.fillStyle = "#667085";
       });
 
       ctx.fillStyle = "#11243D";
-      ctx.fillRect(0, 1225, 960, 105);
+      ctx.fillRect(0, 1525, 960, 105);
 
       ctx.fillStyle = "#E9BF69";
       ctx.font = "650 27px Arial, sans-serif";
       draw(
         "THANK YOU FOR CHOOSING PAISARULE",
         480,
-        1264,
+        1564,
         900,
         "center",
       );
@@ -2472,7 +2517,7 @@ ctx.fillStyle = "#667085";
       draw(
         "Prepared from saved loan details",
         480,
-        1305,
+        1605,
         900,
         "center",
       );
@@ -3016,7 +3061,49 @@ ctx.fillStyle = "#667085";
                 gap: 7px;
               }
 
-              /* Calendar icon only: keep date input border. */
+                            /* PAISARULE_C125_R113_LOAN_RECEIPT_CALENDAR_ALIGNMENT */
+              /* Only Loan Share Receipts FROM / TO controls. */
+              .finora-r173-receipt .finora-r205-loan-filters .finora-calendar-input-wrap {
+                position: relative !important;
+                width: 100%;
+                min-width: 0;
+                box-sizing: border-box;
+              }
+
+              .finora-r173-receipt .finora-r205-loan-filters .finora-calendar-input {
+                width: 100%;
+                min-width: 0;
+                box-sizing: border-box;
+                padding-right: 52px !important;
+              }
+
+              .finora-r173-receipt .finora-r205-loan-filters .finora-calendar-icon-button {
+                position: absolute !important;
+                top: 50% !important;
+                right: 9px !important;
+                bottom: auto !important;
+                left: auto !important;
+                transform: translateY(-50%) !important;
+                width: 36px !important;
+                height: 36px !important;
+                min-width: 36px !important;
+                min-height: 36px !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                flex-shrink: 0;
+                box-sizing: border-box;
+                z-index: 1;
+              }
+
+              .finora-r173-receipt .finora-r205-loan-filters .finora-calendar-icon-button:hover,
+              .finora-r173-receipt .finora-r205-loan-filters .finora-calendar-icon-button:focus-visible {
+                top: 50% !important;
+                transform: translateY(-50%) !important;
+              }
+/* Calendar icon only: keep date input border. */
               .finora-r173-receipt .finora-r205-loan-filters .finora-calendar-icon-button {
                 background: transparent !important;
                 border: 0 !important;

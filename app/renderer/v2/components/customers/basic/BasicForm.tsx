@@ -1,3 +1,4 @@
+import "../wizard/CustomerWizardPrimaryPlaceholder.css";
 /* ===========================================================
    FINORA ENTERPRISE OS™
 
@@ -243,6 +244,7 @@ export default function BasicForm({
                   value.fatherOrSpouseName
                 }
 
+                className="paisarule-customer-wizard-primary-placeholder"
                 placeholder="Enter father or spouse name"
 
                 onChange={(
@@ -545,6 +547,7 @@ export default function BasicForm({
                   value.spouseName
                 }
 
+                className="paisarule-customer-wizard-primary-placeholder"
                 placeholder="Enter spouse name"
 
                 onChange={(

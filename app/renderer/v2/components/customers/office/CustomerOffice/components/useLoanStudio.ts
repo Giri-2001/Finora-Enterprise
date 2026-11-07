@@ -2524,8 +2524,36 @@ export function useLoanStudio({
        ATTACH EXTENDED LOAN METADATA
     ======================================================== */
 
+    // PAISARULE_C125_R139_R2
+    // Explicit union type prevents TypeScript string widening.
+    let persistedPaymentMode:
+      | "cash"
+      | "cheque"
+      | "bank"
+      | "upi"
+      | undefined;
+
+    switch (paymentMode) {
+      case "cash":
+        persistedPaymentMode = "cash";
+        break;
+      case "cheque":
+        persistedPaymentMode = "cheque";
+        break;
+      case "bank":
+        persistedPaymentMode = "bank";
+        break;
+      case "upi":
+        persistedPaymentMode = "upi";
+        break;
+      default:
+        persistedPaymentMode = undefined;
+        break;
+    }
     const loanWithDocuments = {
       ...loan,
+
+      paymentMode: persistedPaymentMode,
 
       // ------------------------------------------------------
       // ENTRY MODE

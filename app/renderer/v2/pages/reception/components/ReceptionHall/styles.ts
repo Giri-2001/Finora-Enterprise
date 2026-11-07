@@ -229,9 +229,9 @@ export function createReceptionHallStyles(
       `
         linear-gradient(
           180deg,
-          ${finoraReceptionTone(theme.colors.background.surfaceElevated)} 0%,
-          ${finoraReceptionTone(theme.colors.background.surface)} 52%,
-          ${finoraReceptionTone(theme.colors.background.surfaceMuted)} 100%
+          ${theme.id === "royal-navy" ? "#4E8FCB" : finoraReceptionTone(theme.colors.background.surfaceElevated)} 0%,
+          ${theme.id === "royal-navy" ? "#4E8FCB" : finoraReceptionTone(theme.colors.background.surface)} 52%,
+          ${theme.id === "royal-navy" ? "#4E8FCB" : finoraReceptionTone(theme.colors.background.surfaceMuted)} 100%
         )
       `,
 
@@ -503,7 +503,7 @@ export function createReceptionHallStyles(
         linear-gradient(
           90deg,
           transparent,
-          ${theme.colors.brand.primary},
+          ${theme.id === "royal-navy" ? "#FFFFFF" : theme.colors.brand.primary},
           transparent
         )
       `,

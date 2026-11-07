@@ -1,3 +1,4 @@
+import "../CustomerWizardPrimaryPlaceholder.css";
 /* ===========================================================
    FINORA ENTERPRISE OSâ„¢
 
@@ -197,6 +198,7 @@ function KycFieldView({
           id={`finora-kyc-${field}`}
           type="text"
           value={value}
+          className="paisarule-customer-wizard-primary-placeholder"
           placeholder={placeholder}
           autoComplete="off"
           style={styles.inputStyle}

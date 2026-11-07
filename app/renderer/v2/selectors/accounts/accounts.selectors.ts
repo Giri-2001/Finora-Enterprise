@@ -265,6 +265,20 @@ function matchesAccountActivity(
     return true;
   }
 
+  // PAISARULE_C125_R150
+  if (filters.activity === "OVERDUE_PENALTY_INCOME") {
+    const penalty = Number(entry.penaltyIncome);
+
+    return (
+      entry.sourceType === "COLLECTION" &&
+      entry.activity === "COLLECTION_RECEIVED" &&
+      entry.direction === "CREDIT" &&
+      Number.isFinite(penalty) &&
+      penalty > 0 &&
+      penalty <= entry.moneyIn
+    );
+  }
+
   return entry.activity === filters.activity;
 }
 
@@ -596,12 +610,29 @@ export function buildAccountsLedgerView(
 ): AccountsLedgerView {
   const visibleEntries = filterAccountEntries(entries, filters, now);
 
+  // PAISARULE_C125_R150
+  // View-only projection: no new transaction and no source mutation.
+  const displayEntries =
+    filters.activity === "OVERDUE_PENALTY_INCOME"
+      ? visibleEntries.map((entry): AccountEntry => {
+          const amount = Number(entry.penaltyIncome);
+
+          return {
+            ...entry,
+            amount,
+            moneyIn: amount,
+            moneyOut: 0,
+            description: "Overdue Penalty Income",
+          };
+        })
+      : visibleEntries;
+
   return {
-    entries: visibleEntries,
+    entries: displayEntries,
 
-    summary: calculateAccountsSummary(visibleEntries),
+    summary: calculateAccountsSummary(displayEntries),
 
-    customerCount: countAccountCustomers(visibleEntries),
+    customerCount: countAccountCustomers(displayEntries),
 
     periodLabel: getAccountsPeriodLabel(filters, now),
   };

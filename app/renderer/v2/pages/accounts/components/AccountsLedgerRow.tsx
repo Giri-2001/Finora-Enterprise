@@ -147,7 +147,14 @@ export function AccountsLedgerRow({
 
   const dateDisplay = formatLedgerDate(entry.dateKey);
 
-  const timeDisplay = formatLedgerTime(entry.occurredAt);
+  // PAISARULE_C125_R129
+  // Loan.loanDate is a business date, not a verified event time.
+  // Do not display a fabricated 05:30 from UTC midnight.
+  // Collection timestamps retain their existing presentation.
+  const timeDisplay =
+    entry.sourceType === "LOAN"
+      ? ""
+      : formatLedgerTime(entry.occurredAt);
 
   /* =========================================================
      MONEY DISPLAY
@@ -302,9 +309,9 @@ export function AccountsLedgerRow({
             {dateDisplay}
           </span>
 
-          <span className={ACCOUNTS_LEDGER_DATE_CLASSES.time}>
+          {timeDisplay !== ACCOUNTS_EMPTY_VALUE && timeDisplay.trim().length > 0 && (<span className={ACCOUNTS_LEDGER_DATE_CLASSES.time}>
             {timeDisplay}
-          </span>
+          </span>)}
         </div>
       </td>
 

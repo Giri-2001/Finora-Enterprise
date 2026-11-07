@@ -410,7 +410,8 @@ export function AccountsOffice() {
         window.requestAnimationFrame(() => resolve());
       });
 
-      printAccountsPdf(createDocumentRequest());
+      // PAISARULE_C125_R151_R1: Await PDF errors inside existing UI handler.
+      await printAccountsPdf(createDocumentRequest());
     } catch (error) {
       setDocumentError(
         getAccountsErrorMessage(
@@ -450,7 +451,7 @@ export function AccountsOffice() {
         window.requestAnimationFrame(() => resolve());
       });
 
-      downloadAccountsPdf(createDocumentRequest());
+      await downloadAccountsPdf(createDocumentRequest());
     } catch (error) {
       setDocumentError(
         getAccountsErrorMessage(
@@ -604,7 +605,7 @@ export function AccountsOffice() {
               ================================================= */}
 
             <div className={ACCOUNTS_OFFICE_CLASSES.section}>
-              <AccountsSummary summary={ledger.summary} />
+              <AccountsSummary summary={ledger.summary} entries={ledger.entries} />
             </div>
 
             {/* =================================================

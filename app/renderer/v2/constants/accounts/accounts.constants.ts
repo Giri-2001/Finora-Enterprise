@@ -42,6 +42,7 @@
 
 import type {
   AccountActivity,
+  AccountActivityFilter,
   AccountLoanType,
   AccountPaymentMethod,
   AccountPeriodPreset,
@@ -80,7 +81,7 @@ export const ACCOUNTS_MONEY_IN_TITLE = "Money In";
 
 export const ACCOUNTS_MONEY_IN_ACCOUNTING_LABEL = "Credit";
 
-export const ACCOUNTS_MONEY_IN_SUBTITLE = "Collections received";
+export const ACCOUNTS_MONEY_IN_SUBTITLE = "Collections & processing fees";
 
 export const ACCOUNTS_NET_MOVEMENT_TITLE = "Net Movement";
 
@@ -195,7 +196,7 @@ export const ACCOUNTS_PERIOD_OPTIONS: readonly AccountsPeriodOption[] = [
 =========================================================== */
 
 export interface AccountsActivityOption {
-  value: "ALL" | AccountActivity;
+  value: AccountActivityFilter;
 
   label: string;
 
@@ -219,6 +220,22 @@ export const ACCOUNTS_ACTIVITY_OPTIONS: readonly AccountsActivityOption[] = [
     value: "COLLECTION_RECEIVED",
     label: "Collections",
     description: "Only money collected",
+  },
+
+  // PAISARULE_C125_R148
+  // Existing processing fee credit activity.
+  {
+    value: "PROCESSING_FEE_INCOME",
+    label: "Processing Fee Income",
+    description: "Processing fee credit entries only",
+  },
+
+  // PAISARULE_C125_R150
+  // Filter-only view of the penalty portion of Collections.
+  {
+    value: "OVERDUE_PENALTY_INCOME",
+    label: "Overdue Penalty Income",
+    description: "Recorded penalty portion of approved collections",
   },
 ];
 
@@ -317,6 +334,7 @@ export const ACCOUNT_ACTIVITY_LABELS: Readonly<
   LOAN_DISBURSEMENT: "Loan Disbursed",
 
   COLLECTION_RECEIVED: "Collection Received",
+  PROCESSING_FEE_INCOME: "Processing Fee Income",
 };
 
 /* ===========================================================

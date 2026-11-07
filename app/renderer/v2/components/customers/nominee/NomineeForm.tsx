@@ -1,3 +1,4 @@
+import "../wizard/CustomerWizardPrimaryPlaceholder.css";
 /* ===========================================================
    FINORA ENTERPRISE V2
    CUSTOMER NOMINEE INFORMATION
@@ -144,6 +145,7 @@ function Field({
           type={type}
           value={value}
           readOnly={readOnly}
+          className="paisarule-customer-wizard-primary-placeholder"
           placeholder={placeholder}
           autoComplete="off"
           inputMode={inputMode}

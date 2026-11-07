@@ -228,6 +228,131 @@ function resolveLoanDescription(loanType: AccountLoanType): string {
    SINGLE LOAN → ACCOUNT ENTRY
 =========================================================== */
 
+/**
+ * PAISARULE C125-R119
+ * Pure Accounts cash-flow breakdown for an existing Loan.
+ *
+ * The Processing Fee is retained from the loan payout;
+ * it is not a second cash receipt or wallet recharge.
+ *
+ * Advance Deduction is NOT owner income.
+ * These amounts are for the Accounts read-model only.
+ */
+export interface LoanProcessingFeeBreakdown {
+  principal: number;
+  netDisbursement: number;
+  processingFeeIncome: number;
+  advanceDeduction: number;
+  cashFlowDebit: number;
+}
+
+export function resolveLoanProcessingFeeBreakdown(
+  loan: Loan,
+): LoanProcessingFeeBreakdown | null {
+  const principal = safeNumber(loan.amount);
+  const netDisbursement = resolveLoanAccountDisbursementAmount(loan);
+  const processingFee = safeNumber(loan.processingFee);
+  const advanceDeduction = safeNumber(loan.advanceDeduction);
+
+  if (
+    !Number.isFinite(principal) ||
+    principal <= 0 ||
+    netDisbursement === null ||
+    !Number.isFinite(netDisbursement) ||
+    netDisbursement <= 0 ||
+    !Number.isFinite(processingFee) ||
+    processingFee < 0 ||
+    !Number.isFinite(advanceDeduction) ||
+    advanceDeduction < 0
+  ) {
+    return null;
+  }
+
+  // Do not manufacture income from inconsistent historical data.
+  const expectedNet = principal - processingFee - advanceDeduction;
+  if (
+    expectedNet <= 0 ||
+    Math.abs(expectedNet - netDisbursement) > 0.01
+  ) {
+    return null;
+  }
+
+  // Fee is part of the gross disbursement presentation.
+  // Advance deduction remains withheld, not earned income.
+  const cashFlowDebit = netDisbursement + processingFee;
+
+  if (
+    !Number.isFinite(cashFlowDebit) ||
+    cashFlowDebit <= 0 ||
+    cashFlowDebit > principal + 0.01
+  ) {
+    return null;
+  }
+
+  return {
+    principal,
+    netDisbursement,
+    processingFeeIncome: processingFee,
+    advanceDeduction,
+    cashFlowDebit,
+  };
+}
+/**
+ * PAISARULE C125-R120-R1
+ * Display-only processing fee income entry.
+ * Does not persist a financial transaction.
+ */
+export function mapLoanToProcessingFeeAccountEntry(
+  loan: Loan,
+  goldLoanIds?: ReadonlySet<string>,
+): AccountEntry | null {
+  const debitEntry = mapLoanToAccountEntry(loan, goldLoanIds);
+  const breakdown = resolveLoanProcessingFeeBreakdown(loan);
+
+  if (!debitEntry || !breakdown || breakdown.processingFeeIncome <= 0) {
+    return null;
+  }
+
+  return {
+    ...debitEntry,
+    id: `LOAN_PROCESSING_FEE:${debitEntry.sourceId}`,
+    direction: "CREDIT",
+    moneyFlow: "MONEY_IN",
+    activity: "PROCESSING_FEE_INCOME",
+    amount: breakdown.processingFeeIncome,
+    moneyOut: 0,
+    moneyIn: breakdown.processingFeeIncome,
+    description: "Processing Fee Income",
+    remarks: undefined,
+  };
+}
+/**
+ * PAISARULE_C125_R140
+ * Source-authoritative Loan Step 6 payment method.
+ * Legacy loans with no saved mode remain UNKNOWN.
+ */
+function resolveLoanAccountsPaymentMode(
+  loan: Loan,
+): {
+  paymentMethod: AccountEntry["paymentMethod"];
+  paymentMethodLabel: string;
+} {
+  switch (String(loan.paymentMode ?? "").trim().toLowerCase()) {
+    case "cash":
+      return { paymentMethod: "CASH", paymentMethodLabel: "Cash" };
+    case "cheque":
+      return { paymentMethod: "CHEQUE", paymentMethodLabel: "Cheque" };
+    case "bank":
+      return {
+        paymentMethod: "BANK_TRANSFER",
+        paymentMethodLabel: "Bank Transfer",
+      };
+    case "upi":
+      return { paymentMethod: "UPI", paymentMethodLabel: "UPI" };
+    default:
+      return { paymentMethod: "UNKNOWN", paymentMethodLabel: "--" };
+  }
+}
 export function mapLoanToAccountEntry(
   loan: Loan,
 
@@ -251,7 +376,13 @@ export function mapLoanToAccountEntry(
     return null;
   }
 
-  const amount = resolveLoanAccountDisbursementAmount(loan);
+  // PAISARULE_C125_R121
+  // Presentation split: payout + retained fee.
+  // Advance deduction remains withheld, never fee income.
+  const breakdown = resolveLoanProcessingFeeBreakdown(loan);
+  const amount = breakdown
+    ? breakdown.cashFlowDebit
+    : resolveLoanAccountDisbursementAmount(loan);
 
   if (amount === null || amount <= 0) {
     return null;
@@ -316,9 +447,9 @@ export function mapLoanToAccountEntry(
      *
      * Never guess Cash / Bank / UPI.
      */
-    paymentMethod: "UNKNOWN",
+    paymentMethod: resolveLoanAccountsPaymentMode(loan).paymentMethod,
 
-    paymentMethodLabel: ACCOUNT_PAYMENT_METHOD_LABELS.UNKNOWN,
+    paymentMethodLabel: resolveLoanAccountsPaymentMode(loan).paymentMethodLabel,
 
     description: resolveLoanDescription(loanType),
 
@@ -398,6 +529,17 @@ export function mapLoansToAccountEntries(
     }
 
     entries.push(entry);
+
+    // PAISARULE_C125_R121: exactly one fee credit per valid Loan.
+    // The same source Loan ID gives this entry a stable identity.
+    const processingFeeEntry = mapLoanToProcessingFeeAccountEntry(
+      loan,
+      goldLoanIds,
+    );
+
+    if (processingFeeEntry) {
+      entries.push(processingFeeEntry);
+    }
   }
 
   return {

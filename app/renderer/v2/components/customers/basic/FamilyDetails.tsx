@@ -1,3 +1,4 @@
+import "../wizard/CustomerWizardPrimaryPlaceholder.css";
 /* ===========================================================
    FINORA ENTERPRISE OS™
 
@@ -244,6 +245,7 @@ export default function FamilyDetails({
                 value.numberOfFamilyMembers
               }
 
+              className="paisarule-customer-wizard-primary-placeholder"
               placeholder="Enter family members"
 
               inputMode="numeric"
@@ -309,6 +311,7 @@ export default function FamilyDetails({
                 value.emergencyContactName
               }
 
+              className="paisarule-customer-wizard-primary-placeholder"
               placeholder="Enter emergency contact"
 
               onChange={
@@ -372,6 +375,7 @@ export default function FamilyDetails({
     value.emergencyContactMobile
   }
 
+  className="paisarule-customer-wizard-primary-placeholder"
   placeholder="Enter mobile number"
 
   inputMode="numeric"

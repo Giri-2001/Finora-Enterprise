@@ -111,6 +111,12 @@ export interface Loan {
 
   netDisbursement?: number;
 
+  /**
+   * PAISARULE C125-R139-R2
+   * Step 6 payment method; optional for legacy loans.
+   */
+  paymentMode?: "cash" | "cheque" | "bank" | "upi";
+
   /* ==========================================
      NOTES
   ========================================== */

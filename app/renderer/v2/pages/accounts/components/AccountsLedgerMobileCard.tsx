@@ -157,7 +157,14 @@ export function AccountsLedgerMobileCard({
 
   const dateDisplay = formatMobileLedgerDate(entry.dateKey);
 
-  const timeDisplay = formatMobileLedgerTime(entry.occurredAt);
+  // PAISARULE_C125_R129
+  // Loan.loanDate is a business date, not a verified event time.
+  // Do not display a fabricated 05:30 from UTC midnight.
+  // Collection timestamps retain their existing presentation.
+  const timeDisplay =
+    entry.sourceType === "LOAN"
+      ? ""
+      : formatMobileLedgerTime(entry.occurredAt);
 
   /* =========================================================
      CUSTOMER
@@ -317,11 +324,10 @@ export function AccountsLedgerMobileCard({
             {dateDisplay}
           </span>
 
-          <span aria-hidden="true">•</span>
-
-          <span className={ACCOUNTS_LEDGER_MOBILE_CLASSES.time}>
+          {timeDisplay !== ACCOUNTS_EMPTY_VALUE && timeDisplay.trim().length > 0 && (<span aria-hidden="true">•</span>)}
+{timeDisplay !== ACCOUNTS_EMPTY_VALUE && timeDisplay.trim().length > 0 && (<span className={ACCOUNTS_LEDGER_MOBILE_CLASSES.time}>
             {timeDisplay}
-          </span>
+          </span>)}
         </div>
 
         {/* ===================================================

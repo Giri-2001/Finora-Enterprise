@@ -342,6 +342,18 @@ export function mapCollectionToAccountEntry(
   if (amount === null || amount <= 0) {
     return null;
   }
+  // PAISARULE_C125_R124_R1
+  // The Approved collection payment already includes this amount.
+  // Never add the penalty as a second Money In transaction.
+  const recordedPenalty = safeNumber(collection.penaltyAmount);
+
+  const penaltyIncome =
+    Number.isFinite(recordedPenalty) &&
+    recordedPenalty > 0 &&
+    recordedPenalty <= amount
+      ? recordedPenalty
+      : 0;
+
 
   const receiptNumber = safeText(collection.receiptNumber);
 
@@ -419,6 +431,8 @@ export function mapCollectionToAccountEntry(
     paymentMethod,
 
     paymentMethodLabel: paymentMethodLabel || "--",
+
+    penaltyIncome,
 
     description: resolveCollectionDescription(loanType),
 

@@ -1,0 +1,8 @@
+/* PAISARULE_C125_R164
+   Customer Registration Basic / KYC / Nominee only.
+   Use the active theme's primary text for placeholders.
+*/
+input.paisarule-customer-wizard-primary-placeholder::placeholder {
+  color: var(--finora-theme-text-primary, #F5F2EA) !important;
+  opacity: 1 !important;
+}

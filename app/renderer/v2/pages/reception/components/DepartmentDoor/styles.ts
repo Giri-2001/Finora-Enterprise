@@ -134,8 +134,8 @@ export function createDepartmentDoorStyles(
       `
         linear-gradient(
           180deg,
-          ${finoraReceptionTone(theme.colors.background.surfaceElevated)} 0%,
-          ${finoraReceptionTone(theme.colors.background.surface)} 100%
+          ${theme.id === "royal-navy" ? "#4E8FCB" : finoraReceptionTone(theme.colors.background.surfaceElevated)} 0%,
+          ${theme.id === "royal-navy" ? "#4E8FCB" : finoraReceptionTone(theme.colors.background.surface)} 100%
         )
       `,
 

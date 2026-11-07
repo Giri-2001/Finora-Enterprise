@@ -39,3 +39,7 @@ release-developer/
 *.corrupt-*
 _finora-*-backup-*/
 /android/app/src/developer/assets/public/index.html
+
+# PAISARULE C125 - generated build outputs
+/release-c125-r92/
+/release-c125-r93-android/

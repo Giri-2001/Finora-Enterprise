@@ -330,7 +330,7 @@ export function buildAccountsResponsiveCssVariables(
        SUMMARY
     ======================================================= */
 
-    "--finora-accounts-summary-columns": String(summary.columns),
+    "--finora-accounts-summary-columns": String(summary.columns >= 4 ? 6 : summary.columns >= 2 ? 3 : 1),
 
     "--finora-accounts-summary-gap": px(summary.gap),
 

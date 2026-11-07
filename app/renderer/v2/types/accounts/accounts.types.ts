@@ -72,7 +72,7 @@ export type AccountSourceType = "LOAN" | "COLLECTION";
    ACCOUNT ACTIVITY
 =========================================================== */
 
-export type AccountActivity = "LOAN_DISBURSEMENT" | "COLLECTION_RECEIVED";
+export type AccountActivity = "LOAN_DISBURSEMENT" | "COLLECTION_RECEIVED" | "PROCESSING_FEE_INCOME";
 
 /* ===========================================================
    LOAN TYPE
@@ -118,7 +118,7 @@ export type AccountPeriodPreset =
    ACTIVITY FILTER
 =========================================================== */
 
-export type AccountActivityFilter = "ALL" | AccountActivity;
+export type AccountActivityFilter = "ALL" | AccountActivity | "OVERDUE_PENALTY_INCOME";
 
 /* ===========================================================
    LOAN TYPE FILTER
@@ -283,6 +283,12 @@ export interface AccountEntry {
    * Optional source remarks.
    */
   remarks?: string;
+
+  /**
+   * Approved collection penalty portion.
+   * Already included in moneyIn, not a second credit.
+   */
+  penaltyIncome?: number;
 }
 
 /* ===========================================================

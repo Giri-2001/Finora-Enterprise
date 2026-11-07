@@ -1,3 +1,4 @@
+import "../wizard/CustomerWizardPrimaryPlaceholder.css";
 /* ===========================================================
    FINORA ENTERPRISE OS™
 
@@ -209,6 +210,7 @@ export default function OccupationCard({
               value={
                 value.occupation
               }
+              className="paisarule-customer-wizard-primary-placeholder"
               placeholder="Enter occupation"
               onChange={
                 (event) =>
@@ -262,6 +264,7 @@ export default function OccupationCard({
               value={
                 value.workPlace
               }
+              className="paisarule-customer-wizard-primary-placeholder"
               placeholder="Enter workplace or business"
               onChange={
                 (event) =>
@@ -315,6 +318,7 @@ export default function OccupationCard({
               value={
                 value.monthlyIncome
               }
+              className="paisarule-customer-wizard-primary-placeholder"
               placeholder="Enter monthly income"
               inputMode="numeric"
               onChange={
@@ -369,6 +373,7 @@ export default function OccupationCard({
               value={
                 value.experience
               }
+              className="paisarule-customer-wizard-primary-placeholder"
               placeholder="Years of experience"
               inputMode="decimal"
               onChange={

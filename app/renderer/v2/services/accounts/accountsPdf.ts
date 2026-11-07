@@ -47,6 +47,8 @@
 =========================================================== */
 
 import { getBusinessContext } from "../business/businessContextService";
+import { loadFinoraServerSettingsIdentity } from "../business/finoraServerSettingsIdentity";
+import paisaruleAccountsLogoUrl from "../../app/assets/paisarule_official_brand.png";
 
 import {
   ACCOUNTS_DOCUMENT_FILE_PREFIX,
@@ -78,6 +80,7 @@ import type {
 =========================================================== */
 
 import { formatCurrency } from "../../utils/currency/formatCurrency";
+import { calculateAccountsIncomeBreakdown } from "../../calculations/accounts/accountsTotals";
 
 /* ===========================================================
    SHARED REPORT PDF SERVICE
@@ -107,7 +110,7 @@ type AccountsPdfDocument = ReturnType<typeof createFinoraPdf>;
 
 const PAGE_MARGIN_X = 10;
 
-const CONTENT_START_Y = 46;
+const CONTENT_START_Y = 62;
 
 const PAGE_BOTTOM_MARGIN = 18;
 
@@ -478,7 +481,34 @@ function drawAccountsSummary(
     "NEUTRAL",
   );
 
-  return secondRowY + SUMMARY_CARD_HEIGHT + 6;
+  // PAISARULE_C125_R143_R1
+  // Existing Accounts income breakdown; no additional transactions.
+  const income = calculateAccountsIncomeBreakdown(request.entries);
+
+  const thirdRowY =
+    secondRowY + SUMMARY_CARD_HEIGHT + SUMMARY_GAP;
+
+  drawSummaryCard(
+    document,
+    PAGE_MARGIN_X,
+    thirdRowY,
+    cardWidth,
+    "Processing Fee Income",
+    formatPdfMoney(income.processingFeeIncome),
+    "IN",
+  );
+
+  drawSummaryCard(
+    document,
+    PAGE_MARGIN_X + cardWidth + SUMMARY_GAP,
+    thirdRowY,
+    cardWidth,
+    "Overdue Penalty (Recorded)",
+    formatPdfMoney(income.recordedPenaltyAmount),
+    "IN",
+  );
+
+  return thirdRowY + SUMMARY_CARD_HEIGHT + 6;
 }
 
 /* ===========================================================
@@ -486,35 +516,15 @@ function drawAccountsSummary(
 =========================================================== */
 
 function drawPeriodLine(
-  document: AccountsPdfDocument,
-
-  request: AccountsDocumentRequest,
-
+  _document: AccountsPdfDocument,
+  _request: AccountsDocumentRequest,
   y: number,
 ): number {
-  document.setTextColor(55, 55, 55);
-
-  document.setFont("helvetica", "bold");
-
-  document.setFontSize(8);
-
-  document.text(`Period: ${safeText(request.period.label)}`, PAGE_MARGIN_X, y);
-
-  document.setFont("helvetica", "normal");
-
-  document.setTextColor(100, 100, 100);
-
-  document.setFontSize(7);
-
-  document.text(
-    `Generated: ${safeText(request.generatedAt)}`,
-    PAGE_MARGIN_X,
-    y + 5,
-  );
-
-  return y + 10;
+  // PAISARULE_C125_R144
+  // The shared PDF header already displays Period and Generated.
+  // Do not repeat these values between summary and ledger.
+  return y;
 }
-
 /* ===========================================================
    TABLE HEADER
 =========================================================== */
@@ -580,7 +590,12 @@ function getAccountsPdfCellValue(
     case "date": {
       const date = formatPdfDate(entry.dateKey);
 
-      const time = formatPdfTime(entry.occurredAt);
+      // PAISARULE_C125_R141
+      // Loan business date is not an actual payment clock time.
+      const time =
+        entry.sourceType === "LOAN"
+          ? ACCOUNTS_EMPTY_VALUE
+          : formatPdfTime(entry.occurredAt);
 
       return time === ACCOUNTS_EMPTY_VALUE ? date : `${date}\n${time}`;
     }
@@ -608,8 +623,20 @@ function getAccountsPdfCellValue(
         ? ACCOUNTS_EMPTY_VALUE
         : safeText(entry.paymentMethodLabel);
 
-    case "reference":
-      return safeText(entry.sourceReference);
+    case "reference": {
+      // PAISARULE_C125_R141
+      // Match the Accounts Ledger's primary/secondary reference.
+      const primary = safeText(entry.sourceReference);
+
+      const secondary =
+        entry.sourceType === "COLLECTION" &&
+        entry.loanNumber &&
+        entry.loanNumber !== entry.sourceReference
+          ? safeText(entry.loanNumber)
+          : "";
+
+      return secondary ? `${primary}\n${secondary}` : primary;
+    }
 
     default:
       return ACCOUNTS_EMPTY_VALUE;
@@ -780,9 +807,177 @@ function drawAccountsRegister(
    BUILD PDF
 =========================================================== */
 
-export function buildAccountsPdf(
+/**
+ * PAISARULE_C125_R146
+ * Reports PDF brand asset and original 30mm center placement.
+ */
+async function drawAccountsReportsBrandLogo(
+  document: AccountsPdfDocument,
+): Promise<void> {
+  const image = new Image();
+  image.src = paisaruleAccountsLogoUrl;
+
+  try {
+    await image.decode();
+  } catch {
+    throw new Error("Unable to load PAISARULE Accounts PDF logo.");
+  }
+
+  if (!image.naturalWidth || !image.naturalHeight) {
+    throw new Error("PAISARULE Accounts PDF logo dimensions invalid.");
+  }
+
+  const canvas = window.document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("PAISARULE Accounts PDF logo canvas unavailable.");
+  }
+
+  // Identical rounded-corner geometry to Loan Statement PDF.
+  const radius = Math.min(canvas.width, canvas.height) * 0.12;
+
+  context.beginPath();
+  context.moveTo(radius, 0);
+  context.lineTo(canvas.width - radius, 0);
+  context.quadraticCurveTo(canvas.width, 0, canvas.width, radius);
+  context.lineTo(canvas.width, canvas.height - radius);
+  context.quadraticCurveTo(
+    canvas.width,
+    canvas.height,
+    canvas.width - radius,
+    canvas.height,
+  );
+  context.lineTo(radius, canvas.height);
+  context.quadraticCurveTo(0, canvas.height, 0, canvas.height - radius);
+  context.lineTo(0, radius);
+  context.quadraticCurveTo(0, 0, radius, 0);
+  context.closePath();
+  context.clip();
+  context.drawImage(image, 0, 0, 256, 256);
+
+  const png = canvas.toDataURL("image/png");
+  const pageWidth = document.internal.pageSize.getWidth();
+  const logoSize = 30;
+
+  document.addImage(
+    png,
+    "PNG",
+    (pageWidth - logoSize) / 2,
+    5,
+    logoSize,
+    logoSize,
+    "PAISARULE_ACCOUNTS_CENTER_LOGO",
+    "FAST",
+  );
+}
+
+/**
+ * Scope-checked Reports identity resolution.
+ * Never show another branch's stored profile.
+ */
+async function drawAccountsReportsBusinessIdentity(
+  document: AccountsPdfDocument,
+): Promise<void> {
+  const context = getBusinessContext();
+
+  const scope =
+    context?.ownerId?.trim() &&
+    context.businessId?.trim() &&
+    context.branchId?.trim()
+      ? {
+          ownerId: context.ownerId.trim(),
+          businessId: context.businessId.trim(),
+          branchId: context.branchId.trim(),
+        }
+      : null;
+
+  let businessName = "Not recorded";
+  let branchName = "Not recorded";
+
+  if (scope) {
+    const serverIdentity =
+      await loadFinoraServerSettingsIdentity(scope);
+
+    if (serverIdentity.success) {
+      businessName =
+        serverIdentity.data.businessName.trim() || businessName;
+      branchName =
+        serverIdentity.data.branchName.trim() || branchName;
+    } else {
+      // Same validated branch-profile fallback as Reports.
+      const profile = context?.businessProfile;
+
+      if (
+        profile &&
+        profile.ownerId === scope.ownerId &&
+        profile.businessId === scope.businessId &&
+        profile.branchId === scope.branchId &&
+        profile.businessName.trim() &&
+        profile.branchName.trim()
+      ) {
+        businessName = profile.businessName.trim();
+        branchName = profile.branchName.trim();
+      }
+    }
+  }
+
+  const pageWidth = document.internal.pageSize.getWidth();
+  const leftX = 15;
+  const rightX = pageWidth - 15;
+
+  document.setFont("helvetica", "normal");
+  document.setFontSize(7);
+  document.setTextColor(100, 110, 120);
+  document.text("BUSINESS NAME", leftX, 46);
+  document.text("BRANCH NAME", rightX, 46, {
+    align: "right",
+  });
+
+  // Fit long names without overwriting the opposite column.
+  const fitIdentityName = (
+    value: string,
+    maxWidth: number,
+  ): string => {
+    let display = value;
+
+    while (
+      display.length > 4 &&
+      document.getTextWidth(display) > maxWidth
+    ) {
+      display = display.slice(0, -1);
+    }
+
+    return display === value
+      ? display
+      : `${display.slice(0, -3)}...`;
+  };
+
+  document.setFont("helvetica", "bold");
+  document.setFontSize(10);
+  document.setTextColor(22, 35, 52);
+
+  document.text(
+    fitIdentityName(businessName, 82),
+    leftX,
+    53,
+  );
+
+  document.text(
+    fitIdentityName(branchName, 82),
+    rightX,
+    53,
+    { align: "right" },
+  );
+
+  document.setTextColor(0);
+}
+export async function buildAccountsPdf(
   request: AccountsDocumentRequest,
-): AccountsPdfDocument {
+): Promise<AccountsPdfDocument> {
   const fileName = buildAccountsPdfFileName(request);
 
   const generatedAt = request.generatedAt || getReportGeneratedAt();
@@ -790,12 +985,15 @@ export function buildAccountsPdf(
   const document = createFinoraPdf({
     fileName,
 
-    title: resolveAccountsDocumentTitle(request),
+    title: "Accounts Register",
 
     subtitle: `Period: ${safeText(request.period.label)}`,
 
     generatedAt,
   });
+
+  await drawAccountsReportsBrandLogo(document);
+  await drawAccountsReportsBusinessIdentity(document);
 
   let y = CONTENT_START_Y;
 
@@ -820,8 +1018,8 @@ export function buildAccountsPdf(
    DOWNLOAD
 =========================================================== */
 
-export function downloadAccountsPdf(request: AccountsDocumentRequest): void {
-  const document = buildAccountsPdf(request);
+export async function downloadAccountsPdf(request: AccountsDocumentRequest): Promise<void> {
+  const document = await buildAccountsPdf(request);
 
   finalizeAndDownloadFinoraPdf(document, buildAccountsPdfFileName(request));
 }
@@ -830,8 +1028,8 @@ export function downloadAccountsPdf(request: AccountsDocumentRequest): void {
    PRINT
 =========================================================== */
 
-export function printAccountsPdf(request: AccountsDocumentRequest): void {
-  const document = buildAccountsPdf(request);
+export async function printAccountsPdf(request: AccountsDocumentRequest): Promise<void> {
+  const document = await buildAccountsPdf(request);
 
   addFinoraPdfFooters(document);
 
@@ -845,7 +1043,7 @@ export function printAccountsPdf(request: AccountsDocumentRequest): void {
 export async function shareAccountsPdf(
   request: AccountsDocumentRequest,
 ): Promise<void> {
-  const document = buildAccountsPdf(request);
+  const document = await buildAccountsPdf(request);
 
   await finalizeAndShareFinoraPdf(
     document,

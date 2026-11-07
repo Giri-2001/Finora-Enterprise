@@ -284,3 +284,58 @@ export function calculateAccountsSummary(
 /* ===========================================================
    END
 =========================================================== */
+/**
+ * PAISARULE C125-R125
+ * Source-derived income breakdown for the visible Accounts entries.
+ *
+ * Processing fee credit is already included in total Money In.
+ * Penalty metadata is already included in Collection Money In.
+ * Neither amount must be added to Money In a second time.
+ *
+ * Recorded penalty is provisional until the collection settlement
+ * snapshot attribution is separately verified.
+ */
+export interface AccountsIncomeBreakdown {
+  processingFeeIncome: number;
+  recordedPenaltyAmount: number;
+}
+
+export function calculateAccountsIncomeBreakdown(
+  entries: readonly AccountEntry[],
+): AccountsIncomeBreakdown {
+  let processingFeeIncome = 0;
+  let recordedPenaltyAmount = 0;
+
+  for (const entry of entries) {
+    if (
+      entry.sourceType === "LOAN" &&
+      entry.activity === "PROCESSING_FEE_INCOME" &&
+      entry.direction === "CREDIT"
+    ) {
+      processingFeeIncome += getAccountEntryMoneyIn(entry);
+    }
+
+    if (
+      entry.sourceType === "COLLECTION" &&
+      entry.activity === "COLLECTION_RECEIVED" &&
+      entry.direction === "CREDIT"
+    ) {
+      const penalty = Number(entry.penaltyIncome);
+
+      if (
+        Number.isFinite(penalty) &&
+        penalty > 0 &&
+        penalty <= getAccountEntryMoneyIn(entry)
+      ) {
+        recordedPenaltyAmount += penalty;
+      }
+    }
+  }
+
+  return {
+    processingFeeIncome:
+      Math.round(processingFeeIncome * 100) / 100,
+    recordedPenaltyAmount:
+      Math.round(recordedPenaltyAmount * 100) / 100,
+  };
+}
