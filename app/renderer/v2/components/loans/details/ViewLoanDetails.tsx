@@ -1,3 +1,9 @@
+import { formatFinoraDateTime } from "../../../../shared/finoraDateTimeDisplay";
+import {
+  infoItemStyle as collectionInfoItemStyle,
+  labelStyle as collectionLabelStyle,
+  valueStyle as collectionValueStyle,
+} from "../../collections/details/ViewCollectionDetails.styles";
 // ============================================================
 // FINORA ENTERPRISE OS™
 //
@@ -1301,7 +1307,35 @@ export default function ViewLoanDetails({
               GUARANTOR
           ================================================ */}
 
+                    {/* C119-R7: Immutable Loan Creation Time */}
           <section style={sectionStyle}>
+            <div
+              className="finora-view-loan-section-header"
+              style={sectionHeaderStyle}
+            >
+              <div>
+                <h2 style={sectionTitleStyle}>Generated At</h2>
+                <p style={sectionSubtitleStyle}>
+                  Actual system time when this loan was created.
+                </p>
+              </div>
+            </div>
+
+            <div
+              className="finora-view-loan-info-grid"
+              style={infoGridStyle}
+            >
+              <div style={collectionInfoItemStyle}>
+                <span style={collectionLabelStyle}>Generated At</span>
+                <span style={collectionValueStyle}>
+                  {loan.createdAt
+                    ? formatFinoraDateTime(loan.createdAt)
+                    : "Not available"}
+                </span>
+              </div>
+            </div>
+          </section>
+<section style={sectionStyle}>
             <div
               className="finora-view-loan-section-header"
               style={sectionHeaderStyle}

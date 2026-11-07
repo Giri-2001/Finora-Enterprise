@@ -394,7 +394,7 @@ export default function PaymentDetails() {
   // ==========================================================
   //
   // First Collection:
-  //   Loan Date + 1 calendar day
+  //   Loan Date (same day allowed)
   //
   // Later Collections:
   //   Latest saved Collection Date
@@ -1924,7 +1924,7 @@ export default function PaymentDetails() {
             Collection Date *
           </label>
 
-          <FinoraCalendar   value={reviewData.receiptDate}   onChange={handleCollectionBusinessDateChange}   max={getCurrentLocalBusinessDate()}   allowClear={false}   showRelativeDay   placeholder="DD/MM/YYYY"   ariaLabel="Collection Date" />
+          <FinoraCalendar   value={reviewData.receiptDate}   onChange={handleCollectionBusinessDateChange}   min={minimumCollectionDate || undefined}   max={getCurrentLocalBusinessDate()}   allowClear={false}   showRelativeDay   placeholder="DD/MM/YYYY"   ariaLabel="Collection Date" />
         </div>
 
         {/* ====================================================
@@ -2053,7 +2053,7 @@ export default function PaymentDetails() {
                 fontWeight: 750,
                 letterSpacing: 3,
               }}>
-                FINORA
+                PAISARULE
               </div>
 
               <div style={{
@@ -2156,7 +2156,10 @@ export default function PaymentDetails() {
                     Collection Number
                   </span>
                   <strong style={{ overflowWrap: "anywhere" }}>
-                    {savedCollectionPopup.number}
+                    {String(savedCollectionPopup.number ?? "").replace(
+                      /^FIN-COL-/i,
+                      "PAISA-COL-",
+                    )}
                   </strong>
                 </div>
 

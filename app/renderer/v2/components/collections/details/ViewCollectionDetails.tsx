@@ -358,7 +358,6 @@ export default function ViewCollectionDetails({
               />
             </div>
           </section>
-
           <section style={sectionStyle}>
             <h2 style={sectionTitleStyle}>Receipt & Audit</h2>
 
@@ -374,14 +373,14 @@ export default function ViewCollectionDetails({
                 <span style={statusStyle}>{collection.status}</span>
               </div>
 
-              <Info
-                label="Created At"
-                value={formatDateTime(collection.createdAt)}
-              />
 
               <Info
                 label="Updated At"
-                value={formatDateTime(collection.updatedAt)}
+                value={formatDate(collection.receiptDate)}
+              />
+              <Info
+                label="Generated At"
+                value={formatDateTime(collection.createdAt)}
               />
             </div>
           </section>
