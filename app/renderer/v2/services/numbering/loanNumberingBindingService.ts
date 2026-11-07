@@ -469,7 +469,8 @@ async function resolveExistingCustomerNumber(
 
   if (
     shortCustomerSegments.length === 3 &&
-    shortCustomerSegments[0] === "FIN" &&
+    (shortCustomerSegments[0] === "PAISA" ||
+      shortCustomerSegments[0] === "FIN") &&
     shortCustomerSegments[1] === "CUS"
   ) {
     const shortCustomerNumberText = shortCustomerSegments[2];
@@ -512,7 +513,12 @@ async function resolveExistingCustomerNumber(
       };
     }
 
-    if (shortCustomerId !== expectedShortCustomerId) {
+    const expectedRecognizedCustomerId =
+      shortCustomerSegments[0] === "FIN"
+        ? `FIN-CUS-${shortCustomerNumberText}`
+        : expectedShortCustomerId;
+
+    if (shortCustomerId !== expectedRecognizedCustomerId) {
       return {
         success: false,
         error: "Canonical Customer ID does not match active scope.",
@@ -780,7 +786,7 @@ function looksLikeCanonicalLoanNumber(
   loanNumber: string,
 ): boolean {
   // Existing FINORA four-part Loan Number is canonical.
-  if (/^FIN-LOAN-\d{6}-\d{3}$/.test(loanNumber.trim().toUpperCase())) {
+  if (/^(?:FIN|PAISA)-LOAN-\d{6}-\d{3}$/.test(loanNumber.trim().toUpperCase())) {
     return true;
   }
 

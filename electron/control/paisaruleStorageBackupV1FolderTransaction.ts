@@ -26,6 +26,15 @@ export interface PaisaruleFolderTransactionAuthorityV1 {
   // Session, branch folder, removable volume identity.
   // Must not call the marker-blocked storage read API.
   assertCurrentAuthority(): Promise<void>;
+
+  // PAISARULE C117-R204
+  // Completed operations only; no elapsed-time estimates.
+  onProgress?(
+    stage:
+      | "DESTINATION_VERIFIED"
+      | "STAGING_VERIFIED"
+      | "PUBLISHED_READBACK_VERIFIED",
+  ): void;
 }
 
 export interface PaisaruleFolderTransactionResultV1 {
@@ -217,6 +226,23 @@ export async function commitPaisaruleFolderStorageV1(
       await assertOriginal(storage, input);
       await authority.assertCurrentAuthority();
 
+      // PAISARULE C117-R204
+      // Reporting must never interrupt an atomic transaction.
+      const reportCompletedStage = (
+        stage:
+          | "DESTINATION_VERIFIED"
+          | "STAGING_VERIFIED"
+          | "PUBLISHED_READBACK_VERIFIED",
+      ): void => {
+        try {
+          authority.onProgress?.(stage);
+        } catch {
+          // Progress notification has no storage authority.
+        }
+      };
+
+      reportCompletedStage("DESTINATION_VERIFIED");
+
       let markerOwned = false;
       let predecessorMoved = false;
       let published = false;
@@ -233,6 +259,7 @@ export async function commitPaisaruleFolderStorageV1(
         await writeExact(path.win32.join(staging, PRIMARY), primary);
         await writeExact(path.win32.join(staging, SECONDARY), secondary);
         await assertPublished(staging, primary, secondary);
+        reportCompletedStage("STAGING_VERIFIED");
 
         await authority.assertCurrentAuthority();
         await assertOriginal(storage, input);
@@ -246,6 +273,10 @@ export async function commitPaisaruleFolderStorageV1(
 
         await assertPublished(storage, primary, secondary);
         await authority.assertCurrentAuthority();
+
+        // Published data read-back passed. Final journal
+        // cleanup and Coordinator finalization still remain.
+        reportCompletedStage("PUBLISHED_READBACK_VERIFIED");
 
         // Successful commit: predecessor remains untouched.
         await fs.unlink(marker);

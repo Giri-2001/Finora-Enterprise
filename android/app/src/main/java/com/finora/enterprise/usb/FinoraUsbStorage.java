@@ -229,6 +229,150 @@ public final class FinoraUsbStorage {
     // PUBLIC STATUS
     // ========================================================
 
+    // PAISARULE C117-R189
+    // Device-local Owner-scoped USB preference.
+    // Called only with a Native verified Reception principal.
+    // This is a folder preference, never an authentication grant.
+    public static void rememberVerifiedOwnerUsbFolder(
+        Context context,
+        JSONObject verifiedReception
+    ) {
+        if (
+            context == null ||
+            verifiedReception == null ||
+            !verifiedReception.optBoolean("success", false) ||
+            !verifiedReception.optBoolean("businessDataAccess", false) ||
+            !"BUSINESS_RECEPTION".equals(
+                verifiedReception.optString("sessionType", "")
+            )
+        ) {
+            return;
+        }
+
+        JSONObject principal =
+            verifiedReception.optJSONObject("principal");
+
+        if (
+            principal == null ||
+            !"OWNER".equals(principal.optString("role", "")) ||
+            !"USB".equals(principal.optString("storageMode", ""))
+        ) {
+            return;
+        }
+
+        String ownerId = principal.optString("ownerId", "");
+        String businessId = principal.optString("businessId", "");
+        String branchId = principal.optString("branchId", "");
+
+        if (
+            ownerId.trim().isEmpty() ||
+            businessId.trim().isEmpty() ||
+            branchId.trim().isEmpty()
+        ) {
+            return;
+        }
+
+        try {
+            FinoraUsbStorage storage = new FinoraUsbStorage(context);
+            UsbTarget target = storage.resolveConfiguredTarget();
+
+            if (
+                target == null ||
+                !target.isReady() ||
+                target.treeUri == null ||
+                !storage.hasPersistedReadWritePermission(target.treeUri)
+            ) {
+                return;
+            }
+
+            String documentId =
+                DocumentsContract.getTreeDocumentId(target.treeUri);
+
+            if (!isPortableAuthUsbRootDocumentId(documentId)) {
+                return;
+            }
+
+            int separator = documentId.indexOf(':');
+            if (separator <= 0) {
+                return;
+            }
+
+            String branchFolder =
+                documentId.substring(separator + 1);
+
+            // Save only an exact top-level Owner folder.
+            // Never bind a generic USB root to an Owner.
+            if (
+                branchFolder.isEmpty() ||
+                FINORA_DIRECTORY.equalsIgnoreCase(branchFolder) ||
+                branchFolder.indexOf('/') >= 0 ||
+                branchFolder.indexOf('\\') >= 0
+            ) {
+                return;
+            }
+
+            String scope =
+                ownerId + "\n" + businessId + "\n" + branchId;
+
+            byte[] digest = java.security.MessageDigest
+                .getInstance("SHA-256")
+                .digest(
+                    scope.getBytes(
+                        java.nio.charset.StandardCharsets.UTF_8
+                    )
+                );
+
+            StringBuilder key =
+                new StringBuilder("authenticated_usb_v1_");
+
+            for (byte value : digest) {
+                key.append(
+                    String.format(
+                        java.util.Locale.ROOT,
+                        "%02x",
+                        value & 255
+                    )
+                );
+            }
+
+            // The URI is non-secret selection metadata.
+            // Never store passwords, tokens, or Wallet values.
+            // PAISARULE C117-R222
+            // A previously associated URI cannot be silently
+            // assigned to a different verified Owner scope.
+            // This protects preferences, not authentication.
+            String candidateUri = target.treeUri.toString();
+
+            for (
+                java.util.Map.Entry<String, ?> entry :
+                storage.preferences.getAll().entrySet()
+            ) {
+                String existingKey = entry.getKey();
+
+                if (
+                    existingKey != null &&
+                    existingKey.startsWith(
+                        "authenticated_usb_v1_"
+                    ) &&
+                    !existingKey.equals(key.toString()) &&
+                    entry.getValue() instanceof String &&
+                    candidateUri.equals((String) entry.getValue())
+                ) {
+                    // Conflicting association: fail closed.
+                    // Never overwrite another Owner preference.
+                    return;
+                }
+            }
+
+            storage.preferences.edit()
+                .putString(key.toString(), candidateUri)
+                .apply();
+
+        } catch (Exception ignored) {
+            // Login success is independent of preference saving.
+        }
+    }
+
     public JSONObject getStatus() {
         UsbTarget target =
             resolveConfiguredTarget();
@@ -1940,6 +2084,131 @@ public final class FinoraUsbStorage {
     // CONFIGURED TARGET RESOLUTION
     // ========================================================
 
+    // PAISARULE C117-R220
+    // Lookup only. Never activate a USB folder here.
+    // Caller must supply a Native-authenticated Owner scope.
+    // A saved URI is a hint, not proof of folder identity.
+    public synchronized Uri findSavedOwnerUsbFolderCandidate(
+        String ownerId,
+        String businessId,
+        String branchId
+    ) {
+        try {
+            if (
+                ownerId == null ||
+                businessId == null ||
+                branchId == null ||
+                ownerId.trim().isEmpty() ||
+                businessId.trim().isEmpty() ||
+                branchId.trim().isEmpty()
+            ) {
+                return null;
+            }
+
+            String scope =
+                ownerId + "\n" + businessId + "\n" + branchId;
+
+            byte[] digest = java.security.MessageDigest
+                .getInstance("SHA-256")
+                .digest(
+                    scope.getBytes(
+                        java.nio.charset.StandardCharsets.UTF_8
+                    )
+                );
+
+            StringBuilder key =
+                new StringBuilder("authenticated_usb_v1_");
+
+            for (byte value : digest) {
+                key.append(
+                    String.format(
+                        java.util.Locale.ROOT,
+                        "%02x",
+                        value & 255
+                    )
+                );
+            }
+
+            String saved =
+                preferences.getString(key.toString(), null);
+
+            if (saved == null || saved.trim().isEmpty()) {
+                return null;
+            }
+
+            // PAISARULE C117-R221
+            // Fail closed if different Owner scopes reuse the
+            // exact same saved USB folder URI.
+            // A preference never proves business ownership.
+            for (
+                java.util.Map.Entry<String, ?> entry :
+                preferences.getAll().entrySet()
+            ) {
+                String otherKey = entry.getKey();
+
+                if (
+                    otherKey != null &&
+                    otherKey.startsWith("authenticated_usb_v1_") &&
+                    !otherKey.equals(key.toString()) &&
+                    entry.getValue() instanceof String &&
+                    saved.equals((String) entry.getValue())
+                ) {
+                    return null;
+                }
+            }
+
+            Uri uri = Uri.parse(saved);
+
+            if (
+                !"content".equals(uri.getScheme()) ||
+                !EXTERNAL_STORAGE_AUTHORITY.equals(
+                    uri.getAuthority()
+                ) ||
+                !hasPersistedReadWritePermission(uri)
+            ) {
+                return null;
+            }
+
+            String documentId =
+                DocumentsContract.getTreeDocumentId(uri);
+
+            if (!isPortableAuthUsbRootDocumentId(documentId)) {
+                return null;
+            }
+
+            int separator = documentId.indexOf(':');
+
+            if (separator <= 0) {
+                return null;
+            }
+
+            String folder =
+                documentId.substring(separator + 1);
+
+            if (
+                folder.isEmpty() ||
+                FINORA_DIRECTORY.equalsIgnoreCase(folder) ||
+                folder.indexOf('/') >= 0 ||
+                folder.indexOf('\\') >= 0
+            ) {
+                return null;
+            }
+
+            UsbTarget target = resolveTargetForUri(uri);
+
+            if (!target.isReady()) {
+                return null;
+            }
+
+            // No SharedPreferences mutation.
+            // No login or storage authority granted.
+            return uri;
+
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     private UsbTarget resolveConfiguredTarget() {
         String rawTreeUri =
             preferences.getString(
@@ -1954,7 +2223,7 @@ public final class FinoraUsbStorage {
             return targetFailure(
                 "NOT_CONFIGURED",
                 null,
-                "FINORA USB storage access has not been selected."
+                "Select the authenticated Owner USB folder."
             );
         }
 
@@ -2073,6 +2342,33 @@ public final class FinoraUsbStorage {
                 ).equals(
                     relativePath
                 );
+
+            // PAISARULE C117-R186-R2
+            // Accept the removable root, legacy storage folder,
+            // or one top-level Owner branch folder only.
+            boolean selectedOwnerBranchFolder =
+                !selectedUsbRoot &&
+                !selectedFinoraStorageDirectory &&
+                !FINORA_DIRECTORY.equalsIgnoreCase(relativePath) &&
+                !relativePath.equals(".") &&
+                !relativePath.equals("..") &&
+                !relativePath.trim().isEmpty() &&
+                relativePath.equals(relativePath.trim()) &&
+                relativePath.indexOf('/') < 0 &&
+                relativePath.indexOf('\\') < 0 &&
+                relativePath.indexOf(':') < 0;
+
+            if (
+                !selectedUsbRoot &&
+                !selectedFinoraStorageDirectory &&
+                !selectedOwnerBranchFolder
+            ) {
+                return targetFailure(
+                    "UNAVAILABLE",
+                    "USB:" + volumeId,
+                    "Select the USB drive or an Owner folder directly inside it."
+                );
+            }
 
 
             if (

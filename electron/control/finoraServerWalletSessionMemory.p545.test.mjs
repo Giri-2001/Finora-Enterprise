@@ -102,7 +102,7 @@ test("scope and key mismatch or malformed session fails closed", () => {
     { success: true, data: { ...result().data, expiresAt: "bad" } },
     { success: true, data: {
       ...result().data,
-      expiresAt: new Date(baseTime + 1_806_000).toISOString(),
+      expiresAt: new Date(baseTime + 3_606_000).toISOString(),
     } },
   ];
   for (const value of bad) {

@@ -131,7 +131,16 @@ export default function LoanPortfolioResponsiveRecord({
   const recordStyle: CSSProperties = {
     ...createLoansOfficeMobileRecordStyle(tokens),
     borderTop: `1px solid ${fieldBorder}`,
-    background: theme.colors.background.surface,
+    background:
+      loan.status === "CLOSED"
+        ? theme.colors.status.dangerSoft
+        : theme.colors.background.surface,
+    ...(loan.status === "CLOSED"
+      ? {
+          borderBottom: `1px solid ${theme.colors.status.danger}`,
+          boxShadow: `inset 3px 0 0 ${theme.colors.status.danger}`,
+        }
+      : {}),
   };
 
   const fieldStyle = (): CSSProperties => ({

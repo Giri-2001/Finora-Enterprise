@@ -49,6 +49,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import StudioLayout from "../../common/layout/StudioLayout";
+import GlobalLoadingOverlay from "../../common/feedback/GlobalLoadingOverlay";
 
 import CustomerOfficeController from "../office/CustomerOfficeController";
 
@@ -600,7 +601,7 @@ export default function CustomerDepartment({
         />
       ) : (
         <>
-          {customerLoadError ? (
+          {customersLoading ? null : customerLoadError ? (
             <div>{customerLoadError}</div>
           ) : (
             <CustomerOfficeController
@@ -628,12 +629,7 @@ export default function CustomerDepartment({
           ================================================== */}
 
           {customersLoading && (
-            <div
-              aria-hidden="true"
-              style={{
-                display: "none",
-              }}
-            />
+            <GlobalLoadingOverlay message="Loading PAISARULE Customers..." />
           )}
         </>
       )}

@@ -2541,7 +2541,7 @@ export default function ServerWalletPage({
 
     <select
       aria-label="Filter wallet history date"
-      defaultValue="ALL"
+      defaultValue="MONTH"
       onChange={(event) => window.dispatchEvent(
         new CustomEvent("finora:wallet-history-date-filter", {
           detail: event.currentTarget.value,

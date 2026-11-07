@@ -2899,6 +2899,7 @@ return;
                         formatCurrency={formatCurrency}
                         formatDate={formatDate}
                         getCollectionType={getCollectionType}
+                        closedHighlight={safeNumber(collection.outstandingBalance) <= 0}
                         onView={setViewingCollection}
                       />
                     );

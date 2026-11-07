@@ -777,6 +777,90 @@ async function detectAndCacheUsbRoot(): Promise<string | null> {
         }
       }
 
+      // PAISARULE C117-R179
+      // Prefer the authenticated last-used folder ONLY if the
+      // native USB identity and exact branch folder match.
+      // No renderer-provided path; no authentication bypass.
+      if (discoveredBranchRoots.length > 1) {
+        try {
+          const { capturePaisaruleUsbIdentityV1 } =
+            await import(
+              "./control/paisaruleStorageBackupV1UsbIdentity.js"
+            );
+
+          const { findPaisaruleLastUsbFolderV1 } =
+            await import(
+              "./control/paisaruleLastUsbFolderV1.js"
+            );
+
+          const validCandidates: string[] = [];
+
+          for (const removableRoot of roots) {
+            try {
+              const identity =
+                await capturePaisaruleUsbIdentityV1(
+                  removableRoot,
+                );
+
+              const savedCandidate =
+                await findPaisaruleLastUsbFolderV1({
+                  userData: app.getPath("userData"),
+                  removableRoot,
+                  identity,
+                });
+
+              if (!savedCandidate) continue;
+
+              const matchingBranch =
+                discoveredBranchRoots.find(
+                  (branch) =>
+                    path.win32.resolve(branch).toLowerCase() ===
+                    path.win32.resolve(savedCandidate).toLowerCase(),
+                );
+
+              if (matchingBranch) {
+                validCandidates.push(matchingBranch);
+              }
+            } catch {
+              // Identity or storage unavailable: never trust
+              // an unverified saved folder.
+            }
+          }
+
+          const uniqueCandidates = Array.from(
+            new Set(
+              validCandidates.map(
+                (candidate) =>
+                  path.win32.resolve(candidate).toLowerCase(),
+              ),
+            ),
+          );
+
+          if (uniqueCandidates.length === 1) {
+            const selected =
+              validCandidates.find(
+                (candidate) =>
+                  path.win32.resolve(candidate).toLowerCase() ===
+                  uniqueCandidates[0],
+              );
+
+            if (selected) {
+              cachedUsbRoot = selected;
+              cachedUsbRootAt = Date.now();
+
+              console.info(
+                "[PAISARULE LAST USB] VERIFIED_FOLDER_AUTO_SELECTED",
+              );
+
+              return selected;
+            }
+          }
+        } catch {
+          // Preference is optional. Ordinary USB discovery
+          // retains its existing behavior.
+        }
+      }
+
       if (
         discoveredBranchRoots.length ===
           1
@@ -1913,7 +1997,7 @@ async function handleUsbMigrateLegacyTenantScope(input: unknown, sender?: object
 
   if (!usbRoot) {
     return failure(
-      "FINORA Pendrive is disconnected.",
+      "PAISARULE USB is disconnected.",
     );
   }
 
@@ -2332,7 +2416,7 @@ async function getUsbStatus() {
     return {
       availability: "DISCONNECTED",
 
-      message: "FINORA Pendrive is not connected.",
+      message: "PAISARULE USB is not connected.",
     };
   }
 
@@ -2410,7 +2494,7 @@ async function handleUsbGet(query: StorageQuery) {
   const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-    return failure("FINORA Pendrive is disconnected.");
+    return failure("PAISARULE USB is disconnected.");
   }
 
   try {
@@ -2448,7 +2532,7 @@ async function handleUsbGetAll(query: StorageQuery) {
   const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-    return failure("FINORA Pendrive is disconnected.");
+    return failure("PAISARULE USB is disconnected.");
   }
 
   try {
@@ -2504,7 +2588,7 @@ async function handleUsbSaveUnlocked(
   const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-    return failure("FINORA Pendrive is disconnected.");
+    return failure("PAISARULE USB is disconnected.");
   }
 
   try {
@@ -2684,7 +2768,7 @@ async function handleUsbUpdateUnlocked(
   const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-    return failure("FINORA Pendrive is disconnected.");
+    return failure("PAISARULE USB is disconnected.");
   }
 
   try {
@@ -2750,7 +2834,7 @@ async function handleUsbDeleteUnlocked(query: StorageQuery) {
   const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-    return failure("FINORA Pendrive is disconnected.");
+    return failure("PAISARULE USB is disconnected.");
   }
 
   try {
@@ -2798,7 +2882,7 @@ async function handleUsbReplaceAllUnlocked(
   const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-    return failure("FINORA Pendrive is disconnected.");
+    return failure("PAISARULE USB is disconnected.");
   }
 
   try {
@@ -2885,7 +2969,7 @@ async function handleUsbClearUnlocked(query: StorageQuery) {
   const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-    return failure("FINORA Pendrive is disconnected.");
+    return failure("PAISARULE USB is disconnected.");
   }
 
   try {
@@ -2946,7 +3030,7 @@ async function handleUsbResetFinoraData(
   const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
-    return failure("FINORA Pendrive is disconnected.");
+    return failure("PAISARULE USB is disconnected.");
   }
 
   try {
@@ -6358,6 +6442,35 @@ app.whenReady().then(async () => {
         );
         paisarulePendingRestoreSelectionBySender.delete(sender);
 
+        // PAISARULE C117-R194-R1
+        // Only completed native milestones are emitted.
+        // No timer-based progress, paths, keys or business data.
+        const emitRestoreVerifyStage = (
+          stage:
+            | "FILE_SELECTED"
+            | "SERVER_SESSION_VERIFIED"
+            | "USB_IDENTITY_VERIFIED"
+            | "BACKUP_ARCHIVE_VERIFIED",
+        ): void => {
+          if (
+            sender.isDestroyed() ||
+            paisaruleRestoreVerifyTokenBySender.get(sender) !==
+              restoreVerifyToken ||
+            !isCurrentRestoreSession()
+          ) {
+            return;
+          }
+
+          try {
+            sender.send("paisarule:restore:verify-stage", {
+              phase: "VERIFY",
+              stage,
+            });
+          } catch {
+            // Progress notification cannot affect Restore.
+          }
+        };
+
         const businessSession =
           finoraBusinessSessionsBySender.get(sender);
 
@@ -6388,6 +6501,48 @@ app.whenReady().then(async () => {
             return denyRestore("LOGIN_CHANGED");
           }
 
+          // PAISARULE C117-R192
+          // Display the native file picker BEFORE expensive
+          // server and USB identity verification.
+          // Nothing is read, decrypted or committed here.
+          const restorePreselectedDialog =
+            await dialog.showOpenDialog(
+              parentWindow,
+              {
+                title: "Select PAISARULE Business Backup",
+                properties: ["openFile"],
+                filters: [
+                  {
+                    name: "PAISARULE Backup",
+                    extensions: ["paisarule"],
+                  },
+                ],
+              },
+            );
+
+          if (
+            paisaruleRestoreVerifyTokenBySender.get(sender) !==
+            restoreVerifyToken
+          ) {
+            return denyRestore("RESTORE_VERIFY_SUPERSEDED");
+          }
+
+          if (!isCurrentRestoreSession()) {
+            return denyRestore("LOGIN_CHANGED");
+          }
+
+          if (restorePreselectedDialog.canceled) {
+            return {
+              success: true,
+              cancelled: true,
+              verified: false,
+              createdAt: null,
+              errorCode: null,
+            };
+          }
+
+          emitRestoreVerifyStage("FILE_SELECTED");
+
           const verification =
             await verifyPaisaruleBackupBusinessSession(
               businessSession.sessionId,
@@ -6399,6 +6554,8 @@ app.whenReady().then(async () => {
           ) {
             return denyRestore("SERVER_SESSION_INVALID");
           }
+
+          emitRestoreVerifyStage("SERVER_SESSION_VERIFIED");
 
           const principal = verification.principal;
 
@@ -6475,10 +6632,19 @@ app.whenReady().then(async () => {
           const restoreUsbDriveRoot =
             path.win32.parse(restoreFolderBeforeDialog).root;
 
+          const restoreIdentityStartedAt = performance.now();
+
           const restoreUsbIdentity =
             await capturePaisaruleUsbIdentityV1(
               restoreUsbDriveRoot,
             );
+
+          console.info(
+            "[PAISARULE RESTORE PERF] USB_IDENTITY_MS",
+            Math.round(performance.now() - restoreIdentityStartedAt),
+          );
+
+          emitRestoreVerifyStage("USB_IDENTITY_VERIFIED");
 
           if (!isCurrentRestoreSession()) {
             return denyRestore("LOGIN_CHANGED");
@@ -6506,21 +6672,11 @@ app.whenReady().then(async () => {
                 isCurrent: isCurrentRestoreSession,
               },
               {
-                showOpenDialog: () =>
-                  dialog.showOpenDialog(
-                    parentWindow,
-                    {
-                      title:
-                        "Select PAISARULE Business Backup",
-                      properties: ["openFile"],
-                      filters: [
-                        {
-                          name: "PAISARULE Backup",
-                          extensions: ["paisarule"],
-                        },
-                      ],
-                    },
-                  ),
+                // Consume the native selection exactly once.
+                // RestoreVerify still checks extension, file
+                // type, size, encryption, scope and session.
+                showOpenDialog: async () =>
+                  restorePreselectedDialog,
                 onVerifiedArchive: selection => {
                   if (
                     !isCurrentRestoreSession() ||
@@ -6554,6 +6710,7 @@ app.whenReady().then(async () => {
             !result.cancelled &&
             result.verified
           ) {
+            emitRestoreVerifyStage("BACKUP_ARCHIVE_VERIFIED");
             // Preliminary read-only safety gate.
             // Does not authorize or commit a Restore.
             const restoreFolderAfterDialog =
@@ -6912,7 +7069,7 @@ app.whenReady().then(async () => {
         // PAISARULE_C117_R264_EXECUTION_ORDER
         // Remain fail-closed until integration and recovery
         // tests pass and the UI is deliberately connected.
-        const restoreCommitFeatureEnabled: boolean = false;
+        const restoreCommitFeatureEnabled: boolean = true;
 
         if (!restoreCommitFeatureEnabled) {
           return denyCommit(
@@ -7035,6 +7192,38 @@ app.whenReady().then(async () => {
             }
           };
 
+          // PAISARULE C117-R196
+          // Native progress notifications cannot grant authority.
+          // No paths, credentials, business records or keys.
+          const emitRestoreCommitStage = (
+            stage:
+              | "COMMIT_STARTED"
+              | "DESTINATION_VERIFIED"
+              | "STAGING_VERIFIED"
+              | "PUBLISHED_READBACK_VERIFIED"
+              | "COMMIT_COORDINATOR_SUCCEEDED",
+          ): void => {
+            if (
+              sender.isDestroyed() ||
+              !isCurrent()
+            ) {
+              return;
+            }
+
+            try {
+              sender.send("paisarule:restore:commit-stage", {
+                phase: "COMMIT",
+                stage,
+              });
+            } catch {
+              // Notification failure cannot affect Restore.
+            }
+          };
+
+          // The operation begins before acquiring its lock.
+          // This is a stage, not a completed percentage.
+          emitRestoreCommitStage("COMMIT_STARTED");
+
           // Exclusive lock must be acquired BEFORE reading
           // the archive and invoking the coordinator.
           const committed =
@@ -7106,10 +7295,20 @@ app.whenReady().then(async () => {
                     withExclusiveStorageAccess:
                       async operation => operation(),
                     assertCurrentAuthority: assertAuthority,
+                    // PAISARULE C117-R206
+                    // Native-only completed transaction stages.
+                    onProgress: stage => {
+                      emitRestoreCommitStage(stage);
+                    },
                   },
                 );
               },
             );
+          // The coordinator returned successfully.
+          // UI must independently await the success result.
+          // Do not claim 100% until read-back contract is checked.
+          emitRestoreCommitStage("COMMIT_COORDINATOR_SUCCEEDED");
+
           return {
             success: true as const,
             committed: true as const,
@@ -7120,8 +7319,23 @@ app.whenReady().then(async () => {
               committed.preservedWalletRecords,
             errorCode: null,
           };
-        } catch {
-          return denyCommit("RESTORE_COMMIT_UNAVAILABLE");
+        } catch (error: unknown) {
+          // Preserve only structured, non-sensitive error codes.
+          // Never expose raw exceptions, paths or credentials.
+          const message =
+            error instanceof Error ? error.message : "";
+
+          const safeCode =
+            /^(?:RESTORE|USB|SERVER_SESSION|BUSINESS_SESSION|AUTH|WALLET|BRANCH|STORAGE|BACKUP|PAISARULE)_[A-Z0-9_]{1,100}$/.test(message)
+              ? message
+              : "RESTORE_COMMIT_UNAVAILABLE";
+
+          console.warn(
+            "[PAISARULE RESTORE COMMIT REJECTED]",
+            safeCode,
+          );
+
+          return denyCommit(safeCode);
         } finally {
           (archivedBytes as Buffer | null)?.fill(0);
           (scopedKey as Buffer | null)?.fill(0);
@@ -9108,6 +9322,168 @@ app.whenReady().then(async () => {
             },
           });
 
+          // PAISARULE C117-R178
+          // Best-effort device-local preference, AFTER server-verified login.
+          // Never block authentication or write to USB storage.
+          if (
+            process.platform === "win32" &&
+            boundLoginPrincipal.storageMode === "USB"
+          ) {
+            const preferenceSender = event.sender;
+            const preferenceGeneration = businessGeneration;
+            const preferenceSessionId = result.session.sessionId;
+            const preferenceScope = {
+              ownerId: boundLoginPrincipal.ownerId,
+              businessId: boundLoginPrincipal.businessId,
+              branchId: boundLoginPrincipal.branchId,
+            };
+
+            let preferenceStage = "START";
+            void (async () => {
+              const sessionStillCurrent = () => {
+                const current =
+                  finoraBusinessSessionsBySender.get(preferenceSender);
+
+                return (
+                  !preferenceSender.isDestroyed() &&
+                  finoraAccountBusinessLoginGeneration.get(
+                    preferenceSender,
+                  ) === preferenceGeneration &&
+                  current?.sessionId === preferenceSessionId &&
+                  current.principal.ownerId === preferenceScope.ownerId &&
+                  current.principal.businessId === preferenceScope.businessId &&
+                  current.principal.branchId === preferenceScope.branchId &&
+                  current.principal.storageMode === "USB"
+                );
+              };
+
+              if (!sessionStillCurrent()) return;
+
+              preferenceStage = "INITIAL_FOLDER_LOOKUP";
+              const selectedBranch = await findFinoraUsbRoot();
+              if (!selectedBranch || !sessionStillCurrent()) return;
+
+              const branch = path.win32.resolve(selectedBranch);
+              const removableRoot = path.win32.parse(branch).root;
+
+              if (
+                !/^[A-Za-z]:\\$/.test(removableRoot) ||
+                path.win32.dirname(branch).toLowerCase() !==
+                  removableRoot.toLowerCase()
+              ) {
+                return;
+              }
+
+              preferenceStage = "BRANCH_AUTH_CHECK";
+              await fs.access(
+                path.win32.join(
+                  branch,
+                  FINORA_DIRECTORY,
+                  "auth",
+                  "finora-branch-auth.bin",
+                ),
+              );
+
+              const { capturePaisaruleUsbIdentityV1 } = await import(
+                "./control/paisaruleStorageBackupV1UsbIdentity.js"
+              );
+
+              preferenceStage = "USB_IDENTITY_CAPTURE";
+              const identity = await capturePaisaruleUsbIdentityV1(
+                removableRoot,
+              );
+
+              if (!sessionStillCurrent()) return;
+
+              preferenceStage = "FINAL_FOLDER_RECHECK";
+              const latestBranch = await findFinoraUsbRoot();
+              if (
+                !latestBranch ||
+                path.win32.resolve(latestBranch).toLowerCase() !==
+                  branch.toLowerCase() ||
+                !sessionStillCurrent()
+              ) {
+                return;
+              }
+
+              const { savePaisaruleLastUsbFolderV1 } = await import(
+                "./control/paisaruleLastUsbFolderV1.js"
+              );
+
+              if (!sessionStillCurrent()) return;
+
+              preferenceStage = "PREFERENCE_FILE_WRITE";
+              await savePaisaruleLastUsbFolderV1({
+                userData: app.getPath("userData"),
+                removableRoot,
+                branchRoot: branch,
+                identity,
+                scope: preferenceScope,
+              });
+
+              console.info(
+                "[PAISARULE LAST USB] AUTHENTICATED_PREFERENCE_SAVED",
+              );
+            })().catch((error: unknown) => {
+  // PAISARULE C117-R246-R1: no sensitive exception text.
+  const candidate =
+    error && typeof error === "object"
+      ? error as { name?: unknown; code?: unknown }
+      : null;
+
+  const safeNames = new Set([
+    "Error", "TypeError", "RangeError", "SyntaxError"
+  ]);
+  const safeCodes = new Set([
+    "ENOENT", "EACCES", "EPERM", "EEXIST",
+    "EINVAL", "ENOTDIR", "EROFS", "EBUSY", "EXDEV"
+  ]);
+
+  const errorType =
+    typeof candidate?.name === "string" &&
+    safeNames.has(candidate.name)
+      ? candidate.name
+      : "OTHER";
+
+  const errorCode =
+    typeof candidate?.code === "string" &&
+    safeCodes.has(candidate.code)
+      ? candidate.code
+      : "OTHER";
+
+  // C117-R249: emit only a recognized internal error code.
+  // Never print arbitrary error.message, paths or credentials.
+  const knownReasons = new Set([
+    "LAST_USB_INPUT_INVALID",
+    "LAST_USB_FOLDER_INVALID",
+    "LAST_USB_FOLDER_SCOPE_INVALID",
+    "LAST_USB_IDENTITY_INSUFFICIENT",
+    "LAST_USB_STORE_TOO_LARGE",
+    "LAST_USB_STORE_INVALID",
+    "RESTORE_IDENTITY_ROOT_INVALID",
+    "RESTORE_IDENTITY_FIELD_INVALID",
+    "RESTORE_IDENTITY_NUMBER_INVALID",
+    "RESTORE_IDENTITY_CAPTURE_FAILED",
+    "RESTORE_IDENTITY_JSON_INVALID",
+    "RESTORE_IDENTITY_OBJECT_INVALID",
+    "RESTORE_IDENTITY_INSUFFICIENT",
+    "RESTORE_IDENTITY_EXPECTED_MISSING",
+  ]);
+
+  const failureReason =
+    error instanceof Error &&
+    (knownReasons.has(error.message) ||
+      /^(?:RESTORE|LAST_USB|USB|PAISARULE)_[A-Z0-9_]{3,72}$/.test(error.message))
+      ? error.message
+      : "UNCLASSIFIED_FAILURE";
+
+  console.warn(
+    "[PAISARULE LAST USB] PREFERENCE_SAVE_SKIPPED",
+    { errorType, errorCode, failureReason, stage: preferenceStage },
+  );
+});
+          }
+
           return {
             success: true,
             sessionType: "BUSINESS_RECEPTION",
@@ -9586,11 +9962,11 @@ app.whenReady().then(async () => {
             // PAISARULE SESSION-S20-R33
             // Wallet rotation is allowed only after a successful,
             // authenticated Reception touch and matching server scope.
-            // Disabled until PostgreSQL integration is verified.
+            // Server-authorized rotation; emergency opt-out with flag 0.
             if (
               operation === "touch" &&
               account &&
-              process.env.PAISARULE_WALLET_ROTATION_ENABLED === "1"
+              process.env.PAISARULE_WALLET_ROTATION_ENABLED !== "0"
             ) {
               try {
                 const [

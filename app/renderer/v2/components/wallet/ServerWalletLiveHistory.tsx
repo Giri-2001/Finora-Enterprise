@@ -182,7 +182,7 @@ export default function ServerWalletLiveHistory({
 
   const [dateFilter, setDateFilter] = useState<
     "ALL" | "TODAY" | "YESTERDAY" | "MONTH" | "YEAR"
-  >("ALL");
+  >("MONTH");
   const [state, setState] = useState<
     "WAITING" | "LOADING" | "READY" | "ERROR"
   >("WAITING");

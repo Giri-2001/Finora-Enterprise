@@ -47,7 +47,7 @@ const surface: React.CSSProperties = {
   borderRadius: 22,
   padding: 26,
   width: "min(94vw,520px)",
-  maxHeight: "90vh",
+  maxHeight: "96vh",
   overflowY: "auto",
   boxShadow: "0 24px 85px rgba(0,0,0,.58)",
   fontFamily: "inherit",
@@ -174,7 +174,7 @@ export default function PaisaruleRestorePremiumDialog(
     <div role="presentation" style={{
       position:"fixed",
       inset:0,
-      zIndex:99999,
+      zIndex:4800,
       display:"flex",
       alignItems:"center",
       justifyContent:"center",

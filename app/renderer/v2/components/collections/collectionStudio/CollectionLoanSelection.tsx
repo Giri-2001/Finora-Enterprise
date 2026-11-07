@@ -223,9 +223,7 @@ export default function CollectionLoanSelection({
     // FINORA_AP03_R007_ANDROID_COMPACT_DROPDOWN
     // On Android mobile/tablet, 310px must not become
     // the dropdown wrapper's vertical flex-basis.
-    ...(Capacitor.isNativePlatform() &&
-    Capacitor.getPlatform() === "android" &&
-    (viewport === "mobile" || viewport === "tablet")
+    ...((viewport === "mobile" || viewport === "tablet")
       ? {
           flex: "0 0 auto",
           width: "100%",

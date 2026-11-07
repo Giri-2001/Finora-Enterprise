@@ -1894,6 +1894,17 @@ type FinoraElectronPaisaruleStorageBackupV1RestoreVerifyResult =
     };
 
 interface FinoraElectronPaisaruleStorageBackupV1Bridge {
+  // PAISARULE_C117_R93_TYPED_RESTORE_COMMIT
+  // Zero renderer arguments. Native authority only.
+  restoreCommit(): Promise<{
+    success: boolean;
+    committed: boolean;
+    archiveSha256?: string;
+    backupRecordCount?: number;
+    finalRecordCount?: number;
+    preservedWalletRecords?: number;
+    errorCode: string | null;
+  }>;
   exportBackup():
     Promise<FinoraElectronPaisaruleStorageBackupV1Result>;
 

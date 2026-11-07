@@ -63,6 +63,16 @@ export interface PaisaruleFolderCoordinatorAuthorityV1 {
   // selected branch path and pinned physical USB identity.
   // Must NOT read storage via the marker-blocked API.
   assertCurrentAuthority(): Promise<void>;
+
+  // PAISARULE C117-R205
+  // Completed transaction milestones only.
+  // No sensitive data, file paths or credentials.
+  onProgress?(
+    stage:
+      | "DESTINATION_VERIFIED"
+      | "STAGING_VERIFIED"
+      | "PUBLISHED_READBACK_VERIFIED",
+  ): void;
 }
 
 export interface PaisaruleFolderCoordinatorResultV1 {
@@ -259,6 +269,14 @@ export async function commitPaisaruleAuthenticatedFolderV1(
                 operation(),
               assertCurrentAuthority:
                 authority.assertCurrentAuthority,
+              // PAISARULE C117-R205
+              onProgress: stage => {
+                try {
+                  authority.onProgress?.(stage);
+                } catch {
+                  // Progress must never interrupt Restore.
+                }
+              },
             },
           );
               // C117-R321: Only finalize a completed transaction.

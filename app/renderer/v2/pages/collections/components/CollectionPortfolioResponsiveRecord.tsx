@@ -74,6 +74,7 @@ interface Props {
     collection: CollectionReviewData,
   ): "EMI" | "MANUAL";
 
+  closedHighlight: boolean;
   onView(
     collection: CollectionReviewData,
   ): void;
@@ -91,6 +92,7 @@ export default function CollectionPortfolioResponsiveRecord({
   formatDate,
   getCollectionType,
   onView,
+  closedHighlight,
 }: Props) {
   const { theme } = useTheme();
 
@@ -176,8 +178,16 @@ export default function CollectionPortfolioResponsiveRecord({
     borderTop:
       `1px solid ${theme.colors.border.subtle}`,
 
-    background:
-      theme.colors.background.surface,
+    background: closedHighlight
+      ? theme.colors.status.dangerSoft
+      : theme.colors.background.surface,
+
+    ...(closedHighlight
+      ? {
+          borderBottom: `1px solid ${theme.colors.status.danger}`,
+          boxShadow: `inset 3px 0 0 ${theme.colors.status.danger}`,
+        }
+      : {}),
   };
 
   const fieldStyle =

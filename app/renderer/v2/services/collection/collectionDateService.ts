@@ -131,7 +131,7 @@ export function addOperationalCalendarDays(
 // ============================================================
 //
 // First Collection:
-//   Loan Date + 1 calendar day
+//   Loan Date (same day allowed)
 //
 // Later Collections:
 //   Latest saved Collection Date
@@ -141,12 +141,31 @@ export function addOperationalCalendarDays(
 
 export function resolveMinimumCollectionDate(
   loanDate: unknown,
-  _latestCollectionDate?: unknown,
+  latestCollectionDate?: unknown,
 ): string | undefined {
-  return addOperationalCalendarDays(
-    loanDate,
-    1,
-  );
+  const resolvedLoanDate =
+    resolveOperationalDate(
+      loanDate,
+    );
+
+  if (!resolvedLoanDate) {
+    return undefined;
+  }
+
+  const resolvedLatestCollectionDate =
+    resolveOperationalDate(
+      latestCollectionDate,
+    );
+
+  if (
+    resolvedLatestCollectionDate &&
+    resolvedLatestCollectionDate >
+      resolvedLoanDate
+  ) {
+    return resolvedLatestCollectionDate;
+  }
+
+  return resolvedLoanDate;
 }
 
 // ============================================================
@@ -223,25 +242,25 @@ export function validateCollectionDate(
     );
   }
 
-  if (minimumDate > activeBusinessDate) {
+  if (minimumDate > currentLocalBusinessDate) {
     throw new Error(
-      "No valid Collection Date is available within the active FINORA Login Date.",
+      "No valid Collection Date is available on or before today.",
     );
   }
 
-  if (collectionDate <= loanDate) {
+  if (collectionDate < loanDate) {
     throw new Error(
-      "Collection Date must be at least one calendar day after the Loan Date.",
+      "Collection Date cannot be earlier than the Loan Date.",
     );
   }
 
 
   if (
-    collectionDate >
-    activeBusinessDate
+    latestCollectionDate &&
+    collectionDate < latestCollectionDate
   ) {
     throw new Error(
-      "Collection Date cannot be later than the active PAISARULE Login Date.",
+      "Collection Date cannot be earlier than the latest saved Collection Date.",
     );
   }
 
@@ -253,7 +272,7 @@ export function validateCollectionDate(
     minimumDate,
 
     maximumDate:
-      activeBusinessDate,
+      currentLocalBusinessDate,
 
     latestCollectionDate,
   };

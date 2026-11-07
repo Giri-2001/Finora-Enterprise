@@ -136,7 +136,7 @@ function mapCollectionToHistoryRecord(
 
     receiptNumber: collection.receiptNumber || "--",
 
-    collectionDate: collection.receiptDate || collection.createdAt || "",
+    collectionDate: collection.receiptDate || "",
 
     paymentMode: String(collection.paymentMethod || ""),
 

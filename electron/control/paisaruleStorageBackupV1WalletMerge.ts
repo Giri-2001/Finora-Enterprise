@@ -122,7 +122,7 @@ function readPackage(
   }
 
   const records: StoredRecord[] = [];
-  const ids = new Set<string>();
+  const ids = new Map<string, string>();
 
   for (const item of root.records) {
     const record = objectValue(item);
@@ -159,13 +159,19 @@ function readPackage(
       fail("RESTORE_MERGE_RECORD_SCOPE_MISMATCH");
     }
 
-    const id = record.id as string;
+    const id = JSON.stringify([record.entity, record.id]);
 
-    if (ids.has(id)) {
-      fail("RESTORE_MERGE_DUPLICATE_RECORD_ID");
+    const previousEntity = ids.get(id);
+
+    if (previousEntity !== undefined) {
+      fail(
+        previousEntity === record.entity
+          ? "RESTORE_MERGE_DUPLICATE_ID_SAME_ENTITY"
+          : "RESTORE_MERGE_DUPLICATE_ID_CROSS_ENTITY",
+      );
     }
 
-    ids.add(id);
+    ids.set(id, record.entity as string);
     records.push(record as unknown as StoredRecord);
   }
 
@@ -174,6 +180,35 @@ function readPackage(
     updatedAt: root.updatedAt as string,
     records,
   };
+}
+
+/**
+ * Read-only validation of authenticated backup records.
+ * Uses the same strict parser as Restore Commit.
+ */
+export function validatePaisaruleBackupRecordIdsV1(
+  bytes: Uint8Array,
+  scope: PaisaruleWalletMergeScopeV1,
+): void {
+  assertScope(scope);
+  const backup = readPackage(bytes, scope);
+
+  for (const record of backup.records) {
+    if (
+      isWalletRelated(record.entity) &&
+      record.entity !== "WALLET" &&
+      record.entity !== "WALLET_USAGE_OPERATION" && record.entity !== "WALLET_PAYMENT_INTENT"
+    ) {
+      const type = record.entity
+        .toUpperCase()
+        .replace(/[^A-Z0-9_]/g, "_")
+        .slice(0, 45);
+      fail(
+        "RESTORE_MERGE_WALLET_ENTITY_REVIEW_REQUIRED_" +
+          (type || "UNKNOWN"),
+      );
+    }
+  }
 }
 
 function isWalletRelated(entity: string): boolean {
@@ -238,7 +273,7 @@ export function preparePaisaruleWalletPreservingMergeV1(
       continue;
     }
 
-    if (isWalletRelated(record.entity)) {
+    if (isWalletRelated(record.entity) && record.entity !== "WALLET_USAGE_OPERATION" && record.entity !== "WALLET_PAYMENT_INTENT" && record.entity !== "WALLET_PAYMENT_INTENT") {
       fail("RESTORE_MERGE_WALLET_ENTITY_REVIEW_REQUIRED");
     }
 

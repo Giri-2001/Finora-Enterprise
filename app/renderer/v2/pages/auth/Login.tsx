@@ -4830,8 +4830,7 @@ if (
                 USB STATUS
             ============================================== */}
 
-            {!usbChecking &&
-              ownerStorage === "usb" && (
+            {ownerStorage === "usb" && !usbChecking && (
 
               <div
                 style={
@@ -4866,9 +4865,10 @@ if (
                       loginStyles.usbStatusText
                     }
                   >
-                    {usbAvailable
-                      ? "PAISARULE USB Detected"
-                      : "PAISARULE USB Not Detected"}
+                    {!usbChecking &&
+                      (usbAvailable
+                        ? "PAISARULE USB Detected"
+                        : "PAISARULE USB Not Detected")}
                   </span>
 
                 </div>
@@ -4878,8 +4878,8 @@ if (
                     loginStyles.usbMessage
                   }
                 >
-                  {usbMessage}
-                  {usbAvailable && usbStoragePath && (
+                  {!usbChecking && usbMessage}
+                  {!usbChecking && usbAvailable && usbStoragePath && (
                     <div style={{ marginTop: "4px", fontSize: "12px", opacity: 0.78, wordBreak: "break-all" }}>
                       { /^[A-Za-z]:[\\/]?$/.test(usbStoragePath.trim())
   ? "Folder: Not selected — use Change USB Storage"
@@ -7057,8 +7057,7 @@ if (
 
             </button>
 
-
-            {credentialMode === "LOGIN"
+{credentialMode === "LOGIN"
               ? (
                   <>
 
@@ -7087,21 +7086,7 @@ if (
                     >
                       Recover Security Code
                     </button>
-                    <button
-                      type="button"
-                      onClick={
-                        openRestoreBackupMode
-                      }
-                      disabled={
-                      loginBusy
-
-                    }
-                      style={
-                        loginStyles.forgotPassword
-                      }
-                    >
-                      Restore Branch Backup
-                    </button>
+                    <></>
 
                   </>
                 )

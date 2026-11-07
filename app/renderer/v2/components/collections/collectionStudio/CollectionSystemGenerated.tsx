@@ -330,9 +330,21 @@ function calculateAccruedInterest(
 }
 
 
+type PremiumCycleInstallment = {
+  dueDate: string;
+  installmentAmount: number;
+  interestAmount: number;
+  paidAmount: number;
+  waivedAmount: number;
+  penaltyAmount: number;
+  status: string;
+};
+
 type PremiumScheduleMeta = {
   finalDueDate: string;
   cycleDay: number;
+  lateFee: number;
+  rows: PremiumCycleInstallment[];
 };
 
 function readPersistedScheduleRows(
@@ -381,85 +393,81 @@ function resolvePremiumScheduleMeta(
   const rows =
     readPersistedScheduleRows(loan);
 
-  const validDates =
-    rows
-      .map((row) =>
-        String(
-          row.dueDate ??
-            row.date ??
-            row.installmentDate ??
-            "",
-        ).trim(),
-      )
-      .map((value) => ({
-        value,
-        date: parseCalendarDate(value),
-      }))
-      .filter(
-        (
-          item,
-        ): item is {
-          value: string;
-          date: Date;
-        } => item.date !== null,
+  const normalizedRows = rows
+    .map((row) => {
+      const date = parseCalendarDate(
+        String(row.dueDate ?? row.date ?? row.installmentDate ?? ""),
       );
+      const interestAmount = Number(row.interestAmount);
+      const installmentAmount = Number(row.installmentAmount);
+      if (
+        !date ||
+        !Number.isFinite(interestAmount) || interestAmount < 0 ||
+        !Number.isFinite(installmentAmount) || installmentAmount <= 0
+      ) {
+        return null;
+      }
+      return {
+        dueDate: [
+          date.getFullYear(),
+          String(date.getMonth() + 1).padStart(2, "0"),
+          String(date.getDate()).padStart(2, "0"),
+        ].join("-"),
+        installmentAmount,
+        interestAmount,
+        paidAmount: safeFinancialNumber(row.paidAmount),
+        waivedAmount: safeFinancialNumber(row.waivedAmount),
+        penaltyAmount: safeFinancialNumber(row.penaltyAmount),
+        status: String(row.status ?? "Pending").trim().toLowerCase(),
+      };
+    });
 
-  if (validDates.length > 0) {
-    const sorted =
-      [...validDates].sort(
-        (left, right) =>
-          left.date.getTime() -
-          right.date.getTime(),
-      );
-
-    const finalItem =
-      sorted[sorted.length - 1];
-
-    /*
-     * Using the highest scheduled day preserves recurring
-     * 29 / 30 / 31 collection-day patterns even when a shorter
-     * month temporarily clamps an installment date.
-     */
-    const cycleDay =
-      Math.max(
-        ...sorted.map(
-          (item) =>
-            item.date.getDate(),
-        ),
-      );
-
+  // Do not publish a customer-facing settlement figure from partial data.
+  if (normalizedRows.some((row) => row === null)) {
+    const dates = rows
+      .map((row) => parseCalendarDate(
+        String(row.dueDate ?? row.date ?? row.installmentDate ?? ""),
+      ))
+      .filter((date): date is Date => date !== null)
+      .sort((left, right) => left.getTime() - right.getTime());
+    if (dates.length === 0) {
+      return null;
+    }
     return {
-      finalDueDate:
-        finalItem.value,
-      cycleDay,
+      finalDueDate: formatCalendarKey(dates[dates.length - 1]),
+      cycleDay: Math.max(...dates.map((date) => date.getDate())),
+      lateFee: safeFinancialNumber(record.lateFee),
+      rows: [],
     };
   }
 
-  /*
-   * Legacy fallback only.
-   *
-   * Modern Loans should resolve from the persisted EMI schedule.
-   */
-  const fallbackDueDate =
-    String(
-      record.dueDate ?? "",
-    ).trim();
+  const sortedRows = normalizedRows
+    .filter((row): row is PremiumCycleInstallment => row !== null)
+    .sort((left, right) => left.dueDate.localeCompare(right.dueDate));
 
-  const parsedFallback =
-    parseCalendarDate(
-      fallbackDueDate,
+  if (sortedRows.length > 0) {
+    const finalRow = sortedRows[sortedRows.length - 1];
+    const cycleDay = Math.max(
+      ...sortedRows.map((row) => Number(row.dueDate.slice(8, 10))),
     );
-
-  if (!parsedFallback) {
-    return null;
+    return {
+      finalDueDate: finalRow.dueDate,
+      cycleDay,
+      lateFee: safeFinancialNumber(record.lateFee),
+      rows: sortedRows,
+    };
   }
 
-  return {
-    finalDueDate:
-      fallbackDueDate,
-    cycleDay:
-      parsedFallback.getDate(),
-  };
+  // Legacy final EMI date remains visible, but no payoff is guessed.
+  const fallbackDate = parseCalendarDate(String(record.dueDate ?? ""));
+  return fallbackDate
+    ? {
+        finalDueDate: formatCalendarKey(fallbackDate),
+        cycleDay: fallbackDate.getDate(),
+        lateFee: safeFinancialNumber(record.lateFee),
+        rows: [],
+      }
+    : null;
 }
 
 function formatCalendarKey(
@@ -565,6 +573,90 @@ function resolveNextPremiumCycleDate(
   }
 
   return candidate;
+}
+
+/**
+ * Read-only cycle payoff for the single "Close By Next Cycle" card.
+ * The selected business date is inclusive of the current due date.
+ * Interest is taken from persisted EMI rows, not daily accrual.
+ * Penalty rows already carrying a recorded penalty are historical
+ * collections, not a second unpaid charge.
+ */
+function calculateCycleCloseAmount(
+  meta: PremiumScheduleMeta | null,
+  businessDateValue: string,
+  principalDue: number,
+  monthlyInterestRate: number,
+): number | null {
+  const businessDate = parseCalendarDate(businessDateValue);
+  if (!meta || !businessDate || meta.rows.length === 0) {
+    return null;
+  }
+
+  const businessKey = formatCalendarKey(businessDate);
+  const nextDue = meta.rows.find((row) => row.dueDate >= businessKey);
+  let closingDueKey = nextDue?.dueDate ?? meta.finalDueDate;
+  let additionalCycles = 0;
+
+  if (!nextDue) {
+    let cursor = parseCalendarDate(meta.finalDueDate);
+    if (!cursor) {
+      return null;
+    }
+    while (closingDueKey < businessKey && additionalCycles < 1200) {
+      const nextMonth = cursor.getMonth() + 1;
+      cursor = buildPremiumCycleDate(
+        cursor.getFullYear() + Math.floor(nextMonth / 12),
+        nextMonth % 12,
+        meta.cycleDay,
+      );
+      closingDueKey = formatCalendarKey(cursor);
+      additionalCycles += 1;
+    }
+    if (closingDueKey < businessKey) {
+      return null;
+    }
+  }
+
+  // Authoritative principal due already reflects principal repayments.
+  // Within each installment, treat interest as settled first;
+  // never subtract the same EMI cash again from principal due.
+  const interestSettled = meta.rows.reduce(
+    (sum, row) => sum + Math.min(
+      row.interestAmount,
+      row.paidAmount + row.waivedAmount,
+    ),
+    0,
+  );
+  const scheduledInterest = meta.rows
+    .filter((row) => row.dueDate <= closingDueKey)
+    .reduce((sum, row) => sum + row.interestAmount, 0);
+  const extendedInterest = additionalCycles * roundFinancialValue(
+    principalDue * monthlyInterestRate / 100,
+  );
+  const unpaidInterest = Math.max(
+    0,
+    scheduledInterest + extendedInterest - interestSettled,
+  );
+
+  // Only *missed and not settled* installments incur a new penalty.
+  // A positive persisted penaltyAmount is evidence of an already
+  // recorded penalty, and must not be charged a second time.
+  const unpaidPenaltyCount = meta.rows.filter((row) =>
+    row.dueDate < businessKey &&
+    row.paidAmount + row.waivedAmount < row.installmentAmount &&
+    row.penaltyAmount <= 0 &&
+    row.status !== "overdue paid" &&
+    row.status !== "paid" &&
+    row.status !== "preclosed"
+  ).length;
+  const extendedMissedCycles = Math.max(0, additionalCycles - 1);
+  const estimatedUnpaidPenalty =
+    (unpaidPenaltyCount + extendedMissedCycles) * meta.lateFee;
+
+  return roundFinancialValue(
+    principalDue + unpaidInterest + estimatedUnpaidPenalty,
+  );
 }
 
 // ============================================================
@@ -1146,32 +1238,17 @@ export default function CollectionSystemGenerated() {
    * The next cycle keeps moving month-by-month even after the
    * original final EMI date.
    */
-  const minimumCloseByNextCycle =
-    loanClosed
-      ? 0
-      : roundFinancialValue(
-          principalDue +
-            projectedOverdueInterest +
-            lateFee,
-        );
+  const calculatedCycleClose = loanClosed
+    ? 0
+    : calculateCycleCloseAmount(
+        premiumScheduleMeta,
+        reviewData.receiptDate,
+        principalDue,
+        monthlyInterestRate,
+      );
 
-  const closeByNextCycle =
-    loanClosed
-      ? 0
-      : roundFinancialValue(
-          Math.max(
-            minimumCloseByNextCycle,
-            closeToday +
-              Math.max(
-                0,
-                projectedContractInterest -
-                  accruedInterest,
-              ),
-            currentOutstanding -
-              projectedUnearnedInterest +
-              projectedOverdueInterest,
-          ),
-        );
+  // No fallback to daily accrual when EMI schedule is unavailable.
+  const closeByNextCycle = calculatedCycleClose;
 
   // ==========================================================
   // CURRENCY
@@ -1290,11 +1367,11 @@ export default function CollectionSystemGenerated() {
 
         <div style={collectionSystemGeneratedStyles.financialRow}>
           <span style={collectionSystemGeneratedStyles.financialLabel}>
-            Close By Next Cycle
+            EMI Cycle Closure
           </span>
 
           <strong style={collectionSystemGeneratedStyles.financialValue}>
-            {currency(closeByNextCycle)}
+            {closeByNextCycle === null ? "--" : currency(closeByNextCycle)}
           </strong>
         </div>
 

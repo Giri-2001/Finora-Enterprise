@@ -252,7 +252,29 @@ export async function verifySelectedPaisaruleBackupV1(
       // Store only path + digest, never plaintext or key.
       // The later commit must independently re-read and
       // reauthenticate the archive.
-      if (dependencies.onVerifiedArchive) {
+                // C117-R139-R2: Verify IDs before native handoff.
+          // No USB mutation or record ID rewriting.
+          try {
+            const { validatePaisaruleBackupRecordIdsV1 } =
+              await import(
+                "./paisaruleStorageBackupV1WalletMerge.js"
+              );
+
+            validatePaisaruleBackupRecordIdsV1(
+              restored.files.primary,
+              context.scope,
+            );
+          } catch (error: unknown) {
+            const message =
+              error instanceof Error ? error.message : "";
+            const code =
+              /^RESTORE_MERGE_[A-Z0-9_]{1,100}$/.test(message)
+                ? message
+                : "RESTORE_BACKUP_RECORD_VALIDATION_FAILED";
+            return failure(code);
+          }
+
+          if (dependencies.onVerifiedArchive) {
         await dependencies.onVerifiedArchive({
           selectedPath: filePath,
           archiveSha256: originalArchiveSha256,

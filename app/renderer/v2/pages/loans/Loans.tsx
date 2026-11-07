@@ -4216,10 +4216,10 @@ return (
 
           {loading ? (
             <div style={themedEmptyStateStyle}>
-              <div style={themedEmptyTitleStyle}>Loading V2 Loans...</div>
+              <div style={themedEmptyTitleStyle}>Loading PAISARULE Loans...</div>
 
               <div style={themedEmptyDescriptionStyle}>
-                Reading loan records from FINORA V2 storage.
+                Preparing your loan records...
               </div>
             </div>
           ) : filteredLoans.length === 0 ? (

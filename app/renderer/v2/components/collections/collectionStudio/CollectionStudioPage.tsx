@@ -799,14 +799,60 @@ export default function CollectionStudioPage() {
 
         const storageMode = getAuthenticatedStorageMode();
 
-        const storageResult =
-          await storageManager.selectStorageMode(storageMode);
+        // C121-R13-R6: Reuse an already authenticated,
+        // initialized and READY storage context.
+        // Never bypass an unavailable USB or tenant transition.
+        const activeConfiguration = storageManager.getConfiguration();
 
-        if (!storageResult.success) {
-          throw new Error(
-            storageResult.error ??
-              `Unable to restore FINORA ${storageMode} storage.`,
+        const reuseActiveStorage =
+          storageManager.isInitialized() &&
+          activeConfiguration.storageMode === storageMode &&
+          Boolean(
+            activeConfiguration.ownerId &&
+              activeConfiguration.businessId &&
+              activeConfiguration.branchId,
           );
+
+        if (reuseActiveStorage) {
+          const revision = storageManager.getLifecycleRevision();
+          const status = await storageManager.getStatus();
+
+          if (cancelled) {
+            return;
+          }
+
+          const currentConfiguration = storageManager.getConfiguration();
+
+          if (
+            storageManager.getLifecycleRevision() !== revision ||
+            currentConfiguration.storageMode !== storageMode ||
+            currentConfiguration.ownerId !== activeConfiguration.ownerId ||
+            currentConfiguration.businessId !== activeConfiguration.businessId ||
+            currentConfiguration.branchId !== activeConfiguration.branchId ||
+            currentConfiguration.dataContext !== activeConfiguration.dataContext ||
+            currentConfiguration.demoId !== activeConfiguration.demoId
+          ) {
+            throw new Error(
+              "Collection storage context changed during initialization.",
+            );
+          }
+
+          if (String(status.availability).toUpperCase() !== "READY") {
+            throw new Error(
+              status.message ??
+                "Authenticated collection storage is not ready.",
+            );
+          }
+        } else {
+          const storageResult =
+            await storageManager.selectStorageMode(storageMode);
+
+          if (!storageResult.success) {
+            throw new Error(
+              storageResult.error ??
+                `Unable to restore FINORA ${storageMode} storage.`,
+            );
+          }
         }
 
         if (cancelled) {

@@ -229,6 +229,11 @@ export default function SessionGuard({
         try {
           const result = await touchFinoraServerGuardSession(session.sessionId);
           if (!result.success) {
+            console.warn("[PAISARULE SESSION TOUCH FAILURE]", {
+              errorCode: /^[A-Z][A-Z0-9_]{0,90}$/.test(result.errorCode)
+                ? result.errorCode
+                : "UNCLASSIFIED",
+            });
             if (isTemporaryNetworkFailure(result.errorCode)) {
               lockForNetworkRecovery();
             } else {
@@ -357,6 +362,11 @@ export default function SessionGuard({
         try {
           const result = await validateFinoraServerGuardSession(session.sessionId);
           if (!result.success) {
+            console.warn("[PAISARULE SESSION VALIDATE FAILURE]", {
+              errorCode: /^[A-Z][A-Z0-9_]{0,90}$/.test(result.errorCode)
+                ? result.errorCode
+                : "UNCLASSIFIED",
+            });
             if (isTemporaryNetworkFailure(result.errorCode)) {
               lockForNetworkRecovery();
             } else {

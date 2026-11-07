@@ -294,12 +294,7 @@ function getDateFilterKey(
 function getCollectionDate(
   collection: CollectionReviewData,
 ): string {
-  return (
-    collection.receiptDate ||
-    collection.createdAt ||
-    collection.updatedAt ||
-    ""
-  );
+  return (collection.receiptDate || "");
 }
 
 /* ============================================================

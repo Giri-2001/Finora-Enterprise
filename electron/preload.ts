@@ -3868,6 +3868,15 @@ interface PaisaruleStorageBackupV1Bridge {
   ): Promise<PaisaruleV1DownloadBridgeResult>;
   exportBackup(): Promise<PaisaruleStorageBackupV1ExportResult>;
 
+  // PAISARULE C117-R199
+  // Completed Native milestones; subscription returns cleanup.
+  onRestoreProgress(
+    listener: (progress: {
+      phase: "VERIFY" | "COMMIT";
+      stage: string;
+    }) => void,
+  ): () => void;
+
   restoreVerify(): Promise<PaisaruleStorageBackupV1RestoreVerifyResult>;
 }
 
@@ -3901,6 +3910,112 @@ const paisaruleStorageBackupV1Bridge:
       ipcRenderer.invoke(
         PAISARULE_STORAGE_BACKUP_V1_EXPORT_CHANNEL,
       ) as Promise<PaisaruleStorageBackupV1ExportResult>,
+
+    // PAISARULE C117-R199
+    // Strictly allowlisted Native event names and stages.
+    // No raw IPC object reaches Renderer.
+    onRestoreProgress: listener => {
+      if (typeof listener !== "function") {
+        return () => undefined;
+      }
+
+      const verifyStages = new Set([
+        "FILE_SELECTED",
+        "SERVER_SESSION_VERIFIED",
+        "USB_IDENTITY_VERIFIED",
+        "BACKUP_ARCHIVE_VERIFIED",
+      ]);
+
+      // PAISARULE C117-R207
+      // Only documented Native transaction milestones.
+      const commitStages = new Set([
+        "COMMIT_STARTED",
+        "DESTINATION_VERIFIED",
+        "STAGING_VERIFIED",
+        "PUBLISHED_READBACK_VERIFIED",
+        "COMMIT_COORDINATOR_SUCCEEDED",
+      ]);
+
+      let disposed = false;
+
+      const receive = (
+        phase: "VERIFY" | "COMMIT",
+        payload: unknown,
+      ): void => {
+        if (
+          disposed ||
+          !payload ||
+          typeof payload !== "object" ||
+          Array.isArray(payload)
+        ) {
+          return;
+        }
+
+        const data = payload as {
+          phase?: unknown;
+          stage?: unknown;
+        };
+
+        if (
+          data.phase !== phase ||
+          typeof data.stage !== "string"
+        ) {
+          return;
+        }
+
+        const accepted = phase === "VERIFY"
+          ? verifyStages.has(data.stage)
+          : commitStages.has(data.stage);
+
+        if (!accepted) {
+          return;
+        }
+
+        try {
+          listener({
+            phase,
+            stage: data.stage,
+          });
+        } catch {
+          // A UI listener cannot interfere with Native Restore.
+        }
+      };
+
+      const verifyHandler = (
+        _event: unknown,
+        payload: unknown,
+      ): void => receive("VERIFY", payload);
+
+      const commitHandler = (
+        _event: unknown,
+        payload: unknown,
+      ): void => receive("COMMIT", payload);
+
+      ipcRenderer.on(
+        "paisarule:restore:verify-stage",
+        verifyHandler,
+      );
+
+      ipcRenderer.on(
+        "paisarule:restore:commit-stage",
+        commitHandler,
+      );
+
+      return () => {
+        if (disposed) return;
+        disposed = true;
+
+        ipcRenderer.removeListener(
+          "paisarule:restore:verify-stage",
+          verifyHandler,
+        );
+
+        ipcRenderer.removeListener(
+          "paisarule:restore:commit-stage",
+          commitHandler,
+        );
+      };
+    },
 
     restoreVerify: () =>
       ipcRenderer.invoke(

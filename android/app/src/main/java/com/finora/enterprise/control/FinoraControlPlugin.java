@@ -12091,6 +12091,26 @@ private boolean isValidEntitlement(
                     )
                 );
 
+                // PAISARULE C117-R189
+                // Native verified principal only; best effort.
+                if (
+                    verifiedReception.optBoolean("success", false) &&
+                    verifiedReception.optBoolean("businessDataAccess", false) &&
+                    "BUSINESS_RECEPTION".equals(
+                        verifiedReception.optString("sessionType", "")
+                    )
+                ) {
+                    try {
+                        com.finora.enterprise.usb.FinoraUsbStorage
+                            .rememberVerifiedOwnerUsbFolder(
+                                getContext(),
+                                verifiedReception
+                            );
+                    } catch (Exception ignored) {
+                        // Preference must never block Reception.
+                    }
+                }
+
                 // FINORA_C81_A17_SAVED_LABEL_REFRESH
                 // Run only after native successful Reception verification.
                 // The caller cannot provide a business label or account scope.

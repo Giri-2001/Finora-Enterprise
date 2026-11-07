@@ -1,3 +1,5 @@
+import { useEffect as usePaisaruleRestoreProgressEffect } from "react";
+import GlobalLoadingOverlay from "../../../../components/common/feedback/GlobalLoadingOverlay";
 import { getFinoraUsbBridge } from "../../../../storage/usbBridge";
 // PAISARULE_R175_C33_NATIVE_BRIDGE
 type PaisaruleRestoreSelectionResult = {
@@ -10,6 +12,75 @@ type PaisaruleRestoreVerificationResult = {
   restoreWritten?: boolean;
 };
 
+function getPaisaruleOwnerRestoreErrorMessage(
+  errorCode: string | null | undefined
+): string {
+  const code = String(errorCode ?? "").trim().toUpperCase();
+
+  if (
+    code.includes("EXISTING_BUSINESS_DATA") ||
+    code.includes("DESTINATION_NOT_EMPTY")
+  ) {
+    return "This USB already contains business records. To keep your data safe, restoring another backup here is not allowed.";
+  }
+
+  if (
+    code.includes("LOGIN_CHANGED") ||
+    code.includes("SESSION") ||
+    code.includes("AUTHORIZATION") ||
+    code.includes("UNAUTHORIZED")
+  ) {
+    return "Your login could not be verified. Please sign in again before restoring your backup.";
+  }
+
+  if (
+    code.includes("SCOPE") ||
+    code.includes("BRANCH_MISMATCH") ||
+    code.includes("OWNER_MISMATCH") ||
+    code.includes("BUSINESS_MISMATCH")
+  ) {
+    return "This backup does not match your current business or branch. Please select the correct backup.";
+  }
+
+  if (
+    code.includes("USB") ||
+    code.includes("FOLDER") ||
+    code.includes("DRIVE") ||
+    code.includes("DEVICE_CHANGED")
+  ) {
+    return "Your selected USB or business folder could not be verified. Please reconnect the correct USB and try again.";
+  }
+
+  if (
+    code.includes("WALLET") ||
+    code.includes("MERGE") ||
+    code.includes("DUPLICATE")
+  ) {
+    return "This backup contains records that need additional safety checks. Restore was stopped to protect your business and wallet data.";
+  }
+
+  if (
+    code.includes("BACKUP") ||
+    code.includes("ARCHIVE") ||
+    code.includes("FILE") ||
+    code.includes("CRYPTO") ||
+    code.includes("DECRYPT")
+  ) {
+    return "We could not verify the selected backup file. Please select a valid PAISARULE business backup.";
+  }
+
+  if (
+    code.includes("RECOVERY") ||
+    code.includes("ROLLBACK") ||
+    code.includes("INSTALL") ||
+    code.includes("COMMIT") ||
+    code.includes("WRITE")
+  ) {
+    return "Restore could not be completed safely. Keep your USB connected and contact support before trying again.";
+  }
+
+  return "We could not complete this backup operation. Your business data is protected. Please contact support if the problem continues.";
+}
 type PaisaruleRestoreCommitResult = {
   success?: boolean;
   restoreWritten?: boolean;
@@ -160,13 +231,125 @@ export default function ReceptionFooter() {
     useState(false);
   // PAISARULE_R175_C33
   const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreProcessingMessage, setRestoreProcessingMessage] =
+    useState<string | null>(null);
+
+  // PAISARULE C117-R200
+  // Native-completed stages only, not fabricated percentages.
+  const [restoreNativeStage, setRestoreNativeStage] =
+    useState<string | null>(null);
+
+  usePaisaruleRestoreProgressEffect(() => {
+    if (restoreProcessingMessage === null) {
+      setRestoreNativeStage(null);
+      return;
+    }
+
+    setRestoreNativeStage(null);
+
+    type RestoreProgressEvent = {
+      phase: "VERIFY" | "COMMIT";
+      stage: string;
+    };
+
+    const bridge = window.finora?.paisaruleStorageBackup as
+      | {
+          onRestoreProgress?: (
+            listener: (event: RestoreProgressEvent) => void,
+          ) => (() => void);
+        }
+      | undefined;
+
+    const labels: Record<string, string> = {
+      FILE_SELECTED:
+        "Backup file selected. Checking Owner authorization...",
+      SERVER_SESSION_VERIFIED:
+        "Owner session verified. Checking USB storage...",
+      USB_IDENTITY_VERIFIED:
+        "USB identity checked. Verifying encrypted backup...",
+      BACKUP_ARCHIVE_VERIFIED:
+        "Backup archive verified. Completing safety checks...",
+      COMMIT_STARTED:
+        "Starting protected business restore...",
+      // PAISARULE C117-R208
+      // Display only genuinely completed Native operations.
+      DESTINATION_VERIFIED:
+        "Existing business storage verified. Preparing restore...",
+      STAGING_VERIFIED:
+        "New storage snapshots written and verified...",
+      PUBLISHED_READBACK_VERIFIED:
+        "Published storage verified. Finalizing recovery safety...",
+      COMMIT_COORDINATOR_SUCCEEDED:
+        "Restore transaction finalized. Confirming result...",
+    };
+
+    let unsubscribe: (() => void) | undefined;
+
+    try {
+      unsubscribe = bridge?.onRestoreProgress?.(event => {
+        const label = labels[event.stage];
+
+        if (!label) return;
+
+        const expectedPhase =
+          (
+          // PAISARULE C117-R223
+          // All five native COMMIT stages use phase COMMIT.
+          event.stage === "COMMIT_STARTED" ||
+          event.stage === "DESTINATION_VERIFIED" ||
+          event.stage === "STAGING_VERIFIED" ||
+          event.stage === "PUBLISHED_READBACK_VERIFIED" ||
+          event.stage === "COMMIT_COORDINATOR_SUCCEEDED"
+        ) ? "COMMIT" : "VERIFY";
+
+        if (event.phase !== expectedPhase) return;
+
+        // PAISARULE C117-R209
+        // A checkpoint is a completed Native operation,
+        // not a percentage of bytes, records or elapsed time.
+        const checkpointOrder: Record<string, number> = {
+          FILE_SELECTED: 1,
+          SERVER_SESSION_VERIFIED: 2,
+          USB_IDENTITY_VERIFIED: 3,
+          BACKUP_ARCHIVE_VERIFIED: 4,
+          COMMIT_STARTED: 5,
+          DESTINATION_VERIFIED: 6,
+          STAGING_VERIFIED: 7,
+          PUBLISHED_READBACK_VERIFIED: 8,
+          COMMIT_COORDINATOR_SUCCEEDED: 9,
+        };
+
+        const checkpoint = checkpointOrder[event.stage];
+
+        if (!checkpoint) return;
+
+        setRestoreNativeStage(
+          `${label} Safety checkpoint ${checkpoint} of 9.`,
+        );
+      });
+    } catch {
+      // Progress is optional; Restore remains independently secured.
+    }
+
+    return () => {
+      try {
+        unsubscribe?.();
+      } catch {
+        // Listener cleanup must never affect storage.
+      }
+    };
+  }, [restoreProcessingMessage]);
+
+  // Owner acknowledgement is required after native restore success.
+  const [restoreSuccessOpen, setRestoreSuccessOpen] =
+    useState(false);
 
   // PAISARULE_R175_C76_R2
   const [restorePopupOpen, setRestorePopupOpen] = useState(false);
 
   // PAISARULE_C117_R274_DIALOG_STAGE
   // Native Commit remains disabled until recovery validation.
-  const windowsRestoreCommitReady = false;
+  const windowsRestoreCommitReady = true;
 
   const [restoreDialogStage, setRestoreDialogStage] =
     useState<"preview" | "confirm">("preview");
@@ -578,14 +761,14 @@ export default function ReceptionFooter() {
       return;
     }
 
-    setIsRestoring(true);
+    setRestoreProcessingMessage("Selecting and verifying your backup...");setIsRestoring(true);
 
     try {
       const bridge = window.finora?.paisaruleStorageBackup;
 
       if (!bridge?.restoreVerify) {
         setRestoreStatus("failed");
-        setRestoreMessage("Restore verification is unavailable.");
+        setRestoreMessage("Backup verification is temporarily unavailable. Please reopen PAISARULE and try again.");
         return;
       }
 
@@ -705,11 +888,25 @@ export default function ReceptionFooter() {
           nativeDestinationSafe && nativeBusinessEmpty
         );
 
-        setRestoreDestinationLabel(
-          nativeDestinationSafe && nativeBusinessEmpty
-            ? "Verified selected Owner branch folder"
-            : "Destination safety not verified"
-        );
+        setRestoreDestinationLabel(previous => {
+          if (!nativeDestinationSafe || !nativeBusinessEmpty) {
+            return "Destination safety not verified";
+          }
+
+          // Preserve the live USB storage path obtained from
+          // getFinoraUsbBridge().getStatus(). Do not hardcode
+          // the drive letter or Owner branch folder.
+          const candidate = previous.trim();
+
+          if (
+            !/^[A-Za-z]:[\\/]/.test(candidate) ||
+            /^[A-Za-z]:[\\/]?$/.test(candidate)
+          ) {
+            return "Destination path not independently verified";
+          }
+
+          return candidate;
+        });
 
         setRestoreFileName(result.fileName);
         setRestoreBackupDate(result.createdAt);
@@ -723,9 +920,7 @@ export default function ReceptionFooter() {
 
       setRestoreStatus("failed");
       setRestoreMessage(
-        "Backup verification failed [" +
-        (result.errorCode || "UNKNOWN") +
-        "]. No USB data was changed."
+        getPaisaruleOwnerRestoreErrorMessage(result.errorCode)
       );
     } catch {
       setRestoreStatus("failed");
@@ -735,6 +930,7 @@ export default function ReceptionFooter() {
       );
     } finally {
       setIsRestoring(false);
+      setRestoreProcessingMessage(null);
     }
   }
   // PAISARULE_C117_R185_B_HANDLERS
@@ -1769,7 +1965,7 @@ async function handleBusinessBackup(): Promise<void> {
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 9999,
+            zIndex: 4800,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -1792,6 +1988,8 @@ async function handleBusinessBackup(): Promise<void> {
               maxWidth: 440,
               maxHeight: "90vh",
               overflowY: "auto",
+              overflowX: "hidden",
+              overflowWrap: "anywhere",
               boxSizing: "border-box",
               borderRadius: 18,
               border: "1px solid rgba(180,150,75,0.45)",
@@ -1860,7 +2058,7 @@ async function handleBusinessBackup(): Promise<void> {
               }}
             >
               {isWindowsRestoreVerify
-                ? "Windows verification only. USB Restore is not yet enabled."
+                ? "Restore requires verified backup, Owner session and branch safety."
                 : "Android requires a NEW EMPTY USB for Restore."}
             </p>
 
@@ -2005,9 +2203,208 @@ async function handleBusinessBackup(): Promise<void> {
           setRestoreDialogStage("preview");
         }}
         onRestore={() => {
-          // USB commit deliberately not wired.
+          void (async () => {
+            if (
+              !windowsRestoreCommitReady ||
+              !isWindowsRestoreVerify ||
+              !restorePopupOpen ||
+              restoreStatus !== "verified" ||
+              !restoreVerifiedCounts ||
+              !restoreDestinationVerified ||
+              !restoreDestinationBusinessEmpty ||
+              storageMode !== "USB" ||
+              isRestoring ||
+              isBackingUp
+            ) {
+              return;
+            }
+
+            const initialSessionId = getSession()?.sessionId;
+            const bridge = window.finora?.paisaruleStorageBackup;
+
+            if (!initialSessionId || !bridge?.restoreCommit) {
+              setRestoreStatus("failed");
+              setRestoreMessage("Restore authorization unavailable.");
+              return;
+            }
+
+            setRestoreProcessingMessage("Restoring verified business backup...");setIsRestoring(true);
+
+            try {
+              const result = await bridge.restoreCommit();
+
+              if (getSession()?.sessionId !== initialSessionId) {
+                setRestoreStatus("failed");
+                setRestoreMessage(
+                  "Login changed. Verify storage before using it."
+                );
+                return;
+              }
+
+              if (result.success && result.committed) {
+                setRestorePopupOpen(false);
+                setRestoreDialogStage("preview");
+                setRestoreMessage(
+                  "Restore completed. Reopen and verify business records."
+                );
+                setRestoreStatus("idle");
+                setRestoreSuccessOpen(true);
+              } else {
+                setRestoreStatus("failed");
+                const nativeErrorCode = (
+                  result as typeof result & { errorCode?: string }
+                ).errorCode;
+
+                const safeErrorCode =
+                  typeof nativeErrorCode === "string" &&
+                  /^[A-Z0-9_]{1,120}$/.test(nativeErrorCode)
+                    ? nativeErrorCode
+                    : "UNKNOWN_NATIVE_RESTORE_ERROR";
+
+                console.error(
+                  "[PAISARULE RESTORE COMMIT]",
+                  safeErrorCode
+                );
+
+                setRestoreMessage(
+                  getPaisaruleOwnerRestoreErrorMessage(safeErrorCode)
+                );
+              }
+            } catch {
+              setRestoreStatus("failed");
+              setRestoreMessage(
+                "Restore failed. Storage requires verification."
+              );
+            } finally {
+              setIsRestoring(false);
+              setRestoreProcessingMessage(null);
+            }
+          })();
         }}
       />
+      {restoreSuccessOpen && restoreProcessingMessage === null && (
+        <div
+          role="presentation"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 5000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            background: "rgba(3, 8, 20, 0.78)",
+            boxSizing: "border-box",
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="paisarule-restore-success-title"
+            style={{
+              width: "100%",
+              maxWidth: 440,
+              maxHeight: "90vh",
+              overflowY: "auto",
+              overflowX: "hidden",
+              boxSizing: "border-box",
+              padding: 28,
+              borderRadius: 20,
+              border: "1px solid rgba(219, 176, 81, 0.55)",
+              background: "linear-gradient(160deg, #18253b, #0d1527)",
+              color: "#ffffff",
+              boxShadow: "0 24px 80px rgba(0,0,0,0.5)",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                color: "#e8c56f",
+                fontSize: 12,
+                fontWeight: 800,
+                letterSpacing: 2,
+                marginBottom: 16,
+              }}
+            >
+              PAISARULE · SECURE RECOVERY
+            </div>
+            <div
+              aria-hidden="true"
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                border: "2px solid #3bbf88",
+                color: "#3bbf88",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 34,
+                margin: "0 auto 18px",
+              }}
+            >
+              ✓
+            </div>
+            <h2
+              id="paisarule-restore-success-title"
+              style={{
+                fontSize: 23,
+                margin: "0 0 12px",
+                color: "#f0d58a",
+              }}
+            >
+              Restore Successful
+            </h2>
+            <p
+              style={{
+                fontSize: 14,
+                lineHeight: 1.7,
+                color: "#e3e9f4",
+                margin: "0 0 12px",
+              }}
+            >
+              Your verified business backup was restored successfully.
+            </p>
+            <p
+              style={{
+                fontSize: 12,
+                lineHeight: 1.7,
+                color: "#b9c6db",
+                margin: "0 0 24px",
+              }}
+            >
+              The native restore operation has completed.
+              Please review your business records.
+            </p>
+            <button
+              type="button"
+              autoFocus
+              onClick={() => {
+                setRestoreSuccessOpen(false);
+              }}
+              style={{
+                width: "100%",
+                minHeight: 48,
+                borderRadius: 12,
+                border: "none",
+                background: "#e7c774",
+                color: "#111827",
+                fontSize: 15,
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              OK · Continue to Reception
+            </button>
+          </div>
+        </div>
+      )}
+
+          {restoreProcessingMessage !== null && (
+        <GlobalLoadingOverlay
+          message={restoreNativeStage ?? restoreProcessingMessage}
+        />
+      )}
     </footer>
   );
 }

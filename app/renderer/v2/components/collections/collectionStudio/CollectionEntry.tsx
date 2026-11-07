@@ -1131,11 +1131,14 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                   <div
                     style={{
                       ...collectionEntryStyles.emiDropdownHeader,
-                      ...(isAndroidMobileEmi
+                      ...(viewport === "mobile"
                         ? {
                             width: "430px",
                             minWidth: "430px",
                             maxWidth: "none",
+                            boxSizing: "border-box",
+                            justifyContent: "space-between",
+                            position: "relative" as const,
                           }
                         : {}),
                     }}
@@ -1144,7 +1147,18 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                       EMI SCHEDULE
                     </span>
 
-                    <span style={collectionEntryStyles.scheduleCount}>
+                    <span
+                      style={{
+                        ...collectionEntryStyles.scheduleCount,
+                        ...(viewport === "mobile"
+                          ? {
+                              marginLeft: "auto",
+                              textAlign: "right" as const,
+                              flexShrink: 0,
+                            }
+                          : {}),
+                      }}
+                    >
                       {emiSchedule.length}{" "}
                       {emiSchedule.length === 1
                         ? "INSTALLMENT"
@@ -1249,7 +1263,23 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                                   : currency(installment.installmentAmount)}
                             </strong>
 
-                            <span style={statusStyle}>
+                            <span
+                              style={{
+                                ...statusStyle,
+                                ...(viewport === "mobile"
+                                  ? {
+                                      width: "max-content",
+                                      maxWidth: "none",
+                                      minWidth: "max-content",
+                                      marginLeft: "-32px",
+                                      position: "relative" as const,
+                                      zIndex: 1,
+                                      whiteSpace: "nowrap" as const,
+                                      flexShrink: 0,
+                                    }
+                                  : {}),
+                              }}
+                            >
                               {getStatusLabel(installment.status)}
                             </span>
 
@@ -1281,14 +1311,45 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                         );
                       })}
 
-                      <div style={collectionEntryStyles.emiTotalRow}>
-                        <strong style={collectionEntryStyles.emiTotalLabel}>
+                      <div
+                        style={{
+                          ...collectionEntryStyles.emiTotalRow,
+                          ...(viewport === "mobile"
+                            ? {
+                                gridTemplateColumns:
+                                  "minmax(115px, 1fr) minmax(90px, 1fr) minmax(75px, 0.8fr) 36px",
+                              }
+                            : {}),
+                        }}
+                      >
+                        <strong
+                          style={{
+                            ...collectionEntryStyles.emiTotalLabel,
+                            ...(viewport === "mobile"
+                              ? { gridColumn: "1" }
+                              : {}),
+                          }}
+                        >
                           TOTAL BALANCE
                         </strong>
 
-                        <span style={collectionEntryStyles.emiTotalSpacer} />
+                        <span
+                          style={{
+                            ...collectionEntryStyles.emiTotalSpacer,
+                            ...(viewport === "mobile"
+                              ? { display: "none" }
+                              : {}),
+                          }}
+                        />
 
-                        <strong style={collectionEntryStyles.emiTotalAmount}>
+                        <strong
+                          style={{
+                            ...collectionEntryStyles.emiTotalAmount,
+                            ...(viewport === "mobile"
+                              ? { transform: "translateX(14px)" }
+                              : {}),
+                          }}
+                        >
                           {currency(totalRemainingEmiAmount)}
                         </strong>
 
