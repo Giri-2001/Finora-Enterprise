@@ -146,6 +146,10 @@ export interface CollectionReviewData {
       paidAmount: number;
       waivedAmount: number;
       penaltyAmount: number;
+      // PAISARULE_C125_R226
+      // Unknown legacy settlement evidence stays undefined.
+      penaltyPaidAmount?: number;
+      penaltyWaivedAmount?: number;
       status: string;
     }>;
   };

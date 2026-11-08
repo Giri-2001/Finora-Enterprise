@@ -253,6 +253,66 @@ async function findLegacyCollectionByLoanId(
 // COLLECTION REPOSITORY
 // ============================================================
 
+/**
+ * PAISARULE_C125_R238
+ *
+ * Prepare a Collection record exactly once before persistence.
+ *
+ * The resulting id and audit timestamps remain stable when the
+ * prepared object is passed into a future atomic settlement.
+ *
+ * Preparation is side-effect-free; it does not save to USB.
+ * This function alone does NOT provide idempotent commit.
+ */
+export function prepareCollectionRecordForSettlement(
+  collection: CollectionReviewData,
+): CollectionStorageRecord {
+  if (!collection.loanId) {
+    throw new Error(
+      "Collection loan ID is required before preparing settlement.",
+    );
+  }
+
+    const now = new Date().toISOString();
+
+    const newCollection: CollectionStorageRecord = {
+      ...collection,
+
+      // ------------------------------------------------------
+      // Every collection transaction gets a unique ID.
+      // ------------------------------------------------------
+
+      id: createCollectionId(collection),
+
+      // ------------------------------------------------------
+      // STORAGE ENTITY
+      //
+      // Required by LOCAL / USB / future CLOUD persistence.
+      // ------------------------------------------------------
+
+      entity: COLLECTION_ENTITY,
+
+      status: "Approved",
+
+      // ------------------------------------------------------
+      // AUTHORITATIVE SYSTEM AUDIT TIMESTAMPS
+      //
+      // receiptDate is the operational ERP Business Date.
+      //
+      // createdAt / updatedAt record when FINORA actually
+      // persisted this Collection transaction.
+      //
+      // Caller-provided timestamps are intentionally ignored.
+      // ------------------------------------------------------
+
+      createdAt: now,
+
+      updatedAt: now,
+    };
+
+  return newCollection;
+}
+
 export class CollectionRepository {
   // ==========================================================
   // GET ALL
@@ -307,43 +367,10 @@ export class CollectionRepository {
       );
     }
 
-    const now = new Date().toISOString();
-
-    const newCollection: CollectionStorageRecord = {
-      ...collection,
-
-      // ------------------------------------------------------
-      // Every collection transaction gets a unique ID.
-      // ------------------------------------------------------
-
-      id: createCollectionId(collection),
-
-      // ------------------------------------------------------
-      // STORAGE ENTITY
-      //
-      // Required by LOCAL / USB / future CLOUD persistence.
-      // ------------------------------------------------------
-
-      entity: COLLECTION_ENTITY,
-
-      status: "Approved",
-
-      // ------------------------------------------------------
-      // AUTHORITATIVE SYSTEM AUDIT TIMESTAMPS
-      //
-      // receiptDate is the operational ERP Business Date.
-      //
-      // createdAt / updatedAt record when FINORA actually
-      // persisted this Collection transaction.
-      //
-      // Caller-provided timestamps are intentionally ignored.
-      // ------------------------------------------------------
-
-      createdAt: now,
-
-      updatedAt: now,
-    };
-
+    // PAISARULE_C125_R238
+    // Existing save path uses the same canonical preparation.
+    const newCollection =
+      prepareCollectionRecordForSettlement(collection);
     const result =
       await storageManager.save<CollectionStorageRecord>(newCollection);
 

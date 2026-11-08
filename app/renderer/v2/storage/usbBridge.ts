@@ -434,6 +434,83 @@ function getAndroidUsbBridge():
  * Undefined means the current runtime does not expose a FINORA
  * USB implementation.
  */
+// PAISARULE_C125_R256
+// Windows-only typed access to the authenticated atomic IPC.
+// Never fall back to LOCAL or ordinary USB save/update.
+// The native handler deliberately rejects financial execution
+// until the complete atomic workflow passes verification.
+
+type PaisaruleAtomicCollectionWindow = Window & {
+  paisaruleAtomicCollection?: {
+    submit?: (
+      request: unknown,
+      sessionId: string,
+    ) => Promise<unknown>;
+  };
+};
+
+export async function submitPaisaruleAtomicCollection(
+  request: unknown,
+  sessionId: string,
+): Promise<unknown> {
+  if (
+    typeof sessionId !== "string" ||
+    !sessionId.trim() ||
+    request === null ||
+    typeof request !== "object" ||
+    Array.isArray(request)
+  ) {
+    return {
+      success: false,
+      error: "INVALID_ATOMIC_SETTLEMENT_REQUEST",
+    };
+  }
+
+  if (
+    Capacitor.isNativePlatform() ||
+    typeof window === "undefined"
+  ) {
+    return {
+      success: false,
+      error: "ATOMIC_SETTLEMENT_PLATFORM_NOT_SUPPORTED",
+    };
+  }
+
+  const electronBridge = getElectronUsbBridge();
+
+  if (!electronBridge) {
+    return {
+      success: false,
+      error: "ATOMIC_SETTLEMENT_USB_BRIDGE_UNAVAILABLE",
+    };
+  }
+
+  const atomicBridge =
+    (window as PaisaruleAtomicCollectionWindow)
+      .paisaruleAtomicCollection;
+
+  if (typeof atomicBridge?.submit !== "function") {
+    return {
+      success: false,
+      error: "ATOMIC_SETTLEMENT_PRELOAD_UNAVAILABLE",
+    };
+  }
+
+  try {
+    return await atomicBridge.submit(
+      request,
+      sessionId,
+    );
+  } catch {
+    // Never turn an uncertain native outcome into
+    // an ordinary USB retry or local write.
+    return {
+      success: false,
+      error:
+        "ATOMIC_SETTLEMENT_OUTCOME_UNKNOWN_REVIEW_REQUIRED",
+    };
+  }
+}
 export function getFinoraUsbBridge():
   FinoraUsbBridge | undefined {
 

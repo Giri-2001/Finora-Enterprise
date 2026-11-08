@@ -1,3 +1,4 @@
+import { previewManualCollectionSettlement } from "../../../repositories/loan/loanRepository";
 // ============================================================
 // FINORA ENTERPRISE OS™
 //
@@ -624,19 +625,11 @@ export default function PaymentDetails() {
   // FINAL SETTLEMENT EXCESS -> OVERDUE
   // ==========================================================
 
-  const excessOverdueAmount =
-    currentOutstanding > 0
-      ? Math.max(
-          0,
-          finalCollection - currentOutstanding,
-        )
-      : 0;
-
-  const effectivePenaltyAmount =
-    Math.max(
-      penaltyAmount,
-      excessOverdueAmount,
-    );
+  // PAISARULE_C125_R231
+  // Cash above contractual outstanding is NOT evidence of
+  // an assessed or received overdue penalty.
+  // Never fabricate penalty income from excess cash.
+  const effectivePenaltyAmount = penaltyAmount;
 
   const debtPaymentAmount =
     Math.max(
@@ -742,7 +735,24 @@ export default function PaymentDetails() {
   // VALIDATE
   // ==========================================================
 
-  function validateCollection(): boolean {
+  function validateCollection(
+    penaltyOverride?: number,
+  ): boolean {
+    // PAISARULE_C125_R235
+    // Validate against USB schedule-derived Manual penalty.
+    const verifiedDebtPayment =
+      finalCollection - (penaltyOverride ?? effectivePenaltyAmount);
+
+    const verifiedSettlementReduction =
+      verifiedDebtPayment + discountAmount;
+
+    if (
+      !Number.isFinite(verifiedDebtPayment) ||
+      verifiedDebtPayment < 0
+    ) {
+      void finoraWarning("Invalid penalty settlement amount.");
+      return false;
+    }
     // --------------------------------------------------------
     // LOAN
     // --------------------------------------------------------
@@ -777,7 +787,7 @@ export default function PaymentDetails() {
     // PAYMENT CANNOT EXCEED OUTSTANDING
     // --------------------------------------------------------
 
-    if (debtPaymentAmount > currentOutstanding) {
+    if (verifiedDebtPayment > currentOutstanding) {
       void finoraWarning(
         "Collection amount cannot be greater than the current outstanding balance.",
       );
@@ -789,7 +799,7 @@ export default function PaymentDetails() {
     // MANUAL PRINCIPAL MUST BE PART OF ACTUAL DEBT CASH
     // --------------------------------------------------------
 
-    if (manualPrincipal > debtPaymentAmount) {
+    if (manualPrincipal > verifiedDebtPayment) {
       void finoraWarning(
         "Manual Principal cannot be greater than the collection amount available for loan repayment.",
       );
@@ -801,7 +811,7 @@ export default function PaymentDetails() {
     // PAYMENT + DISCOUNT CANNOT EXCEED OUTSTANDING
     // --------------------------------------------------------
 
-    if (settlementReduction > currentOutstanding) {
+    if (verifiedSettlementReduction > currentOutstanding) {
       void finoraWarning(
         "Collection amount plus discount cannot be greater than the current outstanding balance.",
       );
@@ -833,6 +843,7 @@ export default function PaymentDetails() {
   function buildSaveData(
     collectionNumber: string,
     receiptNumber: string,
+    verifiedPenalty?: number,
   ) {
     const now = new Date().toISOString();
 
@@ -863,7 +874,7 @@ export default function PaymentDetails() {
         // OVERDUE / PENALTY
         // ------------------------------------------------------
 
-        penaltyAmount: effectivePenaltyAmount,
+        penaltyAmount: verifiedPenalty ?? effectivePenaltyAmount,
 
         // ------------------------------------------------------
         // ------------------------------------------------------
@@ -950,9 +961,46 @@ export default function PaymentDetails() {
       return;
     }
 
-    if (!validateCollection()) {
+    // PAISARULE_C125_R235
+    // Resolve penalty from the authoritative USB schedule
+    // before validating or reserving a receipt.
+    let verifiedManualPenalty: number | undefined;
+
+    if (selectedEmiNumbers.length === 0) {
+      const preview = await previewManualCollectionSettlement(
+        reviewData.loanId,
+        finalCollection,
+        manualPrincipal,
+        "PREFLIGHT-ONLY-R235",
+        reviewData.receiptDate,
+      );
+
+      if (!preview.success) {
+        void finoraWarning(
+          "Manual Collection blocked: " + preview.error,
+        );
+        return;
+      }
+
+      verifiedManualPenalty = preview.plan.penaltyReceived;
+    }
+
+    if (!validateCollection(verifiedManualPenalty)) {
       return;
     }
+    // PAISARULE_C125_R251
+    // The legacy Manual path writes Loan and Collection
+    // separately. Until authenticated atomic commit is wired,
+    // never begin a Manual financial mutation.
+    if (selectedEmiNumbers.length === 0) {
+      void finoraWarning(
+        "Manual Collection is temporarily unavailable while " +
+        "atomic USB settlement protection is being completed. " +
+        "No payment has been saved.",
+      );
+      return;
+    }
+
 
     let receiptWindow: Window | null = null;
 
@@ -1087,6 +1135,7 @@ export default function PaymentDetails() {
         buildSaveData(
           numbering.collectionNumber,
           numbering.receiptNumber,
+          verifiedManualPenalty,
         );
 
       // Subscription-only: no Collection Wallet preflight.
@@ -1182,6 +1231,9 @@ export default function PaymentDetails() {
         paidAmount: number;
         waivedAmount: number;
         penaltyAmount: number;
+        // PAISARULE_C125_R208_R1
+        penaltyPaidAmount?: number;
+        penaltyWaivedAmount?: number;
         status: string;
       }> = [];
 
@@ -1217,7 +1269,14 @@ export default function PaymentDetails() {
           const paidAmount = Number(row.paidAmount ?? 0);
           const waivedAmount = Number(row.waivedAmount ?? 0);
           const penaltyAmount = Number(row.penaltyAmount ?? 0);
-
+          const penaltyPaidAmount =
+            row.penaltyPaidAmount === undefined
+              ? undefined
+              : Number(row.penaltyPaidAmount);
+          const penaltyWaivedAmount =
+            row.penaltyWaivedAmount === undefined
+              ? undefined
+              : Number(row.penaltyWaivedAmount);
           if (
             !Number.isSafeInteger(number) ||
             number <= 0 ||
@@ -1230,7 +1289,17 @@ export default function PaymentDetails() {
             !Number.isFinite(waivedAmount) ||
             waivedAmount < 0 ||
             !Number.isFinite(penaltyAmount) ||
-            penaltyAmount < 0
+            penaltyAmount < 0 ||
+            (penaltyPaidAmount !== undefined &&
+              (!Number.isFinite(penaltyPaidAmount) ||
+                penaltyPaidAmount < 0)) ||
+            (penaltyWaivedAmount !== undefined &&
+              (!Number.isFinite(penaltyWaivedAmount) ||
+                penaltyWaivedAmount < 0)) ||
+            (penaltyPaidAmount !== undefined &&
+              penaltyWaivedAmount !== undefined &&
+              penaltyPaidAmount + penaltyWaivedAmount >
+                penaltyAmount + 0.005)
           ) {
             finoraSnapshotValid = false;
             break;
@@ -1243,6 +1312,12 @@ export default function PaymentDetails() {
             paidAmount,
             waivedAmount,
             penaltyAmount,
+            ...(penaltyPaidAmount === undefined
+              ? {}
+              : { penaltyPaidAmount }),
+            ...(penaltyWaivedAmount === undefined
+              ? {}
+              : { penaltyWaivedAmount }),
             status,
           });
         }

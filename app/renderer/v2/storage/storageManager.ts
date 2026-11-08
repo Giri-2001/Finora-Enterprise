@@ -145,6 +145,18 @@ export class StorageManager {
   async initialize(
     configuration?: StorageConfiguration,
   ): Promise<StorageResult<void>> {
+    // PAISARULE_C125_R215_USB_ONLY_INITIALIZE
+    // Owner business records must use the USB adapter.
+    if (
+      configuration?.storageMode !== undefined &&
+      configuration.storageMode !== StorageMode.USB
+    ) {
+      return {
+        success: false,
+        error: "PAISARULE requires USB storage for Owner business records.",
+      };
+    }
+
     this.lifecycleRevision++;
 
     // --------------------------------------------------------
@@ -206,6 +218,14 @@ export class StorageManager {
   async selectStorageMode(
     storageMode: StorageMode,
   ): Promise<StorageResult<void>> {
+    // PAISARULE_C125_R215_USB_ONLY_SELECTION
+    if (storageMode !== StorageMode.USB) {
+      return {
+        success: false,
+        error: "PAISARULE supports USB storage only.",
+      };
+    }
+
     this.lifecycleRevision++;
     const modeRevision = this.lifecycleRevision;
 
@@ -601,7 +621,12 @@ export class StorageManager {
   // ==========================================================
 
   getActiveAdapter(): StorageAdapter | undefined {
-    return this.adapters.get(this.configuration.storageMode);
+    // PAISARULE_C125_R217_ACTIVE_USB_ONLY
+    if (this.configuration.storageMode !== StorageMode.USB) {
+      return undefined;
+    }
+
+    return this.adapters.get(StorageMode.USB);
   }
 
   // ==========================================================
@@ -609,7 +634,12 @@ export class StorageManager {
   // ==========================================================
 
   getAdapter(storageMode: StorageMode): StorageAdapter | undefined {
-    return this.adapters.get(storageMode);
+    // PAISARULE_C125_R217_LOOKUP_USB_ONLY
+    if (storageMode !== StorageMode.USB) {
+      return undefined;
+    }
+
+    return this.adapters.get(StorageMode.USB);
   }
 
   // ==========================================================

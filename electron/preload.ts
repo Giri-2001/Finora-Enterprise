@@ -3,6 +3,40 @@ import {
   ipcRenderer,
 } from "electron";// FINORA_C80_B5_SAVED_OWNER_LIST
 // Read-only saved Owner metadata. Never expose vault credentials.
+// PAISARULE_C125_R255
+// Narrow Windows Atomic Collection IPC bridge.
+//
+// Security authority remains in Electron Main.
+// The IPC is intentionally disabled for financial execution.
+// No credentials, filesystem paths or Node APIs are exposed.
+contextBridge.exposeInMainWorld(
+  "paisaruleAtomicCollection",
+  Object.freeze({
+    submit: async (
+      request: unknown,
+      sessionId: string,
+    ): Promise<unknown> => {
+      if (
+        typeof sessionId !== "string" ||
+        !sessionId.trim() ||
+        !request ||
+        typeof request !== "object" ||
+        Array.isArray(request)
+      ) {
+        return {
+          success: false,
+          error: "INVALID_ATOMIC_SETTLEMENT_REQUEST",
+        };
+      }
+
+      return ipcRenderer.invoke(
+        "finora:usb:atomic-collection-settlement",
+        request,
+        { sessionId },
+      );
+    },
+  }),
+);
 contextBridge.exposeInMainWorld(
   "finoraSavedOwnerLogins",
   Object.freeze({

@@ -3192,15 +3192,43 @@ async function finoraR161CreateReceiptImage(
       ? "Next EMI"
       : "Next EMI Unavailable";
 
+  // PAISARULE_C125_R195:
+  // The persisted EMI balance excludes any separately applicable
+  // overdue penalty. Never present it as a complete overdue payoff.
+  const nextEmiOverdue =
+    Boolean(nextEmi) &&
+    Boolean(receiptBusinessDate) &&
+    String(nextEmi?.dueDate ?? "").slice(0, 10) <
+      receiptBusinessDate;
+
+  // PAISARULE_C125_R197:
+  // Display contractual EMI and persisted penalty separately.
+  // A schedule penalty is NOT proof of fee cash received or
+  // proof of an unpaid penalty; do not silently treat it as
+  // a new receipt or an authoritative remaining fee balance.
+  const nextEmiBalance = nextEmi
+    ? Math.max(
+        0,
+        nextEmi.amount -
+          nextEmi.paidAmount -
+          nextEmi.waivedAmount,
+      )
+    : 0;
+
+  const nextEmiSchedulePenalty =
+    nextEmiOverdue && nextEmi &&
+    Number.isFinite(nextEmi.penaltyAmount)
+      ? Math.max(0, nextEmi.penaltyAmount)
+      : 0;
+
   const nextEmiValue = nextEmi
-    ? money(
-        Math.max(
-          0,
-          nextEmi.amount -
-            nextEmi.paidAmount -
-            nextEmi.waivedAmount,
-        ),
-      ) +
+    ? money(nextEmiBalance) +
+        (nextEmiSchedulePenalty > 0
+          ? " + Fee " + money(nextEmiSchedulePenalty) +
+            " (verify fee due)"
+          : nextEmiOverdue
+            ? " · late fee check"
+            : "") +
         (nextEmi.dueDate
           ? " · " + formatReceiptDateOnly(nextEmi.dueDate)
           : "")

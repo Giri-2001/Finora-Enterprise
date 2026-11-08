@@ -1,4 +1,5 @@
-﻿// ============================================================
+﻿import { projectManualPenaltyScheduleSettlement } from "./manualPenaltyScheduleSettlement";
+// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // V2 LOAN REPOSITORY™
@@ -166,6 +167,11 @@ export interface LoanScheduleInstallment {
   waivedAmount?: number;
 
   penaltyAmount?: number;
+  // PAISARULE_C125_R205_PENALTY_SETTLEMENT
+  // penaltyAmount: assessed fee, never proof of payment.
+  // Optional for backward compatibility with existing loans.
+  penaltyPaidAmount?: number;
+  penaltyWaivedAmount?: number;
 
   receiptNumber?: string;
 
@@ -1435,6 +1441,189 @@ export async function deleteLoanById(
 // GET LOAN BY ID
 // ============================================================
 
+/**
+ * PAISARULE_C125_R233
+ *
+ * Read-only loan snapshot for financial preflight.
+ *
+ * This API must never repair or persist the Loan.
+ * No getLoans(), getLoanById(), or repairClosedLoanSchedule().
+ *
+ * A missing or unavailable Loan fails closed.
+ */
+/**
+ * PAISARULE_C125_R259
+ *
+ * Read Loan data without normalizeLoanBase or repair-on-read.
+ * No Loan mutation, Collection mutation or fallback write.
+ *
+ * This is PRECOMMIT DATA only, NOT native USB authority.
+ * The native exclusive-lock commit must independently read
+ * and compare the current scoped persisted Loan.
+ *
+ * This reader follows the active storage mode; a caller
+ * MUST enforce USB mode before constructing a USB commit.
+ */
+export async function getUnnormalizedLoanForAtomicPreflight(
+  loanId: string,
+): Promise<Loan | undefined> {
+  if (
+    typeof loanId !== "string" ||
+    !loanId.trim()
+  ) {
+    return undefined;
+  }
+
+  try {
+    const result = await storageManager.get<Loan>({
+      entity: LOAN_ENTITY,
+      id: loanId,
+    });
+
+    if (!result.success || !result.data) {
+      return undefined;
+    }
+
+    const data: unknown = result.data;
+
+    if (
+      typeof data !== "object" ||
+      data === null ||
+      Array.isArray(data)
+    ) {
+      return undefined;
+    }
+
+    const record = data as Record<string, unknown>;
+
+    if (
+      typeof record.id !== "string" ||
+      record.id !== loanId
+    ) {
+      return undefined;
+    }
+
+    // Return the storage payload untouched.
+    // Do not normalize dates, balances or schedule rows.
+    return result.data;
+  } catch {
+    return undefined;
+  }
+}
+export async function getLoanForCollectionPreflight(
+  loanId: string,
+): Promise<Loan | undefined> {
+  if (typeof loanId !== "string" || !loanId.trim()) {
+    return undefined;
+  }
+
+  try {
+    const result = await storageManager.get<Loan>({
+      entity: LOAN_ENTITY,
+      id: loanId,
+    });
+
+    if (!result.success || !result.data) {
+      return undefined;
+    }
+
+    // Normalize only in memory. Do not apply persistence repairs.
+    return normalizeLoanBase(result.data);
+  } catch {
+    return undefined;
+  }
+}
+/**
+ * PAISARULE_C125_R234
+ *
+ * Non-mutating Manual Collection preview derived from
+ * current authoritative USB Loan schedule.
+ *
+ * A preview is not a durable settlement authorization.
+ * Native commit must revalidate current USB state.
+ */
+export async function previewManualCollectionSettlement(
+  loanId: string,
+  cashAmount: number,
+  principalAmount: number,
+  receiptNumber: string,
+  paidDate: string,
+): Promise<
+  | {
+      success: true;
+      loanId: string;
+      plan: ReturnType<
+        typeof projectManualPenaltyScheduleSettlement
+      >;
+    }
+  | {
+      success: false;
+      error: string;
+    }
+> {
+  if (typeof loanId !== "string" || !loanId.trim()) {
+    return {
+      success: false,
+      error: "LOAN_ID_REQUIRED",
+    };
+  }
+
+  const loan = await getLoanForCollectionPreflight(loanId);
+
+  if (!loan) {
+    return {
+      success: false,
+      error: "AUTHORITATIVE_LOAN_UNAVAILABLE",
+    };
+  }
+
+  if (
+    loan.status === "CLOSED" ||
+    !(Number(loan.outstanding) > 0)
+  ) {
+    return {
+      success: false,
+      error: "LOAN_NOT_COLLECTIBLE",
+    };
+  }
+
+  const persisted = getPersistedSchedule(loan);
+
+  if (
+    !persisted.field ||
+    !persisted.schedule ||
+    persisted.schedule.length === 0
+  ) {
+    return {
+      success: false,
+      error: "AUTHORITATIVE_EMI_SCHEDULE_REQUIRED",
+    };
+  }
+
+  try {
+    const plan = projectManualPenaltyScheduleSettlement(
+      persisted.schedule,
+      cashAmount,
+      principalAmount,
+      receiptNumber,
+      paidDate,
+    );
+
+    return {
+      success: true,
+      loanId,
+      plan,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "PENALTY_PREFLIGHT_FAILED",
+    };
+  }
+}
 export async function getLoanById(loanId: string): Promise<Loan | undefined> {
   if (!loanId) {
     return undefined;
@@ -1641,11 +1830,20 @@ function recalculateInterestOnlyAfterCurtailment(
 }
 
 
-export async function updateLoanOutstanding(
+/**
+ * PAISARULE_C125_R264
+ *
+ * Financial projection only. No storage reads or writes.
+ * The caller must supply a Loan from the correct authority.
+ *
+ * No persisted mutation happens in this function.
+ */
+export function projectLoanOutstandingWithoutPersistence(
+  rawLoan: Loan,
   loanId: string,
   paymentAmount: number,
   options?: LoanOutstandingUpdateOptions,
-): Promise<Loan | undefined> {
+): Loan | undefined {
   // ==========================================================
   // VALIDATE LOAN ID
   // ==========================================================
@@ -1686,21 +1884,7 @@ export async function updateLoanOutstanding(
     return undefined;
   }
 
-  // ==========================================================
-  // LOAD AUTHORITATIVE LOAN
-  // ==========================================================
-
-  const result = await storageManager.get<Loan>({
-    entity: LOAN_ENTITY,
-
-    id: loanId,
-  });
-
-  if (!result.success || !result.data) {
-    return undefined;
-  }
-
-  const loan = normalizeLoan(result.data);
+  const loan = normalizeLoan(rawLoan);
 
   // ==========================================================
   // CURRENT OUTSTANDING
@@ -1797,6 +1981,19 @@ export async function updateLoanOutstanding(
 
   const persistedSchedule = getPersistedSchedule(loan);
 
+  // PAISARULE_C125_R229
+  // Reject Manual Collection when authoritative EMI evidence is absent.
+  if (
+    selectedEmiNumbers.length === 0 &&
+    (
+      !persistedSchedule.field ||
+      !persistedSchedule.schedule ||
+      persistedSchedule.schedule.length === 0
+    )
+  ) {
+    return undefined;
+  }
+
   // ==========================================================
   // BASE LOAN UPDATE
   // ==========================================================
@@ -1846,15 +2043,47 @@ export async function updateLoanOutstanding(
     // MANUAL PAYMENT
     // ========================================================
     else {
-      updatedSchedule = allocateManualPayment(
-        persistedSchedule.schedule,
+      // PAISARULE_C125_R229
+      // Allocate unpaid penalty before EMI on each Manual row.
+      let projection: ReturnType<
+        typeof projectManualPenaltyScheduleSettlement
+      >;
 
-        emiPaymentAmount,
+      try {
+        projection = projectManualPenaltyScheduleSettlement(
+          persistedSchedule.schedule,
+          actualPaymentAmount,
+          manualPrincipalAmount,
+          receiptNumber,
+          paidDate,
+        );
+      } catch {
+        return undefined;
+      }
 
-        receiptNumber,
-
-        paidDate,
+      const projectedPenaltyCents = Math.round(
+        projection.penaltyReceived * 100,
       );
+
+      const suppliedPenaltyCents = Math.round(
+        penaltyAmount * 100,
+      );
+
+      // UI and authoritative schedule must reconcile exactly.
+      if (projectedPenaltyCents !== suppliedPenaltyCents) {
+        return undefined;
+      }
+
+      if (
+        Math.round(projection.principalReceived * 100) !==
+          Math.round(manualPrincipalAmount * 100) ||
+        Math.round(projection.emiReceived * 100) !==
+          Math.round(emiPaymentAmount * 100)
+      ) {
+        return undefined;
+      }
+
+      updatedSchedule = projection.schedule;
     }
 
 
@@ -2171,13 +2400,49 @@ export async function updateLoanOutstanding(
       new Date().toISOString(),
   };
 
-  // ==========================================================
-  // PERSIST
-  // ==========================================================
+  return updatedLoan;
+}
 
-  const updateResult = await storageManager.update<LoanStorageRecord>(
-    toLoanStorageRecord(updatedLoan),
-  );
+/**
+ * Existing persistent Loan update.
+ *
+ * The calculation is shared with the non-persistent
+ * Atomic Collection projection.
+ */
+export async function updateLoanOutstanding(
+  loanId: string,
+  paymentAmount: number,
+  options?: LoanOutstandingUpdateOptions,
+): Promise<Loan | undefined> {
+  if (!loanId) {
+    return undefined;
+  }
+
+  const result = await storageManager.get<Loan>({
+    entity: LOAN_ENTITY,
+    id: loanId,
+  });
+
+  if (!result.success || !result.data) {
+    return undefined;
+  }
+
+  const updatedLoan =
+    projectLoanOutstandingWithoutPersistence(
+      result.data,
+      loanId,
+      paymentAmount,
+      options,
+    );
+
+  if (!updatedLoan) {
+    return undefined;
+  }
+
+  const updateResult =
+    await storageManager.update<LoanStorageRecord>(
+      toLoanStorageRecord(updatedLoan),
+    );
 
   if (!updateResult.success) {
     return undefined;
@@ -2190,6 +2455,108 @@ export async function updateLoanOutstanding(
 // COMPATIBILITY ALIAS
 // ============================================================
 
+/**
+ * PAISARULE_C125_R266
+ *
+ * Prepare a Manual Collection Loan update entirely in memory.
+ *
+ * - Never invokes storageManager.save/update.
+ * - Never changes the supplied raw Loan.
+ * - Never substitutes LOCAL for USB.
+ * - Uses the existing financial calculation.
+ *
+ * The caller must enforce authoritative USB mode and obtain
+ * native authenticated settlement authorization.
+ *
+ * This does NOT commit a Collection or authorize a payment.
+ */
+export function prepareManualLoanForAtomicSettlement(
+  rawLoan: Loan,
+  cashAmount: number,
+  options: LoanOutstandingUpdateOptions,
+): Loan | undefined {
+  if (
+    !rawLoan ||
+    typeof rawLoan.id !== "string" ||
+    !rawLoan.id.trim() ||
+    !options ||
+    !Number.isFinite(cashAmount) ||
+    cashAmount <= 0
+  ) {
+    return undefined;
+  }
+
+  // This entry point is exclusively for Manual Collection.
+  if (
+    options.selectedEmiNumbers !== undefined &&
+    (
+      !Array.isArray(options.selectedEmiNumbers) ||
+      options.selectedEmiNumbers.length !== 0
+    )
+  ) {
+    return undefined;
+  }
+
+  // Native R244 currently rejects discount settlement.
+  if (
+    options.discountAmount !== undefined &&
+    options.discountAmount !== 0
+  ) {
+    return undefined;
+  }
+
+  if (
+    typeof options.receiptNumber !== "string" ||
+    !options.receiptNumber.trim() ||
+    typeof options.paidDate !== "string" ||
+    !options.paidDate.trim()
+  ) {
+    return undefined;
+  }
+
+  const persisted = getPersistedSchedule(rawLoan);
+
+  if (
+    !persisted.field ||
+    !persisted.schedule ||
+    persisted.schedule.length === 0
+  ) {
+    return undefined;
+  }
+
+  // Detect accidental input mutation while preparing.
+  const before = JSON.stringify(rawLoan);
+
+  const updated = projectLoanOutstandingWithoutPersistence(
+    rawLoan,
+    rawLoan.id,
+    cashAmount,
+    {
+      ...options,
+      selectedEmiNumbers: [],
+    },
+  );
+
+  if (
+    !updated ||
+    JSON.stringify(rawLoan) !== before
+  ) {
+    return undefined;
+  }
+
+  const projectedSchedule = getPersistedSchedule(updated);
+
+  if (
+    projectedSchedule.field !== persisted.field ||
+    !projectedSchedule.schedule ||
+    projectedSchedule.schedule.length !==
+      persisted.schedule.length
+  ) {
+    return undefined;
+  }
+
+  return updated;
+}
 export const updateLoanOutstandingAmount = updateLoanOutstanding;
 
 // ============================================================

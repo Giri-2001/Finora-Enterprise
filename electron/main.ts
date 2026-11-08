@@ -429,6 +429,9 @@ const IPC_CHANNELS = {
 
   GET_ALL: "finora:usb:get-all",
 
+  // PAISARULE_C125_R253
+  ATOMIC_COLLECTION_SETTLEMENT:
+    "finora:usb:atomic-collection-settlement",
   SAVE: "finora:usb:save",
 
   UPDATE: "finora:usb:update",
@@ -2744,6 +2747,1028 @@ async function handleUsbSaveUnlocked(
 // IPC: UPDATE
 // ============================================================
 
+/*
+ * PAISARULE_C125_R241
+ *
+ * INTERNAL ONLY. Not registered as IPC.
+ *
+ * Future authenticated settlement entry point will supply
+ * canonical prepared records and the expected original Loan.
+ *
+ * This function does not independently calculate or validate
+ * financial allocation. It MUST NOT be exposed as an IPC
+ * operation until native settlement authority is implemented.
+ */
+async function handleUsbAtomicCollectionSettlementUnlocked(
+  expectedLoanData: unknown,
+  loanInput: unknown,
+  collectionInput: unknown,
+  options?: StorageWriteOptions,
+) {
+  if (
+    !validateRecord(loanInput) ||
+    !validateRecord(collectionInput)
+  ) {
+    return failure("Invalid settlement records.");
+  }
+
+  const loan = loanInput as Record<string, unknown>;
+  const collection = collectionInput as Record<string, unknown>;
+
+  const loanId =
+    typeof loan.id === "string" ? loan.id.trim() : "";
+
+  const collectionId =
+    typeof collection.id === "string"
+      ? collection.id.trim()
+      : "";
+
+  if (
+    loan.entity !== "LOAN" ||
+    collection.entity !== "COLLECTION" ||
+    !loanId ||
+    !collectionId ||
+    !expectedLoanData ||
+    typeof expectedLoanData !== "object"
+  ) {
+    return failure("Invalid atomic settlement identity.");
+  }
+
+  // PAISARULE_C125_R242
+  // Tenant authority must already have been resolved in native
+  // main process. Never accept an absent or DEMO scope.
+  const tenantScopeValid =
+    typeof options?.ownerId === "string" &&
+    options.ownerId.trim().length > 0 &&
+    typeof options.businessId === "string" &&
+    options.businessId.trim().length > 0 &&
+    typeof options.branchId === "string" &&
+    options.branchId.trim().length > 0 &&
+    (
+      options.demoId === undefined ||
+      options.demoId === null ||
+      options.demoId === ""
+    );
+
+  if (!tenantScopeValid) {
+    return failure("SETTLEMENT_REAL_TENANT_SCOPE_REQUIRED");
+  }
+
+  // Check embedded record identity before any USB access.
+  const loanDataUnknown = loan.data ?? loan;
+  const collectionDataUnknown = collection.data ?? collection;
+
+  if (
+    !loanDataUnknown ||
+    typeof loanDataUnknown !== "object" ||
+    Array.isArray(loanDataUnknown) ||
+    !collectionDataUnknown ||
+    typeof collectionDataUnknown !== "object" ||
+    Array.isArray(collectionDataUnknown)
+  ) {
+    return failure("SETTLEMENT_RECORD_DATA_INVALID");
+  }
+
+  const loanData =
+    loanDataUnknown as Record<string, unknown>;
+
+  const collectionData =
+    collectionDataUnknown as Record<string, unknown>;
+
+  if (
+    String(loanData.id ?? "").trim() !== loanId ||
+    String(collectionData.id ?? "").trim() !== collectionId ||
+    String(collectionData.loanId ?? "").trim() !== loanId
+  ) {
+    return failure("SETTLEMENT_EMBEDDED_IDENTITY_MISMATCH");
+  }
+
+  if (
+    !expectedLoanData ||
+    typeof expectedLoanData !== "object" ||
+    Array.isArray(expectedLoanData) ||
+    String(
+      (expectedLoanData as Record<string, unknown>).id ?? "",
+    ).trim() !== loanId
+  ) {
+    return failure("SETTLEMENT_EXPECTED_LOAN_IDENTITY_MISMATCH");
+  }
+
+  const receiptNumber =
+    typeof collectionData.receiptNumber === "string"
+      ? collectionData.receiptNumber.trim()
+      : "";
+
+  if (
+    !receiptNumber ||
+    String(collectionData.loanId ?? "").trim() !== loanId
+  ) {
+    return failure("Collection receipt or Loan identity mismatch.");
+  }
+  // PAISARULE_C125_R243
+  // Native pre-publication financial reconciliation.
+  // This does not replace authoritative EMI-wise verification.
+  const originalLoan =
+    expectedLoanData as Record<string, unknown>;
+
+  const asCents = (value: unknown): number | null => {
+    if (
+      typeof value !== "number" ||
+      !Number.isFinite(value) ||
+      value < 0
+    ) {
+      return null;
+    }
+
+    const scaled = value * 100;
+    const rounded = Math.round(scaled);
+
+    if (
+      !Number.isSafeInteger(rounded) ||
+      Math.abs(scaled - rounded) > 0.000001
+    ) {
+      return null;
+    }
+
+    return rounded;
+  };
+
+  const cash = asCents(collectionData.paymentAmount);
+  const penalty = asCents(collectionData.penaltyAmount);
+  const discount = asCents(collectionData.discountAmount);
+  const principal = asCents(collectionData.advanceAdjustment);
+  const previous = asCents(originalLoan.outstanding);
+  const remaining = asCents(loanData.outstanding);
+  const recordedRemaining =
+    asCents(collectionData.outstandingBalance);
+
+  if (
+    cash === null ||
+    penalty === null ||
+    discount === null ||
+    principal === null ||
+    previous === null ||
+    remaining === null ||
+    recordedRemaining === null ||
+    cash <= 0 ||
+    penalty > cash ||
+    principal > cash - penalty ||
+    previous < remaining ||
+    previous - remaining !== cash - penalty + discount ||
+    remaining !== recordedRemaining
+  ) {
+    return failure("SETTLEMENT_FINANCIAL_RECONCILIATION_FAILED");
+  }
+
+  const snapshotUnknown = collectionData.receiptSnapshot;
+
+  if (
+    !snapshotUnknown ||
+    typeof snapshotUnknown !== "object" ||
+    Array.isArray(snapshotUnknown)
+  ) {
+    return failure("SETTLEMENT_RECEIPT_SNAPSHOT_REQUIRED");
+  }
+
+  const snapshot =
+    snapshotUnknown as Record<string, unknown>;
+
+  if (
+    asCents(snapshot.previousOutstanding) !== previous ||
+    asCents(snapshot.remainingOutstanding) !== remaining ||
+    asCents(snapshot.amountReceived) !== cash ||
+    asCents(snapshot.penaltyReceived) !== penalty ||
+    asCents(snapshot.discountAmount) !== discount
+  ) {
+    return failure("SETTLEMENT_RECEIPT_TOTALS_MISMATCH");
+  }
+
+
+  // PAISARULE_C125_R245
+  // This endpoint is exclusively for Manual Collection.
+  // Selected EMI settlements need their own validated contract.
+  const selectedUnknown =
+    collectionData.selectedEmiNumbers;
+
+  const snapshotSelectedUnknown =
+    snapshot.selectedEmiNumbers;
+
+  if (
+    !Array.isArray(selectedUnknown) ||
+    selectedUnknown.length !== 0 ||
+    !Array.isArray(snapshotSelectedUnknown) ||
+    snapshotSelectedUnknown.length !== 0
+  ) {
+    return failure("SETTLEMENT_MANUAL_MODE_ONLY");
+  }
+
+  // Receipt must contain a verified schedule snapshot.
+  // Missing or invalid schedule evidence cannot be treated
+  // as a successful financial settlement.
+  if (
+    snapshot.version !== 1 ||
+    snapshot.scheduleAvailable !== true ||
+    typeof snapshot.totalEmis !== "number" ||
+    !Number.isSafeInteger(snapshot.totalEmis) ||
+    snapshot.totalEmis <= 0
+  ) {
+    return failure(
+      "SETTLEMENT_AUTHORITATIVE_RECEIPT_SCHEDULE_REQUIRED",
+    );
+  }
+  // PAISARULE_C125_R244
+  // Strict, independent EMI-wise Penalty-First reconciliation.
+  // No native USB write occurs before these checks pass.
+  //
+  // Only a single unambiguous schedule representation is allowed.
+  // Unsupported legacy/interest-only/discount transformations
+  // fail closed until explicitly verified.
+  const scheduleKeys = [
+    "schedule",
+    "emiSchedule",
+    "installments",
+  ] as const;
+
+  const scheduleMatches = scheduleKeys.filter(
+    (key) =>
+      Array.isArray(originalLoan[key]) &&
+      Array.isArray(loanData[key]),
+  );
+
+  if (scheduleMatches.length !== 1) {
+    return failure("SETTLEMENT_SCHEDULE_AMBIGUOUS_OR_MISSING");
+  }
+
+  const scheduleKey = scheduleMatches[0];
+
+  const previousRows =
+    originalLoan[scheduleKey] as unknown[];
+
+  const nextRows =
+    loanData[scheduleKey] as unknown[];
+
+  if (
+    previousRows.length === 0 ||
+    previousRows.length !== nextRows.length
+  ) {
+    return failure("SETTLEMENT_SCHEDULE_LENGTH_MISMATCH");
+  }
+
+  const readRow = (
+    value: unknown,
+  ): Record<string, unknown> | null => {
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value)
+    ) {
+      return null;
+    }
+
+    return value as Record<string, unknown>;
+  };
+
+  const numberOf = (
+    row: Record<string, unknown>,
+  ): number | null => {
+    const value = row.installmentNumber;
+
+    return (
+      typeof value === "number" &&
+      Number.isSafeInteger(value) &&
+      value > 0
+    )
+      ? value
+      : null;
+  };
+
+  const previousByNumber =
+    new Map<number, Record<string, unknown>>();
+
+  const nextByNumber =
+    new Map<number, Record<string, unknown>>();
+
+  for (const rowUnknown of previousRows) {
+    const row = readRow(rowUnknown);
+    const number = row ? numberOf(row) : null;
+
+    if (
+      !row ||
+      number === null ||
+      previousByNumber.has(number)
+    ) {
+      return failure("SETTLEMENT_PREVIOUS_EMI_ID_INVALID");
+    }
+
+    previousByNumber.set(number, row);
+  }
+
+  for (const rowUnknown of nextRows) {
+    const row = readRow(rowUnknown);
+    const number = row ? numberOf(row) : null;
+
+    if (
+      !row ||
+      number === null ||
+      nextByNumber.has(number)
+    ) {
+      return failure("SETTLEMENT_NEXT_EMI_ID_INVALID");
+    }
+
+    nextByNumber.set(number, row);
+  }
+
+  // This strict version excludes discount/waiver reshaping.
+  // Do not silently accept an allocation we cannot prove.
+  if (discount !== 0) {
+    return failure("SETTLEMENT_DISCOUNT_NATIVE_SUPPORT_PENDING");
+  }
+
+  let availableEmiCash = cash - principal;
+  let verifiedPenalty = 0;
+  let verifiedEmi = 0;
+
+  const numbers = [...previousByNumber.keys()].sort(
+    (left, right) => left - right,
+  );
+
+  for (const number of numbers) {
+    const before = previousByNumber.get(number);
+    const after = nextByNumber.get(number);
+
+    if (!before || !after) {
+      return failure("SETTLEMENT_EMI_ID_CHANGED");
+    }
+
+    const requiredAmount =
+      asCents(before.installmentAmount);
+
+    const nextRequiredAmount =
+      asCents(after.installmentAmount);
+
+    const paidBefore = asCents(before.paidAmount ?? 0);
+    const paidAfter = asCents(after.paidAmount ?? 0);
+
+    const waivedBefore = asCents(before.waivedAmount ?? 0);
+    const waivedAfter = asCents(after.waivedAmount ?? 0);
+
+    const assessedBefore =
+      asCents(before.penaltyAmount ?? 0);
+
+    const assessedAfter =
+      asCents(after.penaltyAmount ?? 0);
+
+    // Never assume old assessed penalties were already paid.
+    const paidEvidencePresent =
+      before.penaltyPaidAmount !== undefined;
+
+    const waivedEvidencePresent =
+      before.penaltyWaivedAmount !== undefined;
+
+    if (
+      assessedBefore !== null &&
+      assessedBefore > 0 &&
+      (!paidEvidencePresent || !waivedEvidencePresent)
+    ) {
+      return failure("SETTLEMENT_LEGACY_PENALTY_EVIDENCE_MISSING");
+    }
+
+    const penaltyPaidBefore =
+      asCents(before.penaltyPaidAmount ?? 0);
+
+    const penaltyPaidAfter =
+      asCents(after.penaltyPaidAmount ?? 0);
+
+    const penaltyWaivedBefore =
+      asCents(before.penaltyWaivedAmount ?? 0);
+
+    const penaltyWaivedAfter =
+      asCents(after.penaltyWaivedAmount ?? 0);
+
+    const amounts = [
+      requiredAmount,
+      nextRequiredAmount,
+      paidBefore,
+      paidAfter,
+      waivedBefore,
+      waivedAfter,
+      assessedBefore,
+      assessedAfter,
+      penaltyPaidBefore,
+      penaltyPaidAfter,
+      penaltyWaivedBefore,
+      penaltyWaivedAfter,
+    ];
+
+    if (amounts.some((value) => value === null)) {
+      return failure("SETTLEMENT_EMI_AMOUNT_INVALID");
+    }
+
+    // Convert nullable values after explicit validation.
+    const required = requiredAmount as number;
+    const nextRequired = nextRequiredAmount as number;
+    const oldPaid = paidBefore as number;
+    const newPaid = paidAfter as number;
+    const oldWaived = waivedBefore as number;
+    const newWaived = waivedAfter as number;
+    const assessed = assessedBefore as number;
+    const nextAssessed = assessedAfter as number;
+    const oldPenaltyPaid = penaltyPaidBefore as number;
+    const newPenaltyPaid = penaltyPaidAfter as number;
+    const oldPenaltyWaived = penaltyWaivedBefore as number;
+    const newPenaltyWaived = penaltyWaivedAfter as number;
+
+    if (
+      required !== nextRequired ||
+      assessed !== nextAssessed ||
+      oldWaived !== newWaived ||
+      oldPenaltyWaived !== newPenaltyWaived ||
+      oldPaid + oldWaived > required ||
+      oldPenaltyPaid + oldPenaltyWaived > assessed ||
+      newPaid < oldPaid ||
+      newPenaltyPaid < oldPenaltyPaid
+    ) {
+      return failure("SETTLEMENT_EMI_BASELINE_CHANGED");
+    }
+
+    const penaltyDue =
+      assessed - oldPenaltyPaid - oldPenaltyWaived;
+
+    const emiDue =
+      required - oldPaid - oldWaived;
+
+    const expectedPenalty =
+      Math.min(availableEmiCash, penaltyDue);
+
+    availableEmiCash -= expectedPenalty;
+
+    // EMI becomes payable only after this row's penalty
+    // is fully covered.
+    const expectedEmi =
+      expectedPenalty === penaltyDue
+        ? Math.min(availableEmiCash, emiDue)
+        : 0;
+
+    availableEmiCash -= expectedEmi;
+
+    if (
+      newPenaltyPaid - oldPenaltyPaid !== expectedPenalty ||
+      newPaid - oldPaid !== expectedEmi
+    ) {
+      return failure("SETTLEMENT_PENALTY_FIRST_ORDER_MISMATCH");
+    }
+
+    verifiedPenalty += expectedPenalty;
+    verifiedEmi += expectedEmi;
+  }
+
+  if (
+    availableEmiCash !== 0 ||
+    verifiedPenalty !== penalty ||
+    verifiedPenalty + verifiedEmi + principal !== cash
+  ) {
+    return failure("SETTLEMENT_EMI_CASH_RECONCILIATION_FAILED");
+  }
+  // PAISARULE_C125_R247
+  // Receipt EMI evidence must exactly match the proposed
+  // post-settlement Loan schedule before USB publication.
+  const snapshotRowsUnknown = snapshot.installments;
+
+  if (
+    !Array.isArray(snapshotRowsUnknown) ||
+    snapshotRowsUnknown.length !== nextRows.length ||
+    snapshot.totalEmis !== nextRows.length
+  ) {
+    return failure("SETTLEMENT_RECEIPT_EMI_COUNT_MISMATCH");
+  }
+
+  const receiptByNumber =
+    new Map<number, Record<string, unknown>>();
+
+  for (const value of snapshotRowsUnknown) {
+    const row = readRow(value);
+
+    if (!row) {
+      return failure("SETTLEMENT_RECEIPT_EMI_ROW_INVALID");
+    }
+
+    const number = row.number;
+
+    if (
+      typeof number !== "number" ||
+      !Number.isSafeInteger(number) ||
+      number <= 0 ||
+      receiptByNumber.has(number)
+    ) {
+      return failure("SETTLEMENT_RECEIPT_EMI_NUMBER_INVALID");
+    }
+
+    receiptByNumber.set(number, row);
+  }
+
+  const paidReceiptStatuses = new Set([
+    "paid",
+    "overdue paid",
+    "preclosed",
+  ]);
+
+  let remainingReceiptEmis = 0;
+
+  for (const [number, loanRow] of nextByNumber) {
+    const receiptRow = receiptByNumber.get(number);
+
+    if (!receiptRow) {
+      return failure("SETTLEMENT_RECEIPT_EMI_NOT_FOUND");
+    }
+
+    const loanStatus =
+      typeof loanRow.status === "string"
+        ? loanRow.status.trim().toLowerCase()
+        : "";
+
+    const receiptStatus =
+      typeof receiptRow.status === "string"
+        ? receiptRow.status.trim().toLowerCase()
+        : "";
+
+    const loanDate =
+      typeof loanRow.dueDate === "string"
+        ? loanRow.dueDate.trim()
+        : "";
+
+    const receiptDate =
+      typeof receiptRow.dueDate === "string"
+        ? receiptRow.dueDate.trim()
+        : "";
+
+    if (
+      !loanStatus ||
+      !loanDate ||
+      receiptStatus !== loanStatus ||
+      receiptDate !== loanDate
+    ) {
+      return failure("SETTLEMENT_RECEIPT_EMI_DETAILS_MISMATCH");
+    }
+
+    const amountFields = [
+      ["amount", "installmentAmount"],
+      ["paidAmount", "paidAmount"],
+      ["waivedAmount", "waivedAmount"],
+      ["penaltyAmount", "penaltyAmount"],
+    ] as const;
+
+    for (const [receiptKey, loanKey] of amountFields) {
+      const receiptValue = asCents(
+        receiptRow[receiptKey],
+      );
+
+      const loanValue = asCents(
+        loanRow[loanKey] ?? (
+          loanKey === "waivedAmount" ||
+          loanKey === "penaltyAmount"
+            ? 0
+            : undefined
+        ),
+      );
+
+      if (
+        receiptValue === null ||
+        loanValue === null ||
+        receiptValue !== loanValue
+      ) {
+        return failure(
+          "SETTLEMENT_RECEIPT_EMI_AMOUNT_MISMATCH",
+        );
+      }
+    }
+
+    // Preserve missing historical paid/waived evidence as
+    // missing. Never silently convert it into zero evidence.
+    const optionalPenaltyFields = [
+      "penaltyPaidAmount",
+      "penaltyWaivedAmount",
+    ] as const;
+
+    for (const key of optionalPenaltyFields) {
+      const receiptHas =
+        Object.prototype.hasOwnProperty.call(
+          receiptRow,
+          key,
+        );
+
+      const loanHas =
+        Object.prototype.hasOwnProperty.call(
+          loanRow,
+          key,
+        );
+
+      if (receiptHas !== loanHas) {
+        return failure(
+          "SETTLEMENT_RECEIPT_PENALTY_EVIDENCE_MISMATCH",
+        );
+      }
+
+      if (receiptHas) {
+        const receiptValue = asCents(receiptRow[key]);
+        const loanValue = asCents(loanRow[key]);
+
+        if (
+          receiptValue === null ||
+          loanValue === null ||
+          receiptValue !== loanValue
+        ) {
+          return failure(
+            "SETTLEMENT_RECEIPT_PENALTY_EVIDENCE_MISMATCH",
+          );
+        }
+      }
+    }
+
+    if (!paidReceiptStatuses.has(loanStatus)) {
+      remainingReceiptEmis += 1;
+    }
+  }
+
+  if (
+    snapshot.remainingEmis !== remainingReceiptEmis ||
+    receiptByNumber.size !== nextByNumber.size
+  ) {
+    return failure(
+      "SETTLEMENT_RECEIPT_REMAINING_EMIS_MISMATCH",
+    );
+  }
+  // PAISARULE_C125_R248
+  // Reject contradictory identity and scope metadata before
+  // the native USB package is opened for settlement.
+  // IMPORTANT: options must still originate from authenticated
+  // native session authority when IPC is introduced.
+  const scopePairs = [
+    ["ownerId", options?.ownerId],
+    ["businessId", options?.businessId],
+    ["branchId", options?.branchId],
+  ] as const;
+
+  const scopeMatches = (
+    record: Record<string, unknown>,
+  ): boolean =>
+    scopePairs.every(([key, expected]) => {
+      if (
+        !Object.prototype.hasOwnProperty.call(record, key)
+      ) {
+        return true;
+      }
+
+      return (
+        typeof record[key] === "string" &&
+        record[key] === expected
+      );
+    });
+
+  if (
+    !scopeMatches(loan) ||
+    !scopeMatches(loanData) ||
+    !scopeMatches(collection) ||
+    !scopeMatches(collectionData) ||
+    !scopeMatches(originalLoan)
+  ) {
+    return failure("SETTLEMENT_TENANT_IDENTITY_MISMATCH");
+  }
+
+  const embeddedReceipt =
+    collectionData.receiptNumber;
+
+  const outerReceipt =
+    collection.receiptNumber;
+
+  if (
+    typeof embeddedReceipt !== "string" ||
+    !embeddedReceipt.trim() ||
+    embeddedReceipt.trim() !== receiptNumber ||
+    (
+      outerReceipt !== undefined &&
+      outerReceipt !== embeddedReceipt
+    )
+  ) {
+    return failure("SETTLEMENT_RECEIPT_IDENTITY_MISMATCH");
+  }
+
+  if (
+    typeof collectionData.receiptDate !== "string" ||
+    !collectionData.receiptDate.trim()
+  ) {
+    return failure("SETTLEMENT_BUSINESS_DATE_REQUIRED");
+  }
+
+  if (
+    collectionData.status !== "Approved" ||
+    collection.entity !== "COLLECTION" ||
+    loan.entity !== "LOAN"
+  ) {
+    return failure("SETTLEMENT_RECORD_STATE_INVALID");
+  }
+  const usbRoot = await findFinoraUsbRoot();
+
+  if (!usbRoot) {
+    return failure("PAISARULE USB is disconnected.");
+  }
+
+  try {
+    const storagePackage = await readStoragePackage(usbRoot);
+
+    const sameScope = (item: PersistedStorageRecord): boolean =>
+      item.ownerId === options?.ownerId &&
+      item.businessId === options?.businessId &&
+      item.branchId === options?.branchId &&
+      item.demoId === options?.demoId;
+
+    const matchingLoans = storagePackage.records.filter(
+      (item) =>
+        item.entity === "LOAN" &&
+        item.id === loanId &&
+        sameScope(item),
+    );
+
+    if (matchingLoans.length !== 1) {
+      return failure("Authoritative Loan must exist exactly once.");
+    }
+
+    const existingLoan = matchingLoans[0];
+
+    // PAISARULE_C125_R249
+    // Recognize only an EXACT already-committed retry.
+    // Never publish the same financial event a second time.
+    const priorCollectionIds = storagePackage.records.filter(
+      (item) =>
+        item.entity === "COLLECTION" &&
+        item.id === collectionId,
+    );
+
+    if (priorCollectionIds.length > 0) {
+      if (
+        priorCollectionIds.length !== 1 ||
+        !sameScope(priorCollectionIds[0])
+      ) {
+        return failure(
+          "SETTLEMENT_COLLECTION_ID_COLLISION_REVIEW_REQUIRED",
+        );
+      }
+
+      const priorCollection = priorCollectionIds[0];
+
+      const sameCollection =
+        JSON.stringify(priorCollection.data) ===
+        JSON.stringify(collection.data ?? collection);
+
+      const sameLoanAfterCommit =
+        JSON.stringify(existingLoan.data) ===
+        JSON.stringify(loan.data ?? loan);
+
+      const priorData =
+        priorCollection.data as Record<string, unknown> | null;
+
+      const sameReceipt =
+        priorData !== null &&
+        typeof priorData === "object" &&
+        !Array.isArray(priorData) &&
+        String(priorData.receiptNumber ?? "").trim() ===
+          receiptNumber;
+
+      if (
+        !sameCollection ||
+        !sameLoanAfterCommit ||
+        !sameReceipt
+      ) {
+        return failure(
+          "SETTLEMENT_RETRY_STATE_MISMATCH_REVIEW_REQUIRED",
+        );
+      }
+
+      const matchingReceiptRecords =
+        storagePackage.records.filter(
+          (item) => {
+            if (
+              item.entity !== "COLLECTION" ||
+              !sameScope(item)
+            ) {
+              return false;
+            }
+
+            const value =
+              item.data as Record<string, unknown> | null;
+
+            return (
+              value !== null &&
+              typeof value === "object" &&
+              !Array.isArray(value) &&
+              String(value.receiptNumber ?? "").trim() ===
+                receiptNumber
+            );
+          },
+        );
+
+      if (
+        matchingReceiptRecords.length !== 1 ||
+        matchingReceiptRecords[0].id !== collectionId
+      ) {
+        return failure(
+          "SETTLEMENT_RETRY_RECEIPT_COLLISION_REVIEW_REQUIRED",
+        );
+      }
+
+      // No USB write. Return the already-persisted result.
+      return success({
+        collectionId,
+        receiptNumber,
+        loanId,
+        committed: true,
+        alreadyCommitted: true,
+      });
+    }
+
+    if (
+      JSON.stringify(existingLoan.data) !==
+      JSON.stringify(expectedLoanData)
+    ) {
+      return failure("LOAN_STATE_CHANGED_RETRY_REQUIRES_REVIEW");
+    }
+
+    const duplicateId = storagePackage.records.some(
+      (item) =>
+        item.entity === "COLLECTION" &&
+        item.id === collectionId,
+    );
+
+    if (duplicateId) {
+      return failure("COLLECTION_ID_ALREADY_USED_REVIEW_REQUIRED");
+    }
+
+    const duplicateReceipt = storagePackage.records.some(
+      (item) => {
+        if (item.entity !== "COLLECTION" || !sameScope(item)) {
+          return false;
+        }
+
+        const data = item.data as Record<string, unknown> | null;
+
+        return (
+          data !== null &&
+          typeof data === "object" &&
+          String(data.receiptNumber ?? "").trim() ===
+            receiptNumber
+        );
+      },
+    );
+
+    if (duplicateReceipt) {
+      return failure("COLLECTION_RECEIPT_ALREADY_USED");
+    }
+
+    const now = new Date().toISOString();
+
+    const loanIndex = storagePackage.records.indexOf(
+      existingLoan,
+    );
+
+    storagePackage.records[loanIndex] = {
+      ...existingLoan,
+      data: loan.data ?? loan,
+      updatedAt: now,
+    };
+
+    const preparedCollection: PersistedStorageRecord = {
+      id: collectionId,
+      entity: "COLLECTION",
+      data: collection.data ?? collection,
+      createdAt:
+        typeof collection.createdAt === "string"
+          ? collection.createdAt
+          : now,
+      updatedAt: now,
+      ownerId: options?.ownerId,
+      businessId: options?.businessId,
+      branchId: options?.branchId,
+      demoId: options?.demoId,
+    };
+
+    storagePackage.records.push(preparedCollection);
+
+    // One package publication contains both changes.
+    await writeStoragePackage(usbRoot, storagePackage);
+
+    const verified = await readStoragePackage(usbRoot);
+
+    const verifiedLoan = verified.records.filter(
+      (item) =>
+        item.entity === "LOAN" &&
+        item.id === loanId &&
+        sameScope(item),
+    );
+
+    const verifiedCollection = verified.records.filter(
+      (item) =>
+        item.entity === "COLLECTION" &&
+        item.id === collectionId &&
+        sameScope(item),
+    );
+
+    // PAISARULE_C125_R250
+    // The published package must contain exactly one identity
+    // and one receipt for the committed financial event.
+    // If verification fails, the outcome remains UNCERTAIN.
+    // Never automatically create another transaction.
+    const publishedCollectionIds =
+      verified.records.filter(
+        (item) =>
+          item.entity === "COLLECTION" &&
+          item.id === collectionId,
+      );
+
+    const publishedReceipts =
+      verified.records.filter((item) => {
+        if (
+          item.entity !== "COLLECTION" ||
+          !sameScope(item)
+        ) {
+          return false;
+        }
+
+        const value =
+          item.data as Record<string, unknown> | null;
+
+        return (
+          value !== null &&
+          typeof value === "object" &&
+          !Array.isArray(value) &&
+          String(value.receiptNumber ?? "").trim() ===
+            receiptNumber
+        );
+      });
+
+    const publishedCollection =
+      verifiedCollection.length === 1
+        ? verifiedCollection[0]
+        : undefined;
+
+    if (
+      verified.records.length !== storagePackage.records.length ||
+      publishedCollectionIds.length !== 1 ||
+      publishedReceipts.length !== 1 ||
+      !publishedCollection ||
+      publishedCollection.id !== collectionId ||
+      publishedCollection.entity !== "COLLECTION" ||
+      publishedCollection.createdAt !==
+        preparedCollection.createdAt ||
+      publishedCollection.updatedAt !==
+        preparedCollection.updatedAt ||
+      publishedCollection.ownerId !== options?.ownerId ||
+      publishedCollection.businessId !== options?.businessId ||
+      publishedCollection.branchId !== options?.branchId ||
+      publishedCollection.demoId !== options?.demoId
+    ) {
+      return failure(
+        "SETTLEMENT_POST_COMMIT_INTEGRITY_UNCERTAIN_REVIEW_REQUIRED",
+      );
+    }
+    if (
+      verifiedLoan.length !== 1 ||
+      verifiedCollection.length !== 1 ||
+      JSON.stringify(verifiedLoan[0].data) !==
+        JSON.stringify(loan.data ?? loan) ||
+      JSON.stringify(verifiedCollection[0].data) !==
+        JSON.stringify(collection.data ?? collection)
+    ) {
+      return failure("SETTLEMENT_OUTCOME_UNCERTAIN_REVIEW_REQUIRED");
+    }
+
+    return success({
+      collectionId,
+      receiptNumber,
+      loanId,
+      committed: true,
+    });
+  } catch {
+    invalidateUsbRootCache();
+
+    // A failed response does not prove publication failed.
+    // Never automatically retry with a new Collection ID.
+    return failure("SETTLEMENT_OUTCOME_UNCERTAIN_REVIEW_REQUIRED");
+  }
+}
+
+// Internal locked wrapper. No renderer IPC exposure.
+export function prepareNativeAtomicCollectionCommit(
+  ...args: Parameters<
+    typeof handleUsbAtomicCollectionSettlementUnlocked
+  >
+): ReturnType<
+  typeof handleUsbAtomicCollectionSettlementUnlocked
+> {
+  return serializeFinoraUsbMutation(() =>
+    withFinoraUsbExclusiveMutationLock(() =>
+      handleUsbAtomicCollectionSettlementUnlocked(...args)
+    )
+  );
+}
 async function handleUsbUpdateUnlocked(
   record: unknown,
 
@@ -4775,6 +5800,40 @@ function registerUsbStorageHandlers(): void {
   // SAVE
   // ----------------------------------------------------------
 
+  // PAISARULE_C125_R253
+  // Authenticated settlement endpoint.
+  //
+  // DELIBERATELY FAIL-CLOSED:
+  // The native settlement core is not approved for financial
+  // execution until runtime tests and Android parity pass.
+  //
+  // Do not invoke prepareNativeAtomicCollectionCommit here.
+  ipcMain.handle(
+    IPC_CHANNELS.ATOMIC_COLLECTION_SETTLEMENT,
+    async (
+      event,
+      _request: unknown,
+      options?: StorageWriteOptions,
+    ) => {
+      if (!isTrustedRenderer(event.senderFrame)) {
+        return failure("Untrusted renderer.");
+      }
+
+      const authorization =
+        await authorizeFinoraUsbWrite(
+          options,
+          event.sender,
+        );
+
+      if (!authorization.success) {
+        return failure(authorization.error);
+      }
+
+      return failure(
+        "PAISARULE_ATOMIC_SETTLEMENT_NOT_ENABLED",
+      );
+    },
+  );
   ipcMain.handle(
     IPC_CHANNELS.SAVE,
     async (event, record: unknown, options?: StorageWriteOptions) => {

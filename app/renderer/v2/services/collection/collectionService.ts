@@ -275,10 +275,18 @@ function buildPersistedCollection(
 //
 // ============================================================
 
-export async function approveCollection(
+/**
+ * PAISARULE_C125_R239
+ *
+ * Validate Collection workflow/date and build canonical data
+ * without writing a Collection record.
+ *
+ * This is a precommit preparation step, NOT authorization
+ * to commit. Native atomic commit must revalidate current
+ * authoritative USB state under its exclusive lock.
+ */
+export async function prepareApprovedCollectionForSettlement(
   reviewData: CollectionReviewData,
-  authorization:
-    FinoraCommercialWriteOperationAuthorization,
 ): Promise<CollectionReviewData> {
 
   // ==========================================================
@@ -377,6 +385,19 @@ export async function approveCollection(
   // PERSIST COLLECTION
   // ==========================================================
 
+
+  return collection;
+}
+
+export async function approveCollection(
+  reviewData: CollectionReviewData,
+  authorization:
+    FinoraCommercialWriteOperationAuthorization,
+): Promise<CollectionReviewData> {
+  // PAISARULE_C125_R239
+  // Existing approval reuses canonical precommit validation.
+  const collection =
+    await prepareApprovedCollectionForSettlement(reviewData);
   consumeFinoraPostCollectionOperationStage(
     authorization,
     "COLLECTION_SAVED",
