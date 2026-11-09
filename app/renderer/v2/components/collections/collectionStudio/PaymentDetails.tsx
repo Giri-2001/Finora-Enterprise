@@ -1,4 +1,33 @@
-import { previewManualCollectionSettlement } from "../../../repositories/loan/loanRepository";
+import { useRef as useCollectionSaveRef } from "react";
+import {
+  previewManualCollectionSettlement,
+  getUnnormalizedLoanForAtomicPreflight,
+  prepareManualLoanForAtomicSettlement,
+} from "../../../repositories/loan/loanRepository";
+import {
+  projectManualPenaltyScheduleSettlement,
+} from "../../../repositories/loan/manualPenaltyScheduleSettlement";
+import {
+  prepareManualAtomicSettlementRequest,
+} from "../../../storage/manualAtomicSettlementRequest";
+import {
+  prepareSelectedEmiWaiverAtomicRequest,
+} from "../../../storage/selectedEmiWaiverAtomicRequest";
+import {
+  projectSelectedEmiWaiverLoan,
+} from "../../../repositories/loan/selectedEmiWaiverLoanProjection";
+import {
+  prepareCollectionRecordForSettlement,
+} from "../../../repositories/collection/collectionRepository";
+import {
+  prepareApprovedCollectionForSettlement,
+} from "../../../services/collection/collectionService";
+import {
+  submitPaisaruleAtomicCollection,
+} from "../../../storage/usbBridge";
+import {
+  consumeFinoraPostCollectionOperationStage,
+} from "../../../services/activation/finoraCommercialWriteOperation";
 // ============================================================
 // FINORA ENTERPRISE OS™
 //
@@ -240,7 +269,7 @@ function escapeReceiptHtml(
 // COMPONENT
 // ============================================================
 
-export default function PaymentDetails() {
+export default function PaymentDetails({ refreshReady }: { refreshReady: boolean }) {
   const { reviewData, updateField } = useCollectionController();
 
   // ==========================================================
@@ -383,10 +412,15 @@ export default function PaymentDetails() {
   const [savedCollectionPopup, setSavedCollectionPopup] = useState<{
     amount: number;
     penalty: number;
+    discount: number;
     customer: string;
     number: string;
     paymentMode: string;
     closed: boolean;
+    nextEmiAdjustment?: {
+      emiNumber: number;
+      amount: number;
+    };
   } | null>(null);
 
 
@@ -650,6 +684,232 @@ export default function PaymentDetails() {
 
   const selectedEmiAmount = safeNumber(reviewData.selectedEmiAmount);
 
+  // PAISARULE R89-R1:
+  // Manual Save button minimum validation.
+  // No financial writes are performed by this effect.
+  // R85 authoritative Save guard remains unchanged.
+
+  const manualMinimumKey =
+    String(reviewData.loanId ?? "") +
+    "|" +
+    String(reviewData.receiptDate ?? "");
+
+  const [manualMinimum, setManualMinimum] = useState<{
+    key: string;
+    amount: number | null;
+  }>({
+    key: "",
+    amount: null,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadManualMinimum(): Promise<void> {
+      const key = manualMinimumKey;
+
+      if (!reviewData.loanId || !reviewData.receiptDate) {
+        if (!cancelled) {
+          setManualMinimum({
+            key,
+            amount: null,
+          });
+        }
+        return;
+      }
+
+      try {
+        const loan =
+          await getUnnormalizedLoanForAtomicPreflight(
+            reviewData.loanId,
+          );
+
+        if (!loan || !Array.isArray(loan.schedule)) {
+          throw new Error(
+            "MANUAL_MINIMUM_SCHEDULE_MISSING",
+          );
+        }
+
+        const lateFee = Number(
+          loan.lateFee ?? 0,
+        );
+
+        if (
+          !Number.isFinite(lateFee) ||
+          lateFee < 0
+        ) {
+          throw new Error(
+            "MANUAL_MINIMUM_LATE_FEE_INVALID",
+          );
+        }
+
+        const date = String(
+          reviewData.receiptDate,
+        ).slice(0, 10);
+
+        // R89-R1 TYPE FIX:
+        // Explicitly convert LoanInstallment through unknown.
+        const rows = [...loan.schedule]
+          .map(
+            (item) =>
+              item as unknown as Record<string, unknown>,
+          )
+          .sort(
+            (a, b) =>
+              Number(a.installmentNumber) -
+              Number(b.installmentNumber),
+          );
+
+        let minimum: number | null = null;
+
+        for (const row of rows) {
+          const number = Number(
+            row.installmentNumber,
+          );
+
+          const amount = Number(
+            row.installmentAmount,
+          );
+
+          const paid = Number(
+            row.paidAmount ?? 0,
+          );
+
+          const waived = Number(
+            row.waivedAmount ?? 0,
+          );
+
+          const assessed = Number(
+            row.penaltyAmount ?? 0,
+          );
+
+          const feePaid = Number(
+            row.penaltyPaidAmount ?? 0,
+          );
+
+          const feeWaived = Number(
+            row.penaltyWaivedAmount ?? 0,
+          );
+
+          const values = [
+            number,
+            amount,
+            paid,
+            waived,
+            assessed,
+            feePaid,
+            feeWaived,
+          ];
+
+          if (
+            !Number.isSafeInteger(number) ||
+            number <= 0 ||
+            values.some(
+              (value) =>
+                !Number.isFinite(value) ||
+                value < 0,
+            ) ||
+            paid + waived > amount + 0.005 ||
+            feePaid + feeWaived > assessed + 0.005
+          ) {
+            throw new Error(
+              "MANUAL_MINIMUM_ROW_INVALID",
+            );
+          }
+
+          const status = String(
+            row.status ?? "",
+          )
+            .trim()
+            .toLowerCase();
+
+          if (
+            status === "paid" ||
+            status === "overdue paid" ||
+            status === "preclosed"
+          ) {
+            continue;
+          }
+
+          const emiRemaining = Math.max(
+            0,
+            amount - paid - waived,
+          );
+
+          const dueDate = String(
+            row.dueDate ?? "",
+          ).slice(0, 10);
+
+          const overdue =
+            /^\d{4}-\d{2}-\d{2}$/.test(dueDate) &&
+            dueDate < date;
+
+          const applicableFee = overdue
+            ? assessed > 0
+              ? assessed
+              : emiRemaining > 0.005
+                ? lateFee
+                : 0
+            : 0;
+
+          const feeRemaining = Math.max(
+            0,
+            applicableFee -
+              feePaid -
+              feeWaived,
+          );
+
+          const total =
+            emiRemaining + feeRemaining;
+
+          if (total > 0.005) {
+            minimum = total;
+            break;
+          }
+        }
+
+        if (!cancelled) {
+          setManualMinimum({
+            key,
+            amount: minimum,
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setManualMinimum({
+            key,
+            amount: null,
+          });
+        }
+      }
+    }
+
+    void loadManualMinimum();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    manualMinimumKey,
+    reviewData.loanId,
+    reviewData.receiptDate,
+  ]);
+
+  // Manual only. EMI checkbox collection is unaffected.
+  // Fail closed until the matching Loan/Date is verified.
+  const manualMinimumBlocked =
+    selectedEmiNumbers.length === 0 &&
+    (
+      manualMinimum.key !== manualMinimumKey ||
+      manualMinimum.amount === null ||
+      discountAmount > manualMinimum.amount ||
+      !Number.isFinite(collectionAmount) ||
+      Math.round(collectionAmount * 100) <
+        Math.round(
+          Math.max(0, manualMinimum.amount - discountAmount) * 100,
+        )
+    );
+
   // ==========================================================
   // UPDATE FIELD
   // ==========================================================
@@ -662,7 +922,56 @@ export default function PaymentDetails() {
     updateField("paymentReference", value);
   }
 
-  function handleRemarksChange(value: string): void {
+    // PAISARULE_C137_R31_R2_REMARKS
+  const [precloseRemarksLocked, setPrecloseRemarksLocked] =
+    useState(false);
+
+  useEffect(() => {
+    function receivePrecloseRemarks(event: Event): void {
+      const detail = (
+        event as CustomEvent<{
+          stage?: string;
+          reason?: string;
+          clear?: boolean;
+        }>
+      ).detail;
+
+      if (detail?.stage === "off") {
+        // PAISARULE_C137_R39_CLEAR_REMARKS
+        if (detail.clear === true) {
+          updateField("remarks", "");
+        }
+        setPrecloseRemarksLocked(false);
+        return;
+      }
+
+      if (
+        detail?.stage === "confirmed" &&
+        typeof detail.reason === "string" &&
+        detail.reason.replace(/\s/g, "").length >= 10
+      ) {
+        updateField("remarks", detail.reason.trim());
+        setPrecloseRemarksLocked(true);
+      }
+    }
+
+    window.addEventListener(
+      "PAISARULE_PRECLOSE_REMARKS",
+      receivePrecloseRemarks,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "PAISARULE_PRECLOSE_REMARKS",
+        receivePrecloseRemarks,
+      );
+    };
+  }, [updateField]);
+
+  useEffect(() => {
+    setPrecloseRemarksLocked(false);
+  }, [reviewData.loanId, reviewData.receiptDate]);
+function handleRemarksChange(value: string): void {
     updateField("remarks", value);
   }
 
@@ -787,7 +1096,14 @@ export default function PaymentDetails() {
     // PAYMENT CANNOT EXCEED OUTSTANDING
     // --------------------------------------------------------
 
-    if (verifiedDebtPayment > currentOutstanding) {
+    // PAISARULE_C145_R5_MANUAL_OVERDUE_EXCESS_PREFLIGHT
+    // Selected-EMI collections retain the strict outstanding ceiling.
+    // Manual collections defer excess-cash authority to the existing
+    // schedule preview + repository + native atomic verification.
+    if (
+      verifiedDebtPayment > currentOutstanding &&
+      selectedEmiNumbers.length > 0
+    ) {
       void finoraWarning(
         "Collection amount cannot be greater than the current outstanding balance.",
       );
@@ -811,7 +1127,10 @@ export default function PaymentDetails() {
     // PAYMENT + DISCOUNT CANNOT EXCEED OUTSTANDING
     // --------------------------------------------------------
 
-    if (verifiedSettlementReduction > currentOutstanding) {
+    if (
+      verifiedSettlementReduction > currentOutstanding &&
+      selectedEmiNumbers.length > 0
+    ) {
       void finoraWarning(
         "Collection amount plus discount cannot be greater than the current outstanding balance.",
       );
@@ -917,12 +1236,49 @@ export default function PaymentDetails() {
   // SAVE COLLECTION
   // ==========================================================
 
+  const collectionSaveLock = useCollectionSaveRef(false);
+
   async function handleSaveCollection(printReceipt: boolean): Promise<void> {
+    // PAISARULE_C137_R31_R2_SAVE_GUARD
+    // UI confirmation does not authorize Preclose settlement.
+    const precloseElement = document.querySelector(
+      '[data-paisarule-preclose-state]',
+    );
+
+    if (!precloseElement) {
+      void finoraWarning(
+        "Preclose state unavailable. Collection Save blocked.",
+      );
+      return;
+    }
+
+    const precloseState = precloseElement.getAttribute(
+      "data-paisarule-preclose-state",
+    );
+
+    const isConfirmedPreclose =
+      precloseState === "confirmed";
+
+    if (precloseState !== "off" && !isConfirmedPreclose) {
+      void finoraWarning(
+        "Complete Preclose confirmation before saving.",
+      );
+      return;
+    }
+
     // --------------------------------------------------------
     // DOUBLE SUBMIT PROTECTION
     // --------------------------------------------------------
 
-    if (saving) {
+    if (saving || collectionSaveLock.current) {
+      return;
+    }
+
+    // PAISARULE_C129_R10_SAVE_READINESS_GUARD
+    if (!refreshReady) {
+      void finoraWarning(
+        "EMI calculations are refreshing. Save is unavailable until the latest Loan and Date are verified.",
+      );
       return;
     }
 
@@ -961,6 +1317,181 @@ export default function PaymentDetails() {
       return;
     }
 
+    // PAISARULE_R117_IMMEDIATE_PROCESSING
+    // Start before the first asynchronous Loan preflight.
+    // The outer finally covers every subsequent early return.
+    collectionSaveLock.current = true;
+    setSaving(true);
+
+    const processingId = startFinoraProcessing(
+      printReceipt
+        ? "Validating Collection & Preparing Receipt..."
+        : "Validating Collection...",
+    );
+
+    try {
+    // PAISARULE R85: Validate the first unsettled EMI minimum
+    // against the authoritative Loan schedule BEFORE any
+    // collection/receipt number reservation or financial write.
+    if (selectedEmiNumbers.length === 0) {
+      const minimumLoan =
+        await getUnnormalizedLoanForAtomicPreflight(
+          reviewData.loanId,
+        );
+
+      if (
+        !minimumLoan ||
+        !Array.isArray(minimumLoan.schedule)
+      ) {
+        void finoraWarning(
+          "Manual Collection blocked: authoritative EMI schedule unavailable.",
+        );
+        return;
+      }
+
+      const date = String(reviewData.receiptDate ?? "").slice(0, 10);
+      const loanLateFee = Number(minimumLoan.lateFee ?? 0);
+
+      if (
+        !Number.isFinite(loanLateFee) ||
+        loanLateFee < 0
+      ) {
+        void finoraWarning(
+          "Manual Collection blocked: invalid Loan Late Fee.",
+        );
+        return;
+      }
+
+      const rows = minimumLoan.schedule
+        .map(
+          (item: unknown) =>
+            item as Record<string, unknown>,
+        )
+        .sort(
+          (a, b) =>
+            Number(a.installmentNumber) -
+            Number(b.installmentNumber),
+        );
+
+      let minimum:
+        | { number: number; amount: number }
+        | undefined;
+
+      let invalidSchedule = false;
+
+      for (const row of rows) {
+        const number = Number(row.installmentNumber);
+        const amount = Number(row.installmentAmount);
+        const paid = Number(row.paidAmount ?? 0);
+        const waived = Number(row.waivedAmount ?? 0);
+        const assessed = Number(row.penaltyAmount ?? 0);
+        const feePaid = Number(row.penaltyPaidAmount ?? 0);
+        const feeWaived = Number(row.penaltyWaivedAmount ?? 0);
+
+        const values = [
+          number, amount, paid, waived,
+          assessed, feePaid, feeWaived,
+        ];
+
+        if (
+          !Number.isSafeInteger(number) ||
+          number <= 0 ||
+          values.some((value) =>
+            !Number.isFinite(value) || value < 0
+          ) ||
+          paid + waived > amount + 0.005 ||
+          feePaid + feeWaived > assessed + 0.005
+        ) {
+          invalidSchedule = true;
+          break;
+        }
+
+        const status = String(row.status ?? "")
+          .trim()
+          .toLowerCase();
+
+        if (
+          status === "paid" ||
+          status === "overdue paid" ||
+          status === "preclosed"
+        ) {
+          continue;
+        }
+
+        const emiRemaining = Math.max(
+          0,
+          amount - paid - waived,
+        );
+
+        const dueDate = String(row.dueDate ?? "").slice(0, 10);
+        const overdue =
+          /^\d{4}-\d{2}-\d{2}$/.test(dueDate) &&
+          dueDate < date;
+
+        const applicableFee = overdue
+          ? assessed > 0
+            ? assessed
+            : emiRemaining > 0.005
+              ? loanLateFee
+              : 0
+          : 0;
+
+        const feeRemaining = Math.max(
+          0,
+          applicableFee - feePaid - feeWaived,
+        );
+
+        const total = emiRemaining + feeRemaining;
+
+        if (total > 0.005) {
+          minimum = { number, amount: total };
+          break;
+        }
+      }
+
+      if (invalidSchedule || !minimum) {
+        void finoraWarning(
+          "Manual Collection blocked: minimum EMI cannot be verified.",
+        );
+        return;
+      }
+
+      if (discountAmount > minimum.amount) {
+        void finoraWarning(
+          "Discount cannot exceed the verified EMI minimum.",
+        );
+        return;
+      }
+
+      // PAISARULE_C145_R5_EXACT_OUTSTANDING_CLOSE
+      // Legacy schedule/outstanding parity may differ after a prior
+      // verified discount. Exact authoritative outstanding payment
+      // is therefore a valid manual full-close candidate.
+      const exactOutstandingClosure =
+        Number.isFinite(finalCollection) &&
+        Math.round(finalCollection * 100) ===
+          Math.round(currentOutstanding * 100) &&
+        Math.round(discountAmount * 100) === 0;
+
+      if (
+        !exactOutstandingClosure &&
+        (
+          !Number.isFinite(finalCollection) ||
+          Math.round(finalCollection * 100) <
+            Math.round(
+              Math.max(0, minimum.amount - discountAmount) * 100,
+            )
+        )
+      ) {
+        void finoraWarning(
+          `Minimum Collection Amount is ₹${Math.max(0, minimum.amount - discountAmount).toLocaleString("en-IN", {
+            maximumFractionDigits: 2,
+          })} (EMI ${String(minimum.number).padStart(2, "0")}).`,
+        );
+        return;
+      }
+    }
+
     // PAISARULE_C125_R235
     // Resolve penalty from the authoritative USB schedule
     // before validating or reserving a receipt.
@@ -988,18 +1519,8 @@ export default function PaymentDetails() {
     if (!validateCollection(verifiedManualPenalty)) {
       return;
     }
-    // PAISARULE_C125_R251
-    // The legacy Manual path writes Loan and Collection
-    // separately. Until authenticated atomic commit is wired,
-    // never begin a Manual financial mutation.
-    if (selectedEmiNumbers.length === 0) {
-      void finoraWarning(
-        "Manual Collection is temporarily unavailable while " +
-        "atomic USB settlement protection is being completed. " +
-        "No payment has been saved.",
-      );
-      return;
-    }
+    // PAISARULE_C126_R129_MANUAL_ATOMIC_ROUTE
+    // Manual mode must never enter the legacy two-write path.
 
 
     let receiptWindow: Window | null = null;
@@ -1072,20 +1593,89 @@ export default function PaymentDetails() {
       receiptWindow.focus();
     }
 
-    setSaving(true);
-
-    const processingId =
-      startFinoraProcessing(
-        printReceipt
-          ? "Saving Collection & Preparing Receipt..."
-          : "Saving Collection...",
-      );
-
     try {
       // ======================================================
       // FRESH COMMERCIAL TRANSACTION AUTHORIZATION
       // ======================================================
 
+      // PAISARULE_C137_R107_DISCOUNT_EARLY_GUARD
+      // Reject unsupported waiver before commercial
+      // authorization and receipt-number reservation.
+      // Replace only after verified atomic EMI support.
+      if (
+        safeNumber(reviewData.discountAmount) > 0 &&
+        selectedEmiNumbers.length !== 1 &&
+        !isConfirmedPreclose
+      ) {
+        throw new Error(
+          "OVERDUE_WAIVER_ATOMIC_SAVE_PENDING",
+        );
+      }
+
+        // PAISARULE_C138_R11A_EARLY_WAIVER_PREFLIGHT
+        // Validate authoritative Loan evidence before commercial
+        // authorization or receipt number reservation.
+        // No storage write, no Wallet debit, no receipt reservation.
+        if (
+          selectedEmiNumbers.length === 1 &&
+          safeNumber(reviewData.discountAmount) > 0
+        ) {
+          const preflightLoan =
+            await getUnnormalizedLoanForAtomicPreflight(
+              reviewData.loanId,
+            );
+
+          if (!preflightLoan || !Array.isArray(preflightLoan.schedule)) {
+            throw new Error("WAIVER_PREFLIGHT_LOAN_UNAVAILABLE");
+          }
+
+          const selectedRow = preflightLoan.schedule.find(
+            (row) =>
+              Number(row.installmentNumber) === selectedEmiNumbers[0],
+          );
+
+          const dueEvidence =
+            String(selectedRow?.dueDate ?? "").trim();
+
+          const dateEvidence =
+            String(reviewData.receiptDate ?? "").trim();
+
+          try {
+            const verifiedWaiverPreflight = projectSelectedEmiWaiverLoan({
+              outstanding: preflightLoan.outstanding,
+              schedule: preflightLoan.schedule,
+              selectedEmiNumbers,
+              cashReceived: collectionAmount,
+              discountAmount: safeNumber(reviewData.discountAmount),
+              configuredLateFee: Number(preflightLoan.lateFee ?? 0),
+              collectionDate: dateEvidence,
+              receiptNumber: "PREFLIGHT-ONLY-NOT-RESERVED",
+            });
+
+            // PAISARULE_C138_R18_PENALTY_CASH
+            // Collection penaltyAmount = cash actually received.
+            // Loan schedule preserves assessed and waived penalty.
+            verifiedManualPenalty = verifiedWaiverPreflight.penaltyReceived;
+          } catch (error) {
+            // Evidence flags only. No personal details or dates.
+            console.warn("[PAISARULE C138 WAIVER PREFLIGHT]", {
+              dueDatePresent: dueEvidence.length > 0,
+              dueDateIsoPrefix:
+                /^\d{4}-\d{2}-\d{2}/.test(dueEvidence),
+              collectionDatePresent: dateEvidence.length > 0,
+              collectionDateIsoPrefix:
+                /^\d{4}-\d{2}-\d{2}/.test(dateEvidence),
+              datesOrdered:
+                dueEvidence.length >= 10 &&
+                dateEvidence.length >= 10 &&
+                dateEvidence.slice(0, 10) >
+                  dueEvidence.slice(0, 10),
+              selectedRowPresent: Boolean(selectedRow),
+            });
+
+            throw error;
+          }
+        }
       const operationResult =
         await beginFinoraPostCollectionOperation();
 
@@ -1107,12 +1697,29 @@ export default function PaymentDetails() {
       // Once reserved, the sequence is never recycled.
       // ======================================================
 
-      const numberingResult =
-        await reserveNextCollectionReceiptPair(
-          reviewData.customerId,
-          reviewData.loanNumber,
-          commercialWriteAuthorization,
+      // PAISARULE_C138_R48_WAIVER_ATOMIC_NUMBER_PREVIEW
+      // No precommit number consumption for selected EMI waiver.
+      // PAISARULE_C145_R12R3_SUCCESS_ONLY_NUMBER_CONSUMPTION
+      // Manual atomic saves use preview numbering only.
+      // Sequence persistence occurs only with successful native commit.
+      const isAtomicWaiverNumbering =
+        selectedEmiNumbers.length === 0 ||
+        isConfirmedPreclose ||
+        (
+          selectedEmiNumbers.length === 1 &&
+          safeNumber(reviewData.discountAmount) > 0
         );
+
+      const numberingResult = isAtomicWaiverNumbering
+        ? await previewNextCollectionReceiptPair(
+            reviewData.customerId,
+            reviewData.loanNumber,
+          )
+        : await reserveNextCollectionReceiptPair(
+            reviewData.customerId,
+            reviewData.loanNumber,
+            commercialWriteAuthorization,
+          );
 
       if (
         !numberingResult.success ||
@@ -1166,7 +1773,148 @@ export default function PaymentDetails() {
       // UPDATE AUTHORITATIVE LOAN
       // ======================================================
 
-      const updatedLoan = await updateLoanOutstandingAmount(
+      // PAISARULE_C126_R129_MANUAL_LOAN_PROJECTION
+      // Projection is in memory. No Loan write here.
+      const isManualAtomic =
+        selectedEmiNumbers.length === 0;
+
+      // PAISARULE_C137_R120_R1_SELECTED_WAIVER_PROJECTION
+      // Selected EMI with overdue penalty waiver must never
+      // use the legacy persistent Loan update.
+      const isSelectedWaiverAtomic =
+        selectedEmiNumbers.length === 1 &&
+        safeNumber(saveData.discountAmount) > 0;
+
+      let rawManualLoan:
+        Awaited<ReturnType<
+          typeof getUnnormalizedLoanForAtomicPreflight
+        >>;
+
+      let manualCashSchedule: unknown;
+
+      const updatedLoan = isManualAtomic
+        ? await (async () => {
+            const rawLoan =
+              await getUnnormalizedLoanForAtomicPreflight(
+                saveData.loanId,
+              );
+
+            if (
+              !rawLoan ||
+              !Array.isArray(rawLoan.schedule)
+            ) {
+              throw new Error(
+                "AUTHORITATIVE_USB_LOAN_SCHEDULE_REQUIRED",
+              );
+            }
+
+            // PAISARULE_C145_R10_SAVE_PREFLIGHT_DEBT_CEILING
+            // Use the same authoritative Loan outstanding ceiling
+            // as the earlier Manual preview.
+            const cashProjection =
+              projectManualPenaltyScheduleSettlement(
+                rawLoan.schedule,
+                saveData.paymentAmount,
+                safeNumber(saveData.advanceAdjustment),
+                saveData.receiptNumber,
+                saveData.receiptDate,
+                Number(rawLoan.lateFee ?? 0),
+                Number(rawLoan.outstanding),
+              );
+
+            if (
+              Math.abs(
+                cashProjection.penaltyReceived -
+                  safeNumber(saveData.penaltyAmount),
+              ) > 0.000001
+            ) {
+              throw new Error(
+                "MANUAL_PENALTY_PREFLIGHT_MISMATCH",
+              );
+            }
+
+            const projectedLoan =
+              prepareManualLoanForAtomicSettlement(
+                rawLoan,
+                saveData.paymentAmount,
+                {
+                  selectedEmiNumbers: [],
+                  receiptNumber: saveData.receiptNumber,
+                  paidDate: saveData.receiptDate,
+                  discountAmount: saveData.discountAmount,
+                  allowPrecloseDiscount: isConfirmedPreclose,
+                  manualPrincipalAmount:
+                    safeNumber(saveData.advanceAdjustment),
+                  penaltyAmount:
+                    safeNumber(saveData.penaltyAmount),
+                },
+              );
+
+            if (!projectedLoan) {
+              throw new Error(
+                "MANUAL_LOAN_PROJECTION_FAILED",
+              );
+            }
+
+            rawManualLoan = rawLoan;
+            manualCashSchedule =
+              cashProjection.schedule;
+
+            return projectedLoan;
+          })()
+        : isSelectedWaiverAtomic
+          ? await (async () => {
+              const rawLoan =
+                await getUnnormalizedLoanForAtomicPreflight(
+                  saveData.loanId,
+                );
+
+              if (
+                !rawLoan ||
+                !Array.isArray(rawLoan.schedule)
+              ) {
+                throw new Error(
+                  "WAIVER_AUTHORITATIVE_USB_LOAN_REQUIRED",
+                );
+              }
+
+              const projection =
+                projectSelectedEmiWaiverLoan({
+                  outstanding: rawLoan.outstanding,
+                  schedule: rawLoan.schedule,
+                  selectedEmiNumbers: saveData.selectedEmiNumbers,
+                  cashReceived: saveData.paymentAmount,
+                  discountAmount: saveData.discountAmount,
+                  configuredLateFee: Number(rawLoan.lateFee ?? 0),
+                  collectionDate: saveData.receiptDate,
+                  receiptNumber: saveData.receiptNumber,
+                });
+
+              if (
+                Math.abs(
+                  projection.penaltyReceived -
+                    safeNumber(saveData.penaltyAmount),
+                ) > 0.000001
+              ) {
+                throw new Error(
+                  "WAIVER_PENALTY_CASH_MISMATCH",
+                );
+              }
+
+              // PAISARULE_C137_R120_R2_EXPECTED_LOAN
+              // Native must compare this original Loan against
+              // the authoritative USB Loan before committing.
+              rawManualLoan = rawLoan;
+
+              // In-memory only. No Loan or Collection write.
+              return {
+                ...rawLoan,
+                outstanding: projection.outstanding,
+                schedule: projection.schedule,
+                status: projection.status,
+                updatedAt: new Date().toISOString(),
+              };
+            })()        : await updateLoanOutstandingAmount(
         saveData.loanId,
 
         saveData.paymentAmount,
@@ -1380,11 +2128,104 @@ export default function PaymentDetails() {
       // SAVE COLLECTION RECORD
       // ======================================================
 
+      // PAISARULE_C126_R129_SINGLE_ATOMIC_COMMIT
+      // Manual: one Native Loan+Collection commit.
+      // Selected EMI: existing legacy workflow unchanged.
+
+      // PAISARULE_C137_R120_R2_ATOMIC_SAVE_ROUTING
       const savedCollection =
-        await approveCollection(
-          collectionSaveData,
-          commercialWriteAuthorization,
-        );
+        (isManualAtomic || isSelectedWaiverAtomic)
+        ? await (async () => {
+            if (!rawManualLoan) {
+              throw new Error(
+                "MANUAL_ORIGINAL_LOAN_MISSING",
+              );
+            }
+
+            const preparedCollection =
+              await prepareApprovedCollectionForSettlement(
+                collectionSaveData,
+              );
+
+            const collectionRecord =
+              prepareCollectionRecordForSettlement(
+                preparedCollection,
+              );
+
+            // PAISARULE_C137_R120_R2_REQUEST_SELECTION
+            const request = isSelectedWaiverAtomic
+              ? prepareSelectedEmiWaiverAtomicRequest(
+                  rawManualLoan,
+                  updatedLoan,
+                  collectionRecord,
+                )
+              : prepareManualAtomicSettlementRequest(
+                rawManualLoan,
+                updatedLoan,
+                collectionRecord,
+                safeNumber(saveData.advanceAdjustment) > 0
+                  ? {
+                      cashAllocatedSchedule:
+                        manualCashSchedule,
+                    }
+                  : undefined,
+              );
+
+            const sessionId = String(
+              getSession()?.sessionId ?? "",
+            ).trim();
+
+            if (!sessionId) {
+              throw new Error(
+                "AUTHENTICATED_OWNER_SESSION_REQUIRED",
+              );
+            }
+
+            const nativeUnknown =
+              await submitPaisaruleAtomicCollection(
+                request,
+                sessionId,
+              );
+
+            const nativeResult = nativeUnknown as
+              | {
+                  success?: boolean;
+                  error?: string;
+                  data?: {
+                    committed?: boolean;
+                    alreadyCommitted?: boolean;
+                  };
+                }
+              | null;
+
+            if (
+              nativeResult?.success !== true ||
+              nativeResult.data?.committed !== true
+            ) {
+              throw new Error(
+                nativeResult?.error ??
+                  "ATOMIC_COLLECTION_COMMIT_NOT_CONFIRMED",
+              );
+            }
+
+            // Atomic Native commit already persisted Loan + Collection.
+            // Record both commercial stages only after commit proof.
+            consumeFinoraPostCollectionOperationStage(
+              commercialWriteAuthorization,
+              "LOAN_UPDATED",
+            );
+
+            consumeFinoraPostCollectionOperationStage(
+              commercialWriteAuthorization,
+              "COLLECTION_SAVED",
+            );
+
+            return preparedCollection;
+          })()
+        : await approveCollection(
+            collectionSaveData,
+            commercialWriteAuthorization,
+          );
 
       // Subscription-only: Collection saved without Wallet debit.
 
@@ -1441,15 +2282,10 @@ export default function PaymentDetails() {
       //
       // ======================================================
 
-      resetTransactionForm();
-
-      // ======================================================
-      // REFRESH LIVE LOAN / COLLECTION VIEWS
-      // ======================================================
-
-      window.dispatchEvent(new Event("FINORA_LOAN_UPDATED"));
-
-      window.dispatchEvent(new Event("FINORA_COLLECTION_UPDATED"));
+      // PAISARULE_C142_R2_OWNER_ACK_AUTHORITY
+      // Successful persistence is complete, but the visible
+      // transaction remains intact until Owner acknowledges
+      // the success popup with OK.
 
       // ======================================================
       // SUCCESS MESSAGE
@@ -1458,10 +2294,181 @@ export default function PaymentDetails() {
       const loanClosed = updatedOutstanding === 0;
 
       if (!printReceipt) {
+        // R64: Compare the Loan schedules captured before and
+        // after the successful collection commit.
+        const nextEmiAdjustment = (() => {
+          if (!isManualAtomic || !rawManualLoan) {
+            return undefined;
+          }
+
+          const beforeSchedule = (
+            rawManualLoan as unknown as {
+              schedule?: unknown;
+            }
+          ).schedule;
+
+          if (
+            !Array.isArray(beforeSchedule) ||
+            !Array.isArray(finoraRawSchedule)
+          ) {
+            return undefined;
+          }
+
+          type PopupEmiRow = {
+            installmentNumber?: unknown;
+            installmentAmount?: unknown;
+            paidAmount?: unknown;
+            waivedAmount?: unknown;
+            penaltyAmount?: unknown;
+            penaltyPaidAmount?: unknown;
+            penaltyWaivedAmount?: unknown;
+          };
+
+          const previousByNumber = new Map<number, PopupEmiRow>();
+
+          for (const item of beforeSchedule) {
+            if (!item || typeof item !== "object") {
+              return undefined;
+            }
+
+            const row = item as PopupEmiRow;
+            const number = Number(row.installmentNumber);
+
+            if (!Number.isSafeInteger(number) || number <= 0) {
+              return undefined;
+            }
+
+            if (previousByNumber.has(number)) {
+              return undefined;
+            }
+
+            previousByNumber.set(number, row);
+          }
+
+          const changed: {
+            number: number;
+            amount: number;
+            after: PopupEmiRow;
+          }[] = [];
+
+          for (const item of finoraRawSchedule) {
+            if (!item || typeof item !== "object") {
+              return undefined;
+            }
+
+            const row = item as PopupEmiRow;
+            const number = Number(row.installmentNumber);
+            const before = previousByNumber.get(number);
+
+            if (!before) {
+              return undefined;
+            }
+
+            const oldPaid = Number(before.paidAmount ?? 0);
+            const newPaid = Number(row.paidAmount ?? 0);
+            const delta = Math.round((newPaid - oldPaid) * 100);
+
+            if (
+              !Number.isFinite(oldPaid) ||
+              !Number.isFinite(newPaid) ||
+              !Number.isSafeInteger(delta) ||
+              delta < 0
+            ) {
+              return undefined;
+            }
+
+            if (delta > 0) {
+              changed.push({
+                number,
+                amount: delta,
+                after: row,
+              });
+            }
+          }
+
+          // This label is for an exactly verified rollover
+          // from a completed EMI to the next partial EMI.
+          if (changed.length !== 2) {
+            return undefined;
+          }
+
+          changed.sort((a, b) => a.number - b.number);
+
+          const previous = changed[0];
+          const next = changed[1];
+
+          if (next.number !== previous.number + 1) {
+            return undefined;
+          }
+
+          const previousPaid = Number(
+            previous.after.paidAmount ?? 0,
+          );
+
+          const previousWaived = Number(
+            previous.after.waivedAmount ?? 0,
+          );
+
+          const previousRequired = Number(
+            previous.after.installmentAmount ?? 0,
+          );
+
+          const previousPenalty = Number(
+            previous.after.penaltyAmount ?? 0,
+          );
+
+          const previousPenaltyPaid = Number(
+            previous.after.penaltyPaidAmount ?? 0,
+          );
+
+          const previousPenaltyWaived = Number(
+            previous.after.penaltyWaivedAmount ?? 0,
+          );
+
+          const nextPaid = Number(next.after.paidAmount ?? 0);
+          const nextRequired = Number(
+            next.after.installmentAmount ?? 0,
+          );
+
+          const previousEmiClosed =
+            Number.isFinite(previousRequired) &&
+            previousRequired > 0 &&
+            Math.round(
+              (previousPaid + previousWaived) * 100,
+            ) === Math.round(previousRequired * 100);
+
+          const previousPenaltyClosed =
+            Number.isFinite(previousPenalty) &&
+            Math.round(
+              (previousPenaltyPaid + previousPenaltyWaived) * 100,
+            ) === Math.round(previousPenalty * 100);
+
+          const nextIsPartial =
+            Number.isFinite(nextRequired) &&
+            nextRequired > 0 &&
+            Number.isFinite(nextPaid) &&
+            nextPaid > 0 &&
+            nextPaid < nextRequired;
+
+          if (
+            !previousEmiClosed ||
+            !previousPenaltyClosed ||
+            !nextIsPartial
+          ) {
+            return undefined;
+          }
+
+          return {
+            emiNumber: next.number,
+            amount: next.amount / 100,
+          };
+        })();
 
         setSavedCollectionPopup({
+          nextEmiAdjustment,
           amount: safeNumber(savedCollection.paymentAmount),
           penalty: safeNumber(savedCollection.penaltyAmount),
+          discount: safeNumber(savedCollection.discountAmount),
           customer: String(saveData.customerName || "--"),
           number: String(savedCollection.collectionNumber),
           paymentMode: String(saveData.paymentMethod || "cash"),
@@ -1489,11 +2496,22 @@ export default function PaymentDetails() {
         (current) => current + 1,
       );
 
-      stopFinoraProcessing(
-        processingId,
+    }
+    } catch (preflightError) {
+      console.error(
+        "PAISARULE COLLECTION PREFLIGHT ERROR:",
+        preflightError,
       );
 
+      void finoraError(
+        preflightError instanceof Error
+          ? preflightError.message
+          : "Collection validation could not be completed.",
+      );
+    } finally {
+      stopFinoraProcessing(processingId);
       setSaving(false);
+      collectionSaveLock.current = false;
     }
   }
 
@@ -2056,9 +3074,21 @@ export default function PaymentDetails() {
             REMARKS
         ==================================================== */}
 
+                {/* PAISARULE_C135_R14_PLACEHOLDERS */}
+        <style>{`
+          #finora-payment-reference::placeholder,
+          #finora-payment-remarks::placeholder {
+            color: var(
+              --finora-theme-text-primary,
+              var(--text, #111827)
+            ) !important;
+            opacity: 1;
+          }
+        `}</style>
         <div style={responsiveRemarksStyle}>
           <textarea
             id="finora-payment-remarks"
+            readOnly={precloseRemarksLocked}
             value={reviewData.remarks || ""}
             onChange={(event) => handleRemarksChange(event.target.value)}
             placeholder="Enter remarks"
@@ -2196,6 +3226,23 @@ export default function PaymentDetails() {
                   {formatCurrency(savedCollectionPopup.amount)}
                 </div>
 
+                {savedCollectionPopup.nextEmiAdjustment && (
+                  <div style={{
+                    color: "#15803d",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    marginTop: 5,
+                  }}>
+                    {formatCurrency(
+                      savedCollectionPopup.nextEmiAdjustment.amount,
+                    )}{" "}
+                    Adjusted to Next EMI{" "}
+                    {String(
+                      savedCollectionPopup.nextEmiAdjustment.emiNumber,
+                    ).padStart(2, "0")}
+                  </div>
+                )}
+
                 {savedCollectionPopup.penalty > 0 && (
                   <div style={{
                     color: "#667085",
@@ -2204,6 +3251,19 @@ export default function PaymentDetails() {
                   }}>
                     Recorded Late Fee:{" "}
                     {formatCurrency(savedCollectionPopup.penalty)}
+                  </div>
+                )}
+
+                {/* PAISARULE_C137_R99_SAVED_DISCOUNT */}
+                {savedCollectionPopup.discount > 0 && (
+                  <div style={{
+                    color: "#15803d",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    marginTop: 7,
+                  }}>
+                    Discount Applied:{" "}
+                    {formatCurrency(savedCollectionPopup.discount)}
                   </div>
                 )}
               </div>
@@ -2224,13 +3284,15 @@ export default function PaymentDetails() {
                 </div>
 
                 <div style={{
-                  display: "grid",
-                  gap: 4,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 12,
                 }}>
                   <span style={{ color: "#667085" }}>
                     Collection Number
                   </span>
-                  <strong style={{ overflowWrap: "anywhere" }}>
+                  <strong style={{ overflowWrap: "anywhere", textAlign: "right", minWidth: 0 }}>
                     {String(savedCollectionPopup.number ?? "").replace(
                       /^FIN-COL-/i,
                       "PAISA-COL-",
@@ -2265,7 +3327,18 @@ export default function PaymentDetails() {
               <button
                 type="button"
                 autoFocus
-                onClick={() => setSavedCollectionPopup(null)}
+                onClick={() => {
+                  // PAISARULE_C142_R2_OWNER_OK
+                  // Owner acknowledgement is the UI boundary.
+                  setSavedCollectionPopup(null);
+                  resetTransactionForm();
+                  window.dispatchEvent(
+                    new Event("FINORA_LOAN_UPDATED"),
+                  );
+                  window.dispatchEvent(
+                    new Event("FINORA_COLLECTION_UPDATED"),
+                  );
+                }}
                 style={{
                   width: "100%",
                   minHeight: 46,
@@ -2286,11 +3359,25 @@ export default function PaymentDetails() {
         <div style={responsiveActionsStyle}>
           <button
             type="button"
-            disabled={saving || !collectionDateLedgerReady}
+            disabled={saving || manualMinimumBlocked || !refreshReady}
+            aria-disabled={saving || manualMinimumBlocked || !refreshReady}
+            title={
+              manualMinimumBlocked
+                ? "Minimum Collection Amount required"
+                : undefined
+            }
             onClick={() => void handleSaveCollection(false)}
-            style={responsiveSaveButtonStyle}
+            style={{
+              ...responsiveSaveButtonStyle,
+              ...(manualMinimumBlocked
+                ? {
+                    opacity: 1,
+                    cursor: "not-allowed",
+                  }
+                : {}),
+            }}
           >
-            {saving ? "SAVING..." : "SAVE COLLECTION"}
+            {saving ? "SAVING..." : !refreshReady ? "REFRESHING..." : "SAVE COLLECTION"}
           </button>
         </div>
       </div>

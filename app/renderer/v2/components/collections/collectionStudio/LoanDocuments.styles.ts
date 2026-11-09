@@ -159,7 +159,7 @@ export const loanDocumentsStyles: Record<string, CSSProperties> = {
 
     marginTop: "7px",
 
-    color: THEME.brand,
+    color: THEME.textPrimary,
 
     strokeWidth: 2,
   },

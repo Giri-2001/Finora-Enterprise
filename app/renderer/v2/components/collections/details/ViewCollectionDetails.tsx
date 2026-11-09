@@ -126,12 +126,12 @@ function getCollectionType(collection: CollectionReviewData): string {
     return "EMI Collection";
   }
 
-  if (collection.collectionType === "manual") {
-    return "Manual Collection";
-  }
-
   if (collection.selectedEmiNumbers?.length) {
     return "EMI Collection";
+  }
+
+  if (collection.collectionType === "manual") {
+    return "Manual Collection";
   }
 
   return "Manual Collection";

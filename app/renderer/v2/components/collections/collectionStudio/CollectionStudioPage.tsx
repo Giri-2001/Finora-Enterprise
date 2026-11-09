@@ -550,6 +550,16 @@ function buildReviewData(
 // ============================================================
 
 export default function CollectionStudioPage() {
+  // PAISARULE_C129_R10_PAGE_REFRESH_STATE
+  const [collectionRefresh, setCollectionRefresh] = useState({
+    key: "",
+    ready: false,
+  });
+
+  // PAISARULE_C129_R25_BRAND_WORKSPACE_STATE
+  const [brandWorkspaceReady, setBrandWorkspaceReady] = useState(true);
+  const brandRefreshRunningRef = useRef(false);
+  const brandPreserveNextSyncRef = useRef(false);
   // ==========================================================
   // ERP BUSINESS DATE
   // ==========================================================
@@ -787,7 +797,16 @@ export default function CollectionStudioPage() {
 
     async function loadCollectionWorkspace(
       preserveSelection = false,
+      brandRefresh = false,
     ): Promise<void> {
+      if (brandRefresh) {
+        setBrandWorkspaceReady(false);
+        setCollectionRefresh((previous) => ({
+          ...previous,
+          ready: false,
+        }));
+      }
+
       if (!preserveSelection) {
         setLoading(true);
       }
@@ -944,6 +963,32 @@ export default function CollectionStudioPage() {
           return;
         }
 
+        // PAISARULE_C129_R25_VALIDATE_BRAND_SELECTION
+        // Never discard an unsaved draft if the selected
+        // customer or loan disappears from authoritative data.
+        if (brandRefresh) {
+          const selectedCustomerForBrand = eligibleCustomers.find(
+            (customer) =>
+              customer.id === selectedCustomerIdRef.current,
+          );
+
+          const selectedLoanForBrand =
+            selectedCustomerForBrand?.loans.find(
+              (loan) => loan.id === selectedLoanIdRef.current,
+            );
+
+          if (
+            !selectedCustomerForBrand ||
+            !selectedLoanForBrand
+          ) {
+            throw new Error(
+              "Selected customer or loan unavailable during brand refresh.",
+            );
+          }
+
+          brandPreserveNextSyncRef.current = true;
+        }
+
         setActiveGoldCustodyByLoanId(activeGoldCustodyMap);
 
         setCollectionCustomers(eligibleCustomers);
@@ -1017,15 +1062,17 @@ export default function CollectionStudioPage() {
         console.error("FINORA COLLECTION CUSTOMER/LOAN LOAD ERROR:", error);
 
         if (!cancelled) {
-          setCollectionCustomers([]);
-
-          setActiveGoldCustodyByLoanId({});
-
-          setSelectedCustomerId("");
-
-          setSelectedLoanId("");
-
-          setReviewData(createEmptyReviewData(activeBusinessDate));
+          if (brandRefresh) {
+            // Fail closed. Keep the existing unsaved draft.
+            brandPreserveNextSyncRef.current = false;
+            setBrandWorkspaceReady(false);
+          } else {
+            setCollectionCustomers([]);
+            setActiveGoldCustodyByLoanId({});
+            setSelectedCustomerId("");
+            setSelectedLoanId("");
+            setReviewData(createEmptyReviewData(activeBusinessDate));
+          }
         }
       } finally {
         if (!cancelled) {
@@ -1056,12 +1103,35 @@ export default function CollectionStudioPage() {
       handleCollectionUpdated,
     );
 
+    // PAISARULE_C129_R25_BRAND_WORKSPACE_LISTENER
+    function handleBrandWorkspaceRefresh(): void {
+      if (brandRefreshRunningRef.current) {
+        return;
+      }
+
+      brandRefreshRunningRef.current = true;
+
+      void loadCollectionWorkspace(true, true).finally(() => {
+        brandRefreshRunningRef.current = false;
+      });
+    }
+
+    window.addEventListener(
+      "PAISARULE_COLLECTION_BRAND_REFRESH",
+      handleBrandWorkspaceRefresh,
+    );
+
     return () => {
       cancelled = true;
 
       window.removeEventListener(
         "FINORA_COLLECTION_UPDATED",
         handleCollectionUpdated,
+      );
+
+      window.removeEventListener(
+        "PAISARULE_COLLECTION_BRAND_REFRESH",
+        handleBrandWorkspaceRefresh,
       );
     };
   }, []);
@@ -1148,13 +1218,51 @@ export default function CollectionStudioPage() {
       return;
     }
 
-    setReviewData(
-      buildReviewData(
+    // PAISARULE_C129_R25_DRAFT_PRESERVING_SYNC
+    setReviewData((previous) => {
+      const authoritative = buildReviewData(
         selectedCustomer,
         selectedLoan,
         activeBusinessDate,
-      ),
-    );
+      );
+
+      if (
+        brandPreserveNextSyncRef.current &&
+        previous.customerId === authoritative.customerId &&
+        previous.loanId === authoritative.loanId
+      ) {
+        brandPreserveNextSyncRef.current = false;
+
+        return {
+          ...authoritative,
+          ...previous,
+
+          // Authoritative identity and loan values win.
+          customerId: authoritative.customerId,
+          customerName: authoritative.customerName,
+          customerPhone: authoritative.customerPhone,
+          loanId: authoritative.loanId,
+          loanNumber: authoritative.loanNumber,
+          loanAmount: authoritative.loanAmount,
+          outstandingBalance: authoritative.outstandingBalance,
+          loanInterestRate: authoritative.loanInterestRate,
+          loanDate: authoritative.loanDate,
+          todayDue: authoritative.todayDue,
+          previousDue: authoritative.previousDue,
+
+          // Date, payment mode, amount, reference,
+          // remarks and unsaved transaction fields
+          // remain in the previous draft.
+        };
+      }
+
+      brandPreserveNextSyncRef.current = false;
+      return authoritative;
+    });
+
+    // Brand workspace is ready after the updated loan
+    // and preserved draft have been synchronized.
+    setBrandWorkspaceReady(true);
   }, [
     activeBusinessDate,
     selectedCustomer,
@@ -1415,6 +1523,17 @@ export default function CollectionStudioPage() {
   // ==========================================================
   // RENDER
   // ==========================================================
+
+  const currentCollectionRefreshKey =
+    String(reviewData.loanId ?? "") +
+    "|" +
+    String(reviewData.receiptDate ?? "");
+
+  const collectionRefreshReady =
+    brandWorkspaceReady &&
+    Boolean(reviewData.loanId) &&
+    collectionRefresh.key === currentCollectionRefreshKey &&
+    collectionRefresh.ready;
 
   return (
     <CollectionContext.Provider
@@ -1876,7 +1995,16 @@ export default function CollectionStudioPage() {
             ================================================== */}
 
             <div style={responsivePaymentDetailsSectionStyle}>
-              <CollectionEntry middleSlot={<CollectionSystemGenerated />} />
+              <CollectionEntry
+                middleSlot={<CollectionSystemGenerated />}
+                onRefreshReadyChange={(key, ready) => {
+                  setCollectionRefresh((previous) =>
+                    previous.key === key && previous.ready === ready
+                      ? previous
+                      : { key, ready }
+                  );
+                }}
+              />
             </div>
 
             {/* ==================================================
@@ -1884,7 +2012,7 @@ export default function CollectionStudioPage() {
             ================================================== */}
 
             <section style={responsivePaymentDetailsSectionStyle}>
-              <PaymentDetails />
+              <PaymentDetails refreshReady={collectionRefreshReady} />
             </section>
           </section>
 

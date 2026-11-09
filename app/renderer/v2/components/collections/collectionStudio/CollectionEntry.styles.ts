@@ -277,7 +277,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
     marginTop: "9px",
 
-    color: THEME.brand,
+    color: THEME.textPrimary,
 
     strokeWidth: 2,
   },
@@ -401,7 +401,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
     background: THEME.surfaceSoft,
 
-    color: THEME.textMuted,
+    color: THEME.textPrimary,
 
     fontFamily: INTER_FONT,
 
@@ -422,7 +422,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
 
     background: THEME.brandSoft,
 
-    color: THEME.brand,
+    color: THEME.textPrimary,
 
     boxShadow: `0 2px 8px ${THEME.shadow}`,
   },
@@ -727,7 +727,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
   emiDropdownArrow: {
     flexShrink: 0,
 
-    color: THEME.brand,
+    color: THEME.textPrimary,
 
     fontFamily: INTER_FONT,
 
@@ -819,7 +819,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
   },
 
   scheduleCount: {
-    color: THEME.textMuted,
+    color: THEME.textPrimary,
 
     fontFamily: INTER_FONT,
 
@@ -1491,7 +1491,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
   },
 
   manualFieldLabel: {
-    color: THEME.textSecondary,
+    color: THEME.textPrimary,
 
     fontFamily: INTER_FONT,
 
@@ -1724,7 +1724,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
   },
 
   compactValueLabel: {
-    color: THEME.textMuted,
+    color: THEME.textPrimary,
 
     fontFamily: INTER_FONT,
 
@@ -1754,7 +1754,7 @@ export const collectionEntryStyles: Record<string, CSSProperties> = {
   },
 
   compactValueHint: {
-    color: THEME.textMuted,
+    color: THEME.textPrimary,
 
     fontFamily: INTER_FONT,
 

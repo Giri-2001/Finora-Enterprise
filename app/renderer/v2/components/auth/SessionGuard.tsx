@@ -97,7 +97,6 @@ export default function SessionGuard({
   // ==========================================================
 
   useEffect(() => {
-    console.warn("[PAISARULE A16 GUARD MOUNT]");
     const activityEvents = [
       // FINORA_R195_C3_R1_ACTIVITY
       "click",
@@ -587,7 +586,6 @@ export default function SessionGuard({
     // --------------------------------------------------------
 
     return () => {
-      console.warn("[PAISARULE A16 GUARD UNMOUNT]");
       activityEvents.forEach(
         (event) => {
           window.removeEventListener(

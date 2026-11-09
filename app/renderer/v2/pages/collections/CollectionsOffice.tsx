@@ -986,28 +986,19 @@ const [receiptWorkspaceOpen, setReceiptWorkspaceOpen] = useState(() =>
           style={{
             ...responsivePageStyle,
             display: "grid",
-            gap: 18,
+            gap: 14,
             alignContent: "start",
+            paddingTop: 20,
           }}
         >
           <header className="finora-receipts-heading">
             <div>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  opacity: 0.7,
-                  letterSpacing: 1.1,
-                }}
-              >
-                PAISARULE COLLECTIONS
-              </div>
 
               <h1
                 style={{
                   ...pageTitleStyle,
                   fontSize: 24,
-                  margin: "7px 0",
+                  margin: "0 0 4px",
                 }}
               >
                 Share Receipts
@@ -1208,11 +1199,55 @@ const [receiptWorkspaceOpen, setReceiptWorkspaceOpen] = useState(() =>
                 fontSize: 12,
                 color: "var(--finora-theme-text-secondary)",
               }}>
-                Newest firs
+                Newest first
               </span>
             </div>
 
-            <div className="finora-receipts-list">
+                        {/* PAISARULE_C137_R74_COLLECTION_CARD_GRID */}
+            <style>{`
+              .finora-receipts-page .finora-receipts-list {
+                display: grid !important;
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+                align-items: stretch;
+                gap: 14px !important;
+                min-width: 0;
+              }
+              .finora-receipts-page .finora-receipts-list > * {
+                min-width: 0;
+                max-width: 100%;
+                box-sizing: border-box;
+              }
+              .finora-receipts-page .finora-receipts-list > :not(.finora-receipts-empty) {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 10px;
+                height: 100%;
+                overflow-wrap: anywhere;
+              }
+              .finora-receipts-page .finora-receipts-list .finora-receipts-empty {
+                grid-column: 1 / -1;
+              }
+              .finora-receipts-page .finora-receipts-list span,
+              .finora-receipts-page .finora-receipts-list p,
+              .finora-receipts-page .finora-receipts-list button {
+                font-weight: 500;
+              }
+              .finora-receipts-page .finora-receipts-list strong {
+                font-weight: 700;
+              }
+              @media (max-width: 1100px) {
+                .finora-receipts-page .finora-receipts-list {
+                  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                }
+              }
+              @media (max-width: 600px) {
+                .finora-receipts-page .finora-receipts-list {
+                  grid-template-columns: minmax(0, 1fr) !important;
+                }
+              }
+            `}</style>
+<div className="finora-receipts-list">
               {filteredReceipts.length === 0 ? (
                 <div className="finora-receipts-empty">
                   <strong>No Receipts Found</strong>
@@ -1657,7 +1692,11 @@ return;
                       key={receiptKey}
                     >
                       <div className="finora-receipts-info">
-                        <strong>
+                        <strong
+                          style={{
+                            fontSize: "calc(1em + 2px)",
+                          }}
+                        >
                           {receipt.customerName || "Customer"}
                         </strong>
 
@@ -1665,8 +1704,20 @@ return;
                           {displayPaisaruleReceiptIdentityB08(receipt.receiptNumber || "--")}
                         </span>
 
-                        <small>
-                          {String(receipt.receiptDate || "--").slice(0, 10)}
+
+                        <small
+                          style={{
+                            fontSize: "1em",
+                            fontWeight: 500,
+                          }}
+                        >
+                          {
+                            String(receipt.receiptDate || "--")
+                              .slice(0, 10)
+                              .split("-")
+                              .reverse()
+                              .join("-")
+                          }
                           {" · "}
                           {receipt.paymentMethod || "--"}
                         </small>
@@ -1788,6 +1839,7 @@ return;
                 display: "block",
                 marginTop: 4,
                 fontSize: 11,
+                fontFamily: "Segoe UI, Arial, sans-serif",
                 color: "#64748B",
                 overflowWrap: "anywhere",
               }}
@@ -1902,7 +1954,7 @@ return;
 
             .finora-receipts-panel {
               min-width: 0;
-              padding: 19px;
+              padding: 18px;
               border-radius: 17px;
               background: rgba(125,135,155,0.045);
               border: 1px solid rgba(135,145,160,0.32);
@@ -2240,13 +2292,11 @@ return;
                   : typeof createButtonStyle.background === "string"
                     ? createButtonStyle.background
                     : "currentColor"),
-              borderWidth: 1,
-              borderStyle: "solid",
-              borderColor: finoraR203Vivid ? "var(--finora-theme-border-strong)" : (typeof createButtonStyle.backgroundColor === "string"
+              border: `1px solid ${finoraR203Vivid ? "var(--finora-theme-border-strong)" : (typeof createButtonStyle.backgroundColor === "string"
                   ? createButtonStyle.backgroundColor
                   : typeof createButtonStyle.background === "string"
                     ? createButtonStyle.background
-                    : "currentColor"),
+                    : "currentColor")}`,
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
@@ -2640,7 +2690,7 @@ return;
               <div style={emptyTitleStyle}>Loading Collections...</div>
 
               <div style={emptyDescriptionStyle}>
-                Reading collection records from FINORA storage.
+                Reading collection records from PAISARULE storage.
               </div>
             </div>
           ) : filteredCollections.length === 0 ? (
@@ -3114,17 +3164,58 @@ async function finoraR161CreateReceiptImage(
         row !== undefined,
     );
 
-  const unpaidRows = installments.filter(
-    (row) => {
-      const remaining =
-        row.amount - row.paidAmount - row.waivedAmount;
+  // PAISARULE_C126_R94_PENALTY_ONLY_NEXT_EMI
+  // Select the first row with unpaid contractual EMI OR an
+  // outstanding assessed overdue fee. Never double-count paid fee.
+  const unpaidRows = installments.filter((row) => {
+    const emiRemaining = Math.max(
+      0,
+      row.amount - row.paidAmount - row.waivedAmount,
+    );
 
-      return (
-        !paidStatuses.has(row.status.toLowerCase()) &&
-        remaining > 0.005
-      );
-    },
-  );
+    const assessed = Number(row.penaltyAmount);
+    const paid = row.penaltyPaidAmount;
+    const waived = row.penaltyWaivedAmount;
+
+    const evidenceVerified =
+      Number.isFinite(assessed) &&
+      assessed >= 0 &&
+      typeof paid === "number" &&
+      typeof waived === "number" &&
+      Number.isFinite(paid) &&
+      Number.isFinite(waived) &&
+      paid >= 0 &&
+      waived >= 0 &&
+      paid + waived <= assessed + 0.005;
+
+    const feeRemaining =
+      evidenceVerified
+        ? Math.max(0, assessed - paid - waived)
+        : 0;
+
+    const feeUnverified =
+      assessed > 0 && !evidenceVerified;
+
+    const paidOnReceiptDate =
+      String(receipt.receiptDate ?? "").slice(0, 10);
+
+    const overdueForReceipt =
+      paidOnReceiptDate.length === 10 &&
+      row.dueDate.slice(0, 10) < paidOnReceiptDate;
+
+    const pendingEmi =
+      !paidStatuses.has(row.status.toLowerCase()) &&
+      emiRemaining > 0.005;
+
+    // R75: A historically settled EMI must not become
+    // Next EMI because legacy fee evidence is missing.
+    const pendingFee =
+      !paidStatuses.has(row.status.toLowerCase()) &&
+      overdueForReceipt &&
+      (feeRemaining > 0.005 || feeUnverified);
+
+    return pendingEmi || pendingFee;
+  });
 
   const nextEmi = unpaidRows[0];
 
@@ -3215,19 +3306,39 @@ async function finoraR161CreateReceiptImage(
       )
     : 0;
 
-  const nextEmiSchedulePenalty =
-    nextEmiOverdue && nextEmi &&
-    Number.isFinite(nextEmi.penaltyAmount)
-      ? Math.max(0, nextEmi.penaltyAmount)
-      : 0;
+  // PAISARULE_C126_R93_RECEIPT_VERIFIED_REMAINING_FEE
+  // Never report the entire assessed fee as still payable
+  // after part or all of it has already been collected.
+  const nextEmiPenaltyEvidenceVerified =
+    Boolean(nextEmi) &&
+    typeof nextEmi?.penaltyPaidAmount === "number" &&
+    typeof nextEmi?.penaltyWaivedAmount === "number" &&
+    Number.isFinite(nextEmi.penaltyPaidAmount) &&
+    Number.isFinite(nextEmi.penaltyWaivedAmount) &&
+    nextEmi.penaltyPaidAmount >= 0 &&
+    nextEmi.penaltyWaivedAmount >= 0 &&
+    nextEmi.penaltyPaidAmount +
+      nextEmi.penaltyWaivedAmount <=
+      nextEmi.penaltyAmount + 0.005;
 
+  const nextEmiSchedulePenalty =
+    nextEmiOverdue && nextEmi && nextEmiPenaltyEvidenceVerified
+      ? Math.max(
+          0,
+          nextEmi.penaltyAmount -
+            (nextEmi.penaltyPaidAmount ?? 0) -
+            (nextEmi.penaltyWaivedAmount ?? 0),
+        )
+      : 0;
   const nextEmiValue = nextEmi
     ? money(nextEmiBalance) +
         (nextEmiSchedulePenalty > 0
-          ? " + Fee " + money(nextEmiSchedulePenalty) +
-            " (verify fee due)"
-          : nextEmiOverdue
-            ? " · late fee check"
+          ? " + Fee " + money(nextEmiSchedulePenalty)
+          : nextEmiOverdue &&
+              nextEmi &&
+              nextEmi.penaltyAmount > 0 &&
+              !nextEmiPenaltyEvidenceVerified
+            ? " · Fee balance unverified"
             : "") +
         (nextEmi.dueDate
           ? " · " + formatReceiptDateOnly(nextEmi.dueDate)
@@ -3297,7 +3408,7 @@ async function finoraR161CreateReceiptImage(
   drawText("P A I S A R U L E", 450, 72, 820, "center");
 
   ctx.fillStyle = "#ffffff";
-  ctx.font = "23px Arial, sans-serif";
+  ctx.font = '500 23px "Segoe UI", Arial, sans-serif';
   drawText(
     "OFFICIAL PAYMENT RECEIPT",
     450,
@@ -3372,11 +3483,11 @@ async function finoraR161CreateReceiptImage(
   const balancePanelTop =
     detailsStartY +
     details.length * detailsRowHeight +
-    28;
+    -12;
 
   // Balance and penalty information
   ctx.fillStyle = "#f3f6fa";
-  ctx.fillRect(34, balancePanelTop, 832, 118);
+  ctx.fillRect(34, balancePanelTop, 832, 160);
 
   ctx.fillStyle = "#667085";
   ctx.font = "26px Arial, sans-serif";
@@ -3416,8 +3527,28 @@ async function finoraR161CreateReceiptImage(
     "right",
   );
 
+  // PAISARULE_C137_R77_RECEIPT_DISCOUNT
+  // Discount is a waiver, never received cash.
+  ctx.fillStyle = "#667085";
+  ctx.font = "26px Arial, sans-serif";
+  drawText(
+    "Discount Applied",
+    52,
+    balancePanelTop + 135,
+    315,
+  );
+
+  ctx.fillStyle = "#11243d";
+  ctx.font = "bold 27px Arial, sans-serif";
+  drawText(
+    money(Number(receipt.discountAmount ?? 0)),
+    850,
+    balancePanelTop + 135,
+    290,
+    "right",
+  );
   // EMI summary
-  const summaryHeadingY = balancePanelTop + 170;
+  const summaryHeadingY = balancePanelTop + 212;
 
   ctx.fillStyle = "#11243d";
   ctx.font = "bold 31px Arial, sans-serif";
@@ -3470,10 +3601,10 @@ async function finoraR161CreateReceiptImage(
   const footerInfoY =
     tableTop +
     summaryRows.length * rowHeight +
-    54;
+    48;
 
   ctx.fillStyle = "#667085";
-  ctx.font = "20px Arial, sans-serif";
+  ctx.font = "24px Arial, sans-serif";
   drawText(
     snapshot?.scheduleAvailable
       ? "EMI details captured at payment time"
@@ -3485,7 +3616,7 @@ async function finoraR161CreateReceiptImage(
   );
 
   ctx.fillStyle = "#B8860B";
-  ctx.font = "bold 24px Arial, sans-serif";
+  ctx.font = "bold 28px Arial, sans-serif";
   drawText(
     "Thank you for your payment",
     450,

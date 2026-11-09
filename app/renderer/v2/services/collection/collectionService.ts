@@ -1,4 +1,4 @@
-﻿﻿// ============================================================
+﻿// ============================================================
 // FINORA ENTERPRISE OS™
 //
 // COLLECTIONS ENGINE™
@@ -238,7 +238,11 @@ function buildPersistedCollection(
   return {
     ...collection,
 
-    selectedEmiNumbers:
+        // PAISARULE_C126_R92_PRESERVE_RECEIVED_LATE_FEE
+    // Preserve the validated transaction's recorded penalty after
+    // CollectionBuilder normalization. Do not recalculate or invent fees.
+    penaltyAmount: reviewData.penaltyAmount,
+selectedEmiNumbers:
       normalizedReviewData.selectedEmiNumbers,
 
     selectedEmiAmount:

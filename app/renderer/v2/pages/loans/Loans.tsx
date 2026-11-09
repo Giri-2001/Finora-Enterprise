@@ -2865,7 +2865,7 @@ ctx.fillStyle = "#667085";
           style={{
             color: receiptTextColor,
             display: "grid",
-            gap: 16,
+            gap: 14,
             alignContent: "start",
           }}
         >
@@ -2912,7 +2912,7 @@ ctx.fillStyle = "#667085";
               minWidth: 0,
             }}
           >
-            <h2 style={{ fontSize: 19, fontWeight: 700 }}>
+            <h2 style={{ margin: 0, fontSize: 19, fontWeight: 700 }}>
               Loan Receipt Library
             </h2>
 
@@ -3180,7 +3180,55 @@ ctx.fillStyle = "#667085";
               {records.length} matching loans
             </p>
 
-            <div style={{ display: "grid", gap: 12 }}>
+                        {/* PAISARULE_C137_R74_LOAN_CARD_GRID */}
+            <style>{`
+              .finora-r173-receipt .paisarule-r74-loan-grid {
+                display: grid !important;
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+                align-items: stretch;
+                gap: 14px !important;
+                min-width: 0;
+              }
+              .finora-r173-receipt .paisarule-r74-loan-grid > article {
+                min-width: 0;
+                max-width: 100%;
+                box-sizing: border-box;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
+                justify-content: flex-start !important;
+                gap: 12px;
+                height: 100%;
+                overflow-wrap: anywhere;
+              }
+              .finora-r173-receipt .paisarule-r74-loan-grid span,
+              .finora-r173-receipt .paisarule-r74-loan-grid p,
+              .finora-r173-receipt .paisarule-r74-loan-grid button {
+                font-weight: 500;
+              }
+              .finora-r173-receipt .paisarule-r74-loan-grid strong {
+                font-weight: 700;
+              }
+              .finora-r173-receipt .paisarule-r74-loan-grid > article > strong {
+                font-weight: 800;
+              }
+              .finora-r173-receipt .paisarule-r74-loan-grid .finora-r185-actions {
+                margin-top: auto !important;
+                width: 100%;
+                min-width: 0;
+              }
+              @media (max-width: 1100px) {
+                .finora-r173-receipt .paisarule-r74-loan-grid {
+                  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                }
+              }
+              @media (max-width: 600px) {
+                .finora-r173-receipt .paisarule-r74-loan-grid {
+                  grid-template-columns: minmax(0, 1fr) !important;
+                }
+              }
+            `}</style>
+<div className="paisarule-r74-loan-grid" style={{ display: "grid", gap: 12 }}>
               {records.length === 0 ? (
                 <p>No matching loans found.</p>
               ) : (
@@ -3461,7 +3509,7 @@ ctx.fillStyle = "#667085";
               width: 100% !important;
               max-width: 1760px;
               margin: 0 auto !important;
-              padding: clamp(18px, 2vw, 32px) !important;
+              padding: 20px clamp(18px, 2vw, 32px) clamp(18px, 2vw, 32px) !important;
             }
 
             .finora-r173-receipt > header {
@@ -3470,30 +3518,30 @@ ctx.fillStyle = "#667085";
               justify-content: space-between;
               flex-wrap: wrap;
               gap: 16px;
-              margin: 0 0 22px !important;
+              margin: 0 !important;
               padding: 0 !important;
             }
 
             .finora-r173-receipt > header h1 {
               margin-top: 0 !important;
-              margin-bottom: 5px !important;
+              margin-bottom: 4px !important;
             }
 
             .finora-r173-receipt > section {
               box-sizing: border-box !important;
               width: 100%;
               min-width: 0;
-              padding: clamp(18px, 1.6vw, 28px) !important;
+              padding: 18px !important;
               border-radius: 18px !important;
               box-shadow: 0 5px 22px rgba(0,0,0,.055);
             }
 
             .finora-r173-receipt > section article {
               box-sizing: border-box !important;
-              padding: clamp(16px, 1.5vw, 24px) !important;
+              padding: 18px !important;
               border-radius: 14px !important;
-              margin-top: 8px;
-              margin-bottom: 8px;
+              margin-top: 6px;
+              margin-bottom: 6px;
             }
 
             .finora-r173-receipt button {

@@ -1051,6 +1051,241 @@ public final class FinoraUsbStorage {
     }
 
     // ========================================================
+    // PAISARULE_C126_R127_ATOMIC_STORAGE
+    // ========================================================
+    // Internal only. Financial validation and authenticated
+    // scope must be completed before exposing this operation
+    // through a Capacitor PluginMethod.
+    //
+    // No renderer/API route calls this method in R127.
+    // ========================================================
+
+    private synchronized JSONObject commitVerifiedCollectionPackage(
+        JSONObject expectedLoanData,
+        JSONObject loanInput,
+        JSONObject collectionInput,
+        JSONObject options
+    ) {
+        if (
+            expectedLoanData == null ||
+            loanInput == null ||
+            collectionInput == null ||
+            options == null
+        ) {
+            return failure("ATOMIC_SETTLEMENT_INVALID_REQUEST");
+        }
+
+        String ownerId = getStringValue(options, "ownerId");
+        String businessId = getStringValue(options, "businessId");
+        String branchId = getStringValue(options, "branchId");
+        String demoId = getOptionalString(options, "demoId");
+
+        if (
+            ownerId == null || ownerId.length() == 0 ||
+            businessId == null || businessId.length() == 0 ||
+            branchId == null || branchId.length() == 0
+        ) {
+            return failure("ATOMIC_SETTLEMENT_SCOPE_REQUIRED");
+        }
+
+        if (
+            !"LOAN".equals(getStringValue(loanInput, "entity")) ||
+            !"COLLECTION".equals(
+                getStringValue(collectionInput, "entity")
+            )
+        ) {
+            return failure("ATOMIC_SETTLEMENT_ENTITY_INVALID");
+        }
+
+        String loanId = getStringValue(loanInput, "id");
+        String collectionId = getStringValue(collectionInput, "id");
+
+        if (
+            loanId == null || loanId.length() == 0 ||
+            collectionId == null || collectionId.length() == 0
+        ) {
+            return failure("ATOMIC_SETTLEMENT_ID_REQUIRED");
+        }
+
+        JSONObject nextLoanData = loanInput.optJSONObject("data");
+        JSONObject collectionData =
+            collectionInput.optJSONObject("data");
+
+        if (nextLoanData == null || collectionData == null) {
+            return failure("ATOMIC_SETTLEMENT_DATA_INVALID");
+        }
+
+        if (
+            !loanId.equals(getStringValue(expectedLoanData, "id")) ||
+            !loanId.equals(getStringValue(nextLoanData, "id")) ||
+            !loanId.equals(getStringValue(collectionData, "loanId"))
+        ) {
+            return failure("ATOMIC_SETTLEMENT_LOAN_ID_MISMATCH");
+        }
+
+        for (JSONObject data : new JSONObject[] {
+            expectedLoanData, nextLoanData, collectionData
+        }) {
+            if (
+                !ownerId.equals(getStringValue(data, "ownerId")) ||
+                !businessId.equals(getStringValue(data, "businessId")) ||
+                !branchId.equals(getStringValue(data, "branchId"))
+            ) {
+                return failure("ATOMIC_SETTLEMENT_SCOPE_MISMATCH");
+            }
+        }
+
+        UsbTarget target = resolveConfiguredTarget();
+
+        if (!target.isReady()) {
+            return failure(statusFailureMessage(target));
+        }
+
+        try {
+            JSONObject storagePackage = readStoragePackage(target);
+            JSONArray records = storagePackage.getJSONArray("records");
+
+            int loanIndex = -1;
+            JSONObject existingLoan = null;
+            JSONObject existingCollection = null;
+            int collectionMatches = 0;
+
+            for (int i = 0; i < records.length(); i++) {
+                JSONObject record = records.optJSONObject(i);
+
+                if (record == null) {
+                    return failure("ATOMIC_SETTLEMENT_STORAGE_INVALID");
+                }
+
+                boolean matchingScope =
+                    ownerId.equals(getOptionalString(record, "ownerId")) &&
+                    businessId.equals(getOptionalString(record, "businessId")) &&
+                    branchId.equals(getOptionalString(record, "branchId")) &&
+                    nullableEquals(
+                        demoId, getOptionalString(record, "demoId")
+                    );
+
+                if (
+                    loanId.equals(getOptionalString(record, "id")) &&
+                    "LOAN".equals(getOptionalString(record, "entity")) &&
+                    matchingScope
+                ) {
+                    if (existingLoan != null) {
+                        return failure("ATOMIC_SETTLEMENT_DUPLICATE_LOAN");
+                    }
+                    loanIndex = i;
+                    existingLoan = record;
+                }
+
+                if (
+                    collectionId.equals(getOptionalString(record, "id")) &&
+                    "COLLECTION".equals(
+                        getOptionalString(record, "entity")
+                    ) &&
+                    matchingScope
+                ) {
+                    existingCollection = record;
+                    collectionMatches++;
+                }
+            }
+
+            if (existingLoan == null || loanIndex < 0) {
+                return failure("ATOMIC_SETTLEMENT_LOAN_NOT_FOUND");
+            }
+
+            if (collectionMatches > 1) {
+                return failure("ATOMIC_SETTLEMENT_DUPLICATE_COLLECTION");
+            }
+
+            if (existingCollection != null) {
+                if (
+                    finoraUsageReadBackEqual(
+                        existingLoan.opt("data"), nextLoanData
+                    ) &&
+                    finoraUsageReadBackEqual(
+                        existingCollection.opt("data"), collectionData
+                    )
+                ) {
+                    JSONObject replay = new JSONObject();
+                    replay.put("committed", true);
+                    replay.put("alreadyCommitted", true);
+                    return success(replay);
+                }
+
+                return failure(
+                    "ATOMIC_SETTLEMENT_EXISTING_COLLECTION_CONFLICT"
+                );
+            }
+
+            if (!finoraUsageReadBackEqual(
+                existingLoan.opt("data"), expectedLoanData
+            )) {
+                return failure(
+                    "LOAN_STATE_CHANGED_RETRY_REQUIRES_REVIEW"
+                );
+            }
+
+            JSONObject updatedLoan =
+                new JSONObject(existingLoan.toString());
+
+            updatedLoan.put("data", new JSONObject(nextLoanData.toString()));
+            updatedLoan.put("updatedAt", nowIso());
+
+            JSONObject newCollection = new JSONObject();
+            newCollection.put("id", collectionId);
+            newCollection.put("entity", "COLLECTION");
+            newCollection.put(
+                "data", new JSONObject(collectionData.toString())
+            );
+            newCollection.put("ownerId", ownerId);
+            newCollection.put("businessId", businessId);
+            newCollection.put("branchId", branchId);
+
+            if (demoId != null) {
+                newCollection.put("demoId", demoId);
+            }
+
+            String now = nowIso();
+            newCollection.put("createdAt", now);
+            newCollection.put("updatedAt", now);
+
+            // One package mutation, one package publication.
+            JSONObject nextPackage =
+                new JSONObject(storagePackage.toString());
+
+            JSONArray nextRecords =
+                nextPackage.getJSONArray("records");
+
+            nextRecords.put(loanIndex, updatedLoan);
+            nextRecords.put(newCollection);
+
+            writeStoragePackage(target, nextPackage);
+
+            // A write exception/read-back mismatch is an
+            // uncertain financial outcome, never safe retry.
+            JSONObject verifiedPackage = readStoragePackage(target);
+
+            if (!finoraUsageReadBackEqual(
+                nextPackage, verifiedPackage
+            )) {
+                return failure(
+                    "SETTLEMENT_OUTCOME_UNCERTAIN_REVIEW_REQUIRED"
+                );
+            }
+
+            JSONObject committed = new JSONObject();
+            committed.put("committed", true);
+            committed.put("alreadyCommitted", false);
+
+            return success(committed);
+        } catch (Exception error) {
+            return failure(
+                "SETTLEMENT_OUTCOME_UNCERTAIN_REVIEW_REQUIRED"
+            );
+        }
+    }
+
+    // ========================================================
     // CRUD: SAVE
     // ========================================================
 

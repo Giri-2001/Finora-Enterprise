@@ -378,7 +378,15 @@ export default function LoanDocuments({ documents = [] }: LoanDocumentsProps) {
             >
               VIEW ALL
 
-              <span aria-hidden="true" style={loanDocumentsStyles.arrow}>
+              <span aria-hidden="true" style={{
+                  ...loanDocumentsStyles.arrow,
+                  color: "inherit",
+                  opacity: 1,
+                  filter: "none",
+                  fontWeight: 800,
+                  fontSize: 18,
+                  transform: "translateY(-2px)",
+                }}>
                 →
               </span>
             </button>

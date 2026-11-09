@@ -712,6 +712,52 @@ public final class
             );
     }
 
+    @Test
+    public void activityEveryThirtyMinutesKeepsSessionValidForTwentyFiveHours() {
+        Fixture fixture = new Fixture();
+
+        FinoraBranchLoginSessionAuthority.SessionResult issued =
+            fixture.authority.issue(identity());
+
+        assertTrue(issued.success);
+
+        final long halfHourMs = 30L * 60L * 1000L;
+
+        for (int interval = 1; interval <= 50; interval++) {
+            fixture.monotonic.now = interval * halfHourMs;
+
+            FinoraBranchLoginSessionAuthority.TouchResult touched =
+                fixture.authority.touch(issued.data.sessionId);
+
+            assertTrue(
+                "Touch failed at interval " + interval,
+                touched.success
+            );
+        }
+
+        FinoraBranchLoginSessionAuthority.SessionResult active =
+            fixture.authority.validate(issued.data.sessionId);
+
+        assertTrue(active.success);
+        assertEquals(1, fixture.authority.activeSessionCountForTest());
+
+        fixture.monotonic.now =
+            50L * halfHourMs +
+            FinoraBranchLoginSessionAuthority.IDLE_TIMEOUT_MS +
+            1L;
+
+        FinoraBranchLoginSessionAuthority.SessionResult expired =
+            fixture.authority.validate(issued.data.sessionId);
+
+        assertFalse(expired.success);
+        assertEquals(
+            FinoraBranchLoginSessionAuthority.ERROR_SESSION_EXPIRED,
+            expired.errorCode
+        );
+        assertEquals(0, fixture.authority.activeSessionCountForTest());
+    }
+
+
     private static final class Fixture {
 
         final FakeAuthorization authorization =

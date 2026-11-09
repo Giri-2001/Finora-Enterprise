@@ -1148,7 +1148,7 @@ final class FinoraNativeWalletSession {
 
             if (java.time.Duration.between(
                 now, walletExpiresAt
-            ).toMillis() > 600000L) {
+            ).toMillis() > 1500000L) {
                 JSONObject skipped = new JSONObject();
                 try {
                     skipped.put("success", true);

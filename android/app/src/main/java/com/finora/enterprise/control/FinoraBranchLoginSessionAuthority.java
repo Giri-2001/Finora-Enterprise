@@ -34,7 +34,7 @@ public final class FinoraBranchLoginSessionAuthority {
         32;
 
     public static final long IDLE_TIMEOUT_MS =
-        30L * 60L * 1000L;
+        60L * 60L * 1000L;
 
     public static final String ACCESS_MODE_ACTIVE =
         "ACTIVE";

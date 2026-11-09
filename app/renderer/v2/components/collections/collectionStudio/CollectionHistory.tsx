@@ -76,6 +76,7 @@ interface CollectionHistoryRecord {
 
   amount: number;
   overdueAmount: number;
+  discountAmount: number;
 
   remainingBalance: number;
 }
@@ -125,6 +126,7 @@ function mapCollectionToHistoryRecord(
     paymentMethod: string;
     paymentAmount: number;
     penaltyAmount: number;
+    discountAmount?: number;
     outstandingBalance: number;
     createdAt: string;
     updatedAt: string;
@@ -145,6 +147,10 @@ function mapCollectionToHistoryRecord(
       : 0,
 
     overdueAmount: Number(collection.penaltyAmount ?? 0),
+
+    discountAmount: Number.isFinite(collection.discountAmount)
+      ? Number(collection.discountAmount)
+      : 0,
 
     remainingBalance: Number.isFinite(collection.outstandingBalance)
       ? collection.outstandingBalance
@@ -447,6 +453,15 @@ export default function CollectionHistory({ loanId }: CollectionHistoryProps = {
               <th
                 style={{
                   ...collectionHistoryStyles.tableHeader,
+                  ...collectionHistoryStyles.centerHeader,
+                }}
+              >
+                DISCOUNT
+              </th>
+
+              <th
+                style={{
+                  ...collectionHistoryStyles.tableHeader,
                   ...collectionHistoryStyles.amountHeader,
                 }}
               >
@@ -500,6 +515,15 @@ export default function CollectionHistory({ loanId }: CollectionHistoryProps = {
                   }}
                 >
                   {formatCurrency(record.overdueAmount)}
+                </td>
+
+                <td
+                  style={{
+                    ...collectionHistoryStyles.tableCell,
+                    ...collectionHistoryStyles.amountCell,
+                  }}
+                >
+                  {formatCurrency(record.discountAmount)}
                 </td>
                 <td
                   style={{

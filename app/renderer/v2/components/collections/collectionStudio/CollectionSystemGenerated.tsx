@@ -132,6 +132,7 @@ import {
   fetchLoanPrincipalDue,
 } from "../../../services/loan/loanService";
 
+import { loadCollections } from "../../../services/collection/collectionService";
 import { formatCurrency } from "../../../utils/currency/formatCurrency";
 
 // ============================================================
@@ -337,6 +338,8 @@ type PremiumCycleInstallment = {
   paidAmount: number;
   waivedAmount: number;
   penaltyAmount: number;
+  penaltyPaidAmount: number | null;
+  penaltyWaivedAmount: number | null;
   status: string;
 };
 
@@ -418,6 +421,18 @@ function resolvePremiumScheduleMeta(
         paidAmount: safeFinancialNumber(row.paidAmount),
         waivedAmount: safeFinancialNumber(row.waivedAmount),
         penaltyAmount: safeFinancialNumber(row.penaltyAmount),
+        penaltyPaidAmount:
+          typeof row.penaltyPaidAmount === "number" &&
+          Number.isFinite(row.penaltyPaidAmount) &&
+          row.penaltyPaidAmount >= 0
+            ? row.penaltyPaidAmount
+            : null,
+        penaltyWaivedAmount:
+          typeof row.penaltyWaivedAmount === "number" &&
+          Number.isFinite(row.penaltyWaivedAmount) &&
+          row.penaltyWaivedAmount >= 0
+            ? row.penaltyWaivedAmount
+            : null,
         status: String(row.status ?? "Pending").trim().toLowerCase(),
       };
     });
@@ -587,7 +602,7 @@ function calculateCycleCloseAmount(
   businessDateValue: string,
   principalDue: number,
   monthlyInterestRate: number,
-): number | null {
+): { amount: number; penaltyIncluded: number } | null {
   const businessDate = parseCalendarDate(businessDateValue);
   if (!meta || !businessDate || meta.rows.length === 0) {
     return null;
@@ -639,9 +654,72 @@ function calculateCycleCloseAmount(
     scheduledInterest + extendedInterest - interestSettled,
   );
 
-  // Only *missed and not settled* installments incur a new penalty.
-  // A positive persisted penaltyAmount is evidence of an already
-  // recorded penalty, and must not be charged a second time.
+  // PAISARULE_C132_R54_OVERDUE_ACCOUNTING
+  // Assessed penalty is not proof of collected penalty.
+  // Reject incomplete or inconsistent positive-penalty evidence.
+  // PAISARULE_C132_R60_LEGACY_SETTLED
+  // Match the established legacy manual-settlement compatibility.
+  // This is a display-only quote policy, NOT payment evidence
+  // and NOT authorization for Native Atomic Preclose Save.
+  const legacySettledWithoutEvidence = (
+    row: PremiumCycleInstallment,
+  ): boolean => {
+    const status = row.status.trim().toLowerCase();
+
+    return (
+      (
+        status === "paid" ||
+        status === "overdue paid" ||
+        status === "preclosed"
+      ) &&
+      Math.abs(
+        row.paidAmount + row.waivedAmount -
+        row.installmentAmount,
+      ) < 0.000001 &&
+      (
+        row.penaltyPaidAmount === null ||
+        row.penaltyWaivedAmount === null
+      )
+    );
+  };
+
+  const invalidPenaltyEvidence = meta.rows.some((row) => {
+    if (row.penaltyAmount <= 0) return false;
+
+    // Historical fully-settled EMI: do not re-assess
+    // an unproven legacy penalty as a new payable fee.
+    if (legacySettledWithoutEvidence(row)) return false;
+
+    if (
+      row.penaltyPaidAmount === null ||
+      row.penaltyWaivedAmount === null
+    ) {
+      return true;
+    }
+
+    return (
+      row.penaltyPaidAmount + row.penaltyWaivedAmount >
+        row.penaltyAmount + 0.000001
+    );
+  });
+
+  if (invalidPenaltyEvidence) {
+    return null;
+  }
+
+  const recordedUnpaidPenalty = meta.rows.reduce(
+    (sum, row) =>
+      sum + (legacySettledWithoutEvidence(row) ? 0 : Math.max(
+        0,
+        row.penaltyAmount -
+          (row.penaltyPaidAmount ?? 0) -
+          (row.penaltyWaivedAmount ?? 0),
+      )),
+    0,
+  );
+
+  // Only missed installments without a persisted assessment
+  // receive a newly estimated late fee.
   const unpaidPenaltyCount = meta.rows.filter((row) =>
     row.dueDate < businessKey &&
     row.paidAmount + row.waivedAmount < row.installmentAmount &&
@@ -654,9 +732,18 @@ function calculateCycleCloseAmount(
   const estimatedUnpaidPenalty =
     (unpaidPenaltyCount + extendedMissedCycles) * meta.lateFee;
 
-  return roundFinancialValue(
-    principalDue + unpaidInterest + estimatedUnpaidPenalty,
+  // PAISARULE_C137_R53_R1
+  // Display-only breakdown. Never authorize Native settlement.
+  const penaltyIncluded = roundFinancialValue(
+    recordedUnpaidPenalty + estimatedUnpaidPenalty,
   );
+
+  return {
+    amount: roundFinancialValue(
+      principalDue + unpaidInterest + penaltyIncluded,
+    ),
+    penaltyIncluded,
+  };
 }
 
 // ============================================================
@@ -706,6 +793,111 @@ export default function CollectionSystemGenerated() {
   //
   // ==========================================================
 
+  // PAISARULE_C134_R7_R2_TOTAL_PAID
+  // Actual cash from saved Collections for the selected Loan.
+  // Discount and waiver are never added to collected cash.
+  const [totalPaidCash, setTotalPaidCash] =
+    useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let requestSerial = 0;
+
+    const loanId = String(reviewData.loanId ?? "").trim();
+
+    async function refreshTotalPaid(): Promise<void> {
+      const requestId = ++requestSerial;
+
+      setTotalPaidCash(null);
+
+      if (!loanId) {
+        return;
+      }
+
+      try {
+        const collections = await loadCollections();
+
+        if (cancelled || requestId !== requestSerial) {
+          return;
+        }
+
+        if (!Array.isArray(collections)) {
+          setTotalPaidCash(null);
+          return;
+        }
+
+        let cashTotal = 0;
+
+        for (const collection of collections) {
+          if (String(collection.loanId ?? "").trim() !== loanId) {
+            continue;
+          }
+
+          const amount = Number(collection.paymentAmount);
+
+          if (
+            !Number.isFinite(amount) ||
+            amount < 0
+          ) {
+            setTotalPaidCash(null);
+            return;
+          }
+
+          cashTotal += amount;
+        }
+
+        if (
+          !Number.isFinite(cashTotal) ||
+          cashTotal < 0 ||
+          !Number.isSafeInteger(Math.round(cashTotal * 100))
+        ) {
+          setTotalPaidCash(null);
+          return;
+        }
+
+        setTotalPaidCash(cashTotal);
+      } catch (error) {
+        if (!cancelled && requestId === requestSerial) {
+          console.error(
+            "PAISARULE TOTAL PAID LOAD FAILED:",
+            error,
+          );
+          setTotalPaidCash(null);
+        }
+      }
+    }
+
+    void refreshTotalPaid();
+
+    function handleTotalPaidRefresh(): void {
+      void refreshTotalPaid();
+    }
+
+    window.addEventListener(
+      "FINORA_COLLECTION_UPDATED",
+      handleTotalPaidRefresh,
+    );
+
+    window.addEventListener(
+      "FINORA_LOAN_UPDATED",
+      handleTotalPaidRefresh,
+    );
+
+    return () => {
+      cancelled = true;
+      requestSerial += 1;
+
+      window.removeEventListener(
+        "FINORA_COLLECTION_UPDATED",
+        handleTotalPaidRefresh,
+      );
+
+      window.removeEventListener(
+        "FINORA_LOAN_UPDATED",
+        handleTotalPaidRefresh,
+      );
+    };
+  }, [reviewData.loanId]);
   const [
     authoritativePrincipalDue,
     setAuthoritativePrincipalDue,
@@ -1093,6 +1285,68 @@ export default function CollectionSystemGenerated() {
    * balance, so this future portion is the potential concession
    * available for an early close.
    */
+  // PAISARULE_C137_R16_INTEREST_REMAINING
+  // Presentation only: remaining contractual interest.
+  // Principal and penalties are excluded.
+  const interestRemaining: number | null =
+    loanClosed
+      ? 0
+      : contractualInterestCap === null || !premiumScheduleMeta
+        ? null
+        : (() => {
+            const rows = premiumScheduleMeta.rows;
+
+            if (
+              !Number.isFinite(contractualInterestCap) ||
+              contractualInterestCap < 0 ||
+              rows.length === 0
+            ) {
+              return null;
+            }
+
+            let scheduledInterestTotal = 0;
+            let settledInterestTotal = 0;
+
+            for (const row of rows) {
+              const interest = row.interestAmount;
+              const paid = row.paidAmount;
+              const waived = row.waivedAmount;
+
+              if (
+                !Number.isFinite(interest) ||
+                !Number.isFinite(paid) ||
+                !Number.isFinite(waived) ||
+                interest < 0 ||
+                paid < 0 ||
+                waived < 0
+              ) {
+                return null;
+              }
+
+              scheduledInterestTotal += interest;
+
+              settledInterestTotal += Math.min(
+                interest,
+                paid + waived,
+              );
+            }
+
+            // Fail closed on inconsistent contractual schedules.
+            if (
+              Math.abs(
+                scheduledInterestTotal - contractualInterestCap
+              ) > 0.01
+            ) {
+              return null;
+            }
+
+            return roundFinancialValue(
+              Math.max(
+                0,
+                contractualInterestCap - settledInterestTotal,
+              ),
+            );
+          })();
   const unearnedInterestToday =
     loanClosed ||
     contractualInterestCap === null
@@ -1153,27 +1407,12 @@ export default function CollectionSystemGenerated() {
             minimumCloseToday,
             currentOutstanding -
               unearnedInterestToday +
-              overdueInterest,
+              overdueInterest +
+              lateFee,
           ),
         );
 
-  /*
-   * DISCOUNT ELIGIBLE
-   *
-   * Discount may remove only the future / unearned collectible
-   * portion. It must never reduce the authoritative Principal Due
-   * or applicable overdue / penalty amount.
-   */
-  const discountEligible =
-    loanClosed
-      ? 0
-      : roundFinancialValue(
-          Math.max(
-            0,
-            currentOutstanding -
-              closeToday,
-          ),
-        );
+
 
   const projectedElapsedDays =
     loanClosed ||
@@ -1248,7 +1487,96 @@ export default function CollectionSystemGenerated() {
       );
 
   // No fallback to daily accrual when EMI schedule is unavailable.
-  const closeByNextCycle = calculatedCycleClose;
+  const closeByNextCycle =
+    typeof calculatedCycleClose === "object" &&
+    calculatedCycleClose !== null
+      ? calculatedCycleClose.amount
+      : calculatedCycleClose;
+
+  // PAISARULE_C132_R57_QUOTE_REPLAY
+  const [quoteRequestEpoch, setQuoteRequestEpoch] = useState(0);
+
+  useEffect(() => {
+    function handleQuoteRequest(event: Event): void {
+      const detail = (event as CustomEvent<unknown>).detail;
+
+      if (!detail || typeof detail !== "object") {
+        return;
+      }
+
+      const request = detail as Record<string, unknown>;
+      const requestedLoanId = String(request.loanId ?? "").trim();
+      const requestedDate = String(request.receiptDate ?? "").trim();
+
+      if (
+        requestedLoanId &&
+        requestedLoanId === String(reviewData.loanId ?? "").trim() &&
+        requestedDate === String(reviewData.receiptDate ?? "").trim()
+      ) {
+        setQuoteRequestEpoch((previous) => previous + 1);
+      }
+    }
+
+    window.addEventListener(
+      "PAISARULE_PRECLOSE_CYCLE_QUOTE_REQUEST",
+      handleQuoteRequest,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "PAISARULE_PRECLOSE_CYCLE_QUOTE_REQUEST",
+        handleQuoteRequest,
+      );
+    };
+  }, [reviewData.loanId, reviewData.receiptDate]);
+
+  // PAISARULE_C132_R56_PRECLOSE_UI_SIGNAL
+  // Presentation data only. This event never authorizes Save.
+  // Bind the value to its Loan and Collection Date to reject
+  // stale results when the Owner switches transactions.
+  useEffect(() => {
+    const loanId = String(reviewData.loanId ?? "").trim();
+    const receiptDate = String(reviewData.receiptDate ?? "").trim();
+
+    // PAISARULE_C143_R4_IMMEDIATE_PRECLOSE_QUOTE
+    // Preclose uses the amount required to close on the selected
+    // Collection Date. EMI Cycle Closure remains informational.
+    const validAmount =
+      Number.isFinite(closeToday) &&
+      closeToday >= 0 &&
+      Number.isSafeInteger(Math.round(closeToday * 100)) &&
+      Math.abs(
+        closeToday * 100 -
+        Math.round(closeToday * 100),
+      ) < 0.000001;
+
+    const amount =
+      loanId &&
+      /^\d{4}-\d{2}-\d{2}$/.test(receiptDate) &&
+      validAmount
+        ? closeToday
+        : null;
+
+    window.dispatchEvent(
+      new CustomEvent("PAISARULE_PRECLOSE_CYCLE_QUOTE", {
+        detail: {
+          loanId,
+          receiptDate,
+          amount,
+          penaltyIncluded:
+            amount === null
+              ? null
+              : lateFee,
+        },
+      }),
+    );
+  }, [
+    reviewData.loanId,
+    reviewData.receiptDate,
+    closeToday,
+    lateFee,
+    quoteRequestEpoch,
+  ]);
 
   // ==========================================================
   // CURRENCY
@@ -1305,6 +1633,20 @@ export default function CollectionSystemGenerated() {
         </div>
 
         {/* ==================================================
+            INTEREST REMAINING
+        ================================================== */}
+
+        <div style={collectionSystemGeneratedStyles.financialRow}>
+          <span style={collectionSystemGeneratedStyles.financialLabel}>
+            Interest Remaining
+          </span>
+
+          <strong style={collectionSystemGeneratedStyles.financialValue}>
+            {interestRemaining === null ? "--" : currency(interestRemaining)}
+          </strong>
+        </div>
+
+        {/* ==================================================
             ACCRUED INTEREST
         ================================================== */}
 
@@ -1334,30 +1676,16 @@ export default function CollectionSystemGenerated() {
         </div>
 
         {/* ==================================================
-            LATE FEE
+            TOTAL PAID - C134-R7-R2
         ================================================== */}
 
         <div style={collectionSystemGeneratedStyles.financialRow}>
           <span style={collectionSystemGeneratedStyles.financialLabel}>
-            Late Fee / Penalty
+            Total Paid
           </span>
 
           <strong style={collectionSystemGeneratedStyles.financialValue}>
-            {currency(lateFee)}
-          </strong>
-        </div>
-
-        {/* ==================================================
-            CLOSE TODAY
-        ================================================== */}
-
-        <div style={collectionSystemGeneratedStyles.financialRow}>
-          <span style={collectionSystemGeneratedStyles.financialLabel}>
-            Close Today
-          </span>
-
-          <strong style={collectionSystemGeneratedStyles.financialValue}>
-            {currency(closeToday)}
+            {totalPaidCash === null ? "--" : currency(totalPaidCash)}
           </strong>
         </div>
 
@@ -1376,20 +1704,6 @@ export default function CollectionSystemGenerated() {
         </div>
 
         {/* ==================================================
-            DISCOUNT ELIGIBLE
-        ================================================== */}
-
-        <div style={collectionSystemGeneratedStyles.financialRow}>
-          <span style={collectionSystemGeneratedStyles.financialLabel}>
-            Discount Eligible
-          </span>
-
-          <strong style={collectionSystemGeneratedStyles.financialValue}>
-            {currency(discountEligible)}
-          </strong>
-        </div>
-
-        {/* ==================================================
             OVERDUE INTEREST
         ================================================== */}
 
@@ -1400,6 +1714,20 @@ export default function CollectionSystemGenerated() {
 
           <strong style={collectionSystemGeneratedStyles.financialValue}>
             {currency(overdueInterest)}
+          </strong>
+        </div>
+
+        {/* ==================================================
+            LATE FEE
+        ================================================== */}
+
+        <div style={collectionSystemGeneratedStyles.financialRow}>
+          <span style={collectionSystemGeneratedStyles.financialLabel}>
+            Late Fee / Penalty
+          </span>
+
+          <strong style={collectionSystemGeneratedStyles.financialValue}>
+            {currency(lateFee)}
           </strong>
         </div>
       </div>

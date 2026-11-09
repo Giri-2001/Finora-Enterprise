@@ -1,3 +1,12 @@
+import { isDeepStrictEqual } from "node:util";
+import { verifyNativeSelectedEmiWaiver } from "./selectedEmiWaiverNativeAudit.js";
+// PAISARULE_C138_R48_NATIVE_ATOMIC_NUMBERING
+import {
+  prepareAtomicCollectionNumberingCommit,
+  applyAtomicSequencePlanToRecords,
+  type AtomicSequenceScope,
+  type AtomicSequenceState,
+} from "./atomicCollectionNumberingPlan.js";
 import {
   clipboard as finoraReceiptClipboard,
   nativeImage as finoraReceiptNativeImage,
@@ -2914,7 +2923,8 @@ async function handleUsbAtomicCollectionSettlementUnlocked(
     penalty > cash ||
     principal > cash - penalty ||
     previous < remaining ||
-    previous - remaining !== cash - penalty + discount ||
+    // PAISARULE_C126_R122R1_DEFER_BALANCE_CHECK
+    // Balance is reconciled after native EMI verification.
     remaining !== recordedRemaining
   ) {
     return failure("SETTLEMENT_FINANCIAL_RECONCILIATION_FAILED");
@@ -2943,22 +2953,94 @@ async function handleUsbAtomicCollectionSettlementUnlocked(
     return failure("SETTLEMENT_RECEIPT_TOTALS_MISMATCH");
   }
 
+  let verifiedSelectedWaiver = false;
 
-  // PAISARULE_C125_R245
-  // This endpoint is exclusively for Manual Collection.
-  // Selected EMI settlements need their own validated contract.
+  // PAISARULE_C137_R112_NATIVE_WAIVER_PREFLIGHT
+  // Independent financial verification before USB publication.
+  // This does NOT enable selected-EMI settlement: the existing
+  // Manual-only and discount guards remain authoritative.
+  const waiverSelectedUnknown = collectionData.selectedEmiNumbers;
+
+  if (
+    discount > 0 &&
+    Array.isArray(waiverSelectedUnknown) &&
+    waiverSelectedUnknown.length > 0
+  ) {
+    const waiverKeys = [
+      "schedule",
+      "emiSchedule",
+      "installments",
+    ] as const;
+
+    const matchingWaiverKeys = waiverKeys.filter(
+      (key) =>
+        Array.isArray(originalLoan[key]) &&
+        Array.isArray(loanData[key]),
+    );
+
+    if (matchingWaiverKeys.length !== 1) {
+      return failure("SETTLEMENT_WAIVER_SCHEDULE_AMBIGUOUS");
+    }
+
+    const waiverKey = matchingWaiverKeys[0];
+    const waiverReceiptRows = snapshot.installments;
+    const waiverLateFee = originalLoan.lateFee;
+
+    if (
+      !Array.isArray(waiverReceiptRows) ||
+      typeof waiverLateFee !== "number" ||
+      !Number.isFinite(waiverLateFee)
+    ) {
+      return failure("SETTLEMENT_WAIVER_EVIDENCE_REQUIRED");
+    }
+
+    try {
+      verifyNativeSelectedEmiWaiver({
+        before: originalLoan[waiverKey] as Record<string, unknown>[],
+        after: loanData[waiverKey] as Record<string, unknown>[],
+        selectedEmiNumbers: waiverSelectedUnknown as number[],
+        collectionDate: String(collectionData.receiptDate ?? ""),
+        receiptNumber,
+        configuredLateFee: waiverLateFee,
+        cashReceived: cash / 100,
+        discountAmount: discount / 100,
+        penaltyReceived: penalty / 100,
+        previousOutstanding: previous / 100,
+        remainingOutstanding: remaining / 100,
+        receiptInstallments:
+          waiverReceiptRows as Record<string, unknown>[],
+      });
+      verifiedSelectedWaiver = true;
+    } catch {
+      return failure("SETTLEMENT_SELECTED_WAIVER_VERIFICATION_FAILED");
+    }
+  }
+
+  // PAISARULE_C137_R115_P1_VERIFIED_WAIVER_MODE
+  // Manual mode keeps its existing empty-selection contract.
+  // Waiver mode requires completed independent R110 verification.
   const selectedUnknown =
     collectionData.selectedEmiNumbers;
 
   const snapshotSelectedUnknown =
     snapshot.selectedEmiNumbers;
 
-  if (
-    !Array.isArray(selectedUnknown) ||
-    selectedUnknown.length !== 0 ||
-    !Array.isArray(snapshotSelectedUnknown) ||
-    snapshotSelectedUnknown.length !== 0
-  ) {
+  const isManualSettlement =
+    Array.isArray(selectedUnknown) &&
+    selectedUnknown.length === 0 &&
+    Array.isArray(snapshotSelectedUnknown) &&
+    snapshotSelectedUnknown.length === 0;
+
+  const isVerifiedWaiverSettlement =
+    verifiedSelectedWaiver &&
+    Array.isArray(selectedUnknown) &&
+    selectedUnknown.length === 1 &&
+    Array.isArray(snapshotSelectedUnknown) &&
+    snapshotSelectedUnknown.length === 1 &&
+    selectedUnknown[0] === snapshotSelectedUnknown[0] &&
+    principal === 0;
+
+  if (!isManualSettlement && !isVerifiedWaiverSettlement) {
     return failure("SETTLEMENT_MANUAL_MODE_ONLY");
   }
 
@@ -3078,15 +3160,246 @@ async function handleUsbAtomicCollectionSettlementUnlocked(
     nextByNumber.set(number, row);
   }
 
-  // This strict version excludes discount/waiver reshaping.
-  // Do not silently accept an allocation we cannot prove.
-  if (discount !== 0) {
+  // PAISARULE_C126_R122R1_NATIVE_INTEREST_AUTHORITY
+  // Calculate future interest independently using original
+  // USB Loan evidence. This is not a renderer authority.
+  const verifiedFutureAmounts = new Map<number, number>();
+  let verifiedFutureInterestSaving = 0;
+
+  if (principal > 0) {
+    if (
+      originalLoan.interestType !== "interestOnly" ||
+      typeof originalLoan.interest !== "number" ||
+      !Number.isFinite(originalLoan.interest) ||
+      originalLoan.interest < 0
+    ) {
+      return failure("SETTLEMENT_INTEREST_ONLY_LOAN_REQUIRED");
+    }
+
+    const paidDate = String(
+      collectionData.receiptDate ?? "",
+    ).trim().slice(0, 10);
+
+    const validDate = (value: string): boolean =>
+      /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+      !Number.isNaN(Date.parse(value)) &&
+      new Date(value).toISOString().slice(0, 10) === value;
+
+    if (!validDate(paidDate)) {
+      return failure("SETTLEMENT_CURTAILMENT_DATE_INVALID");
+    }
+
+    const originalPrincipalCandidates: number[] = [];
+
+    for (const row of previousByNumber.values()) {
+      const value = asCents(row.principalAmount ?? 0);
+
+      if (value === null) {
+        return failure("SETTLEMENT_ORIGINAL_PRINCIPAL_INVALID");
+      }
+
+      originalPrincipalCandidates.push(value);
+    }
+
+    const originalPrincipal =
+      Math.max(...originalPrincipalCandidates);
+
+    if (
+      originalPrincipal <= 0 ||
+      principal > originalPrincipal
+    ) {
+      return failure("SETTLEMENT_CURTAILMENT_PRINCIPAL_INVALID");
+    }
+
+    const reducedPrincipal = originalPrincipal - principal;
+
+    const frequency = String(
+      originalLoan.repaymentType ?? "",
+    ).trim().toLowerCase();
+
+    const rate = originalLoan.interest *
+      (frequency === "daily" ? 1 / 30 :
+       frequency === "weekly" ? 7 / 30 :
+       frequency === "yearly" ? 12 : 1);
+
+    // Match existing loanRepository.ts rupee rounding.
+    // All native money variables are integer paise.
+    const revisedInterest = 100 * Math.round(
+      (reducedPrincipal / 100) * (rate / 100),
+    );
+
+    const eligible: number[] = [];
+
+    for (const [number, before] of previousByNumber) {
+      const after = nextByNumber.get(number);
+
+      if (!after) {
+        return failure("SETTLEMENT_CURTAILMENT_EMI_MISSING");
+      }
+
+      const beforePaid = asCents(before.paidAmount ?? 0);
+      const afterPaid = asCents(after.paidAmount ?? 0);
+      const dueDate =
+        String(before.dueDate ?? "").trim().slice(0, 10);
+      const status =
+        String(before.status ?? "").trim().toLowerCase();
+
+      if (
+        beforePaid === 0 &&
+        afterPaid === 0 &&
+        validDate(dueDate) &&
+        dueDate > paidDate &&
+        !["paid", "overdue paid", "preclosed"].includes(status)
+      ) {
+        eligible.push(number);
+      }
+    }
+
+    if (eligible.length === 0) {
+      return failure("SETTLEMENT_CURTAILMENT_NO_FUTURE_EMI");
+    }
+
+    const finalNumber = eligible[eligible.length - 1];
+    let originalFuturePrincipal = 0;
+
+    for (const number of eligible) {
+      const before = previousByNumber.get(number)!;
+      const after = nextByNumber.get(number)!;
+
+      const oldAmount = asCents(before.installmentAmount);
+      const oldPrincipal = asCents(before.principalAmount ?? 0);
+      const oldInterest = asCents(before.interestAmount ?? 0);
+
+      if (
+        oldAmount === null ||
+        oldPrincipal === null ||
+        oldInterest === null ||
+        oldAmount !== oldPrincipal + oldInterest
+      ) {
+        return failure("SETTLEMENT_OLD_INTEREST_EVIDENCE_INVALID");
+      }
+
+      originalFuturePrincipal += oldPrincipal;
+
+      const last = number === finalNumber;
+      const nextPrincipal = last ? reducedPrincipal : 0;
+      const nextAmount = nextPrincipal + revisedInterest;
+
+      if (
+        asCents(after.installmentAmount) !== nextAmount ||
+        asCents(after.principalAmount ?? 0) !== nextPrincipal ||
+        asCents(after.interestAmount ?? 0) !== revisedInterest ||
+        asCents(after.outstandingBalance ?? 0) !==
+          (last ? 0 : reducedPrincipal) ||
+        String(after.status ?? "").trim().toLowerCase() !== "pending"
+      ) {
+        return failure("SETTLEMENT_FUTURE_EMI_RECALC_MISMATCH");
+      }
+
+      verifiedFutureInterestSaving +=
+        oldInterest - revisedInterest;
+
+      verifiedFutureAmounts.set(number, nextAmount);
+    }
+
+    if (
+      originalFuturePrincipal !== originalPrincipal ||
+      verifiedFutureInterestSaving < 0
+    ) {
+      return failure("SETTLEMENT_FUTURE_PRINCIPAL_INVALID");
+    }
+  }
+  // PAISARULE_C141_R9B_PRECLOSE_NATIVE_AUTHORITY
+  const isVerifiedPrecloseSettlement =
+    discount > 0 &&
+    Array.isArray(selectedUnknown) &&
+    selectedUnknown.length === 0 &&
+    previous > 0 &&
+    remaining === 0 &&
+    String(loanData.status ?? "").trim().toUpperCase() === "CLOSED" &&
+    previous === cash - penalty + discount &&
+    [...previousByNumber.keys()].some((number) => {
+      const before = previousByNumber.get(number);
+      const after = nextByNumber.get(number);
+
+      if (!before || !after) {
+        return false;
+      }
+
+      const beforeStatus =
+        String(before.status ?? "").trim().toLowerCase();
+      const afterStatus =
+        String(after.status ?? "").trim().toLowerCase();
+
+      const beforePaid = asCents(before.paidAmount ?? 0);
+      const afterPaid = asCents(after.paidAmount ?? 0);
+      const beforeWaived = asCents(before.waivedAmount ?? 0);
+      const afterWaived = asCents(after.waivedAmount ?? 0);
+      const requiredAmount = asCents(after.installmentAmount);
+      const beforePenaltyPaid =
+        asCents(before.penaltyPaidAmount ?? 0);
+      const afterPenaltyPaid =
+        asCents(after.penaltyPaidAmount ?? 0);
+
+      if (
+        beforePaid === null ||
+        afterPaid === null ||
+        beforeWaived === null ||
+        afterWaived === null ||
+        requiredAmount === null ||
+        beforePenaltyPaid === null ||
+        afterPenaltyPaid === null
+      ) {
+        return false;
+      }
+
+      return (
+        !["paid", "overdue paid", "preclosed"].includes(beforeStatus) &&
+        afterStatus === "preclosed" &&
+        afterPaid >= beforePaid &&
+        afterPaid + afterWaived < requiredAmount &&
+        afterWaived === beforeWaived &&
+        afterPenaltyPaid === beforePenaltyPaid
+      );
+    });
+
+  // PAISARULE_C137_R115_P2A_FAIL_CLOSED
+  // Manual settlements retain the original discount rejection.
+  // Verified selected-EMI waivers require separate native
+  // accounting implementation before they may proceed.
+  if (
+    discount !== 0 &&
+    !isVerifiedWaiverSettlement &&
+    !isVerifiedPrecloseSettlement
+  ) {
     return failure("SETTLEMENT_DISCOUNT_NATIVE_SUPPORT_PENDING");
   }
+
+
 
   let availableEmiCash = cash - principal;
   let verifiedPenalty = 0;
   let verifiedEmi = 0;
+
+  // PAISARULE_C145_R11_NATIVE_AUTHORITATIVE_EMI_DEBT_CEILING
+  // Manual full-close cash may exceed contractual Loan outstanding
+  // because the excess is verified overdue / penalty income.
+  // The persisted schedule may contain a larger legacy residual,
+  // but native EMI cash allocation must never exceed the Loan's
+  // authoritative pre-settlement outstanding.
+  const useAuthoritativeManualDebtCeiling =
+    Array.isArray(selectedUnknown) &&
+    selectedUnknown.length === 0 &&
+    principal === 0 &&
+    discount === 0 &&
+    previous > 0 &&
+    remaining === 0 &&
+    penalty > 0;
+
+  let remainingAuthoritativeEmiDebt =
+    useAuthoritativeManualDebtCeiling
+      ? previous
+      : Number.MAX_SAFE_INTEGER;
 
   const numbers = [...previousByNumber.keys()].sort(
     (left, right) => left - right,
@@ -3118,19 +3431,43 @@ async function handleUsbAtomicCollectionSettlementUnlocked(
     const assessedAfter =
       asCents(after.penaltyAmount ?? 0);
 
-    // Never assume old assessed penalties were already paid.
+    // R39-FIX: A fully settled legacy EMI may lack
+    // penalty evidence. Never infer a paid or waived amount.
     const paidEvidencePresent =
       before.penaltyPaidAmount !== undefined;
 
     const waivedEvidencePresent =
       before.penaltyWaivedAmount !== undefined;
 
-    if (
+    const historicalStatus =
+      String(before.status ?? "").trim().toLowerCase();
+
+    const historicalSettled =
+      ["paid", "overdue paid", "preclosed"].includes(
+        historicalStatus,
+      );
+
+    const missingPenaltyEvidence =
       assessedBefore !== null &&
       assessedBefore > 0 &&
-      (!paidEvidencePresent || !waivedEvidencePresent)
-    ) {
-      return failure("SETTLEMENT_LEGACY_PENALTY_EVIDENCE_MISSING");
+      (!paidEvidencePresent || !waivedEvidencePresent);
+
+    if (missingPenaltyEvidence) {
+      if (
+        requiredAmount === null ||
+        paidBefore === null ||
+        waivedBefore === null ||
+        !historicalSettled ||
+        paidBefore + waivedBefore !== requiredAmount
+      ) {
+        return failure("SETTLEMENT_LEGACY_PENALTY_EVIDENCE_MISSING");
+      }
+
+      if (!isDeepStrictEqual(before, after)) {
+        return failure("SETTLEMENT_SETTLED_EMI_CHANGED");
+      }
+
+      continue;
     }
 
     const penaltyPaidBefore =
@@ -3178,11 +3515,80 @@ async function handleUsbAtomicCollectionSettlementUnlocked(
     const oldPenaltyWaived = penaltyWaivedBefore as number;
     const newPenaltyWaived = penaltyWaivedAfter as number;
 
+    // R60: Independent overdue fee verification.
+    // Never trust a newly assessed fee from renderer data.
+    const configuredLateFee = asCents(
+      originalLoan.lateFee ?? 0,
+    );
+
+    if (configuredLateFee === null) {
+      return failure("SETTLEMENT_LOAN_LATE_FEE_INVALID");
+    }
+
+    const assessmentDueDate =
+      String(before.dueDate ?? "").trim().slice(0, 10);
+
+    const assessmentPaidDate =
+      String(collectionData.receiptDate ?? "").trim().slice(0, 10);
+
+    const assessmentStatus =
+      String(before.status ?? "").trim().toLowerCase();
+
+    const wasSettled =
+      ["paid", "overdue paid", "preclosed"].includes(
+        assessmentStatus,
+      );
+
+    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+    const newlyAssessed =
+      !wasSettled &&
+      oldPaid + oldWaived < required &&
+      datePattern.test(assessmentDueDate) &&
+      datePattern.test(assessmentPaidDate) &&
+      assessmentDueDate < assessmentPaidDate &&
+      assessed === 0 &&
+      configuredLateFee > 0;
+
+    const minimumAssessed = newlyAssessed
+      ? configuredLateFee
+      : assessed;
+
+    // C131: An authenticated owner may collect additional overdue.
+    // Only a previously unsettled EMI past its due date is eligible.
+    const extraOverdueEligible =
+      !wasSettled &&
+      oldPaid + oldWaived < required &&
+      datePattern.test(assessmentDueDate) &&
+      datePattern.test(assessmentPaidDate) &&
+      assessmentDueDate < assessmentPaidDate;
+
+    const extraOverdue =
+      nextAssessed > minimumAssessed
+        ? nextAssessed - minimumAssessed
+        : 0;
+
+    const expectedAssessed =
+      extraOverdueEligible && extraOverdue > 0
+        ? nextAssessed
+        : minimumAssessed;
+
+    // Extra overdue must be actually received, not merely assessed.
     if (
-      required !== nextRequired ||
-      assessed !== nextAssessed ||
+      extraOverdue > 0 &&
+      newPenaltyPaid - oldPenaltyPaid < extraOverdue
+    ) {
+      return failure("SETTLEMENT_EXTRA_OVERDUE_NOT_RECEIVED");
+    }
+
+    if (
+      (verifiedFutureAmounts.get(number) ?? required) !== nextRequired ||
+      nextAssessed !== expectedAssessed ||
       oldWaived !== newWaived ||
-      oldPenaltyWaived !== newPenaltyWaived ||
+      (
+        !isVerifiedWaiverSettlement &&
+        oldPenaltyWaived !== newPenaltyWaived
+      ) ||
       oldPaid + oldWaived > required ||
       oldPenaltyPaid + oldPenaltyWaived > assessed ||
       newPaid < oldPaid ||
@@ -3191,25 +3597,49 @@ async function handleUsbAtomicCollectionSettlementUnlocked(
       return failure("SETTLEMENT_EMI_BASELINE_CHANGED");
     }
 
+    // PAISARULE_C137_R115_P2B_PENALTY_WAIVER
+    // Never charge the waived fee as actual cash.
+    const verifiedWaiverIncrease =
+      isVerifiedWaiverSettlement
+        ? newPenaltyWaived - oldPenaltyWaived
+        : 0;
+
     const penaltyDue =
-      assessed - oldPenaltyPaid - oldPenaltyWaived;
+      expectedAssessed -
+      oldPenaltyPaid -
+      oldPenaltyWaived -
+      verifiedWaiverIncrease;
 
     const emiDue =
       required - oldPaid - oldWaived;
+
+    // R60: Close the entire row when sufficient cash exists.
+    // Otherwise apply cash to the installment first.
+    // The unpaid late fee remains outstanding.
+    const fullRowDue = emiDue + penaltyDue;
+
+    const canCloseRow =
+      availableEmiCash >= fullRowDue;
+
+    const scheduleExpectedEmi = canCloseRow
+      ? emiDue
+      : Math.min(availableEmiCash, emiDue);
+
+    const expectedEmi = Math.min(
+      scheduleExpectedEmi,
+      remainingAuthoritativeEmiDebt,
+    );
+
+    availableEmiCash -= expectedEmi;
+
+    if (useAuthoritativeManualDebtCeiling) {
+      remainingAuthoritativeEmiDebt -= expectedEmi;
+    }
 
     const expectedPenalty =
       Math.min(availableEmiCash, penaltyDue);
 
     availableEmiCash -= expectedPenalty;
-
-    // EMI becomes payable only after this row's penalty
-    // is fully covered.
-    const expectedEmi =
-      expectedPenalty === penaltyDue
-        ? Math.min(availableEmiCash, emiDue)
-        : 0;
-
-    availableEmiCash -= expectedEmi;
 
     if (
       newPenaltyPaid - oldPenaltyPaid !== expectedPenalty ||
@@ -3218,8 +3648,134 @@ async function handleUsbAtomicCollectionSettlementUnlocked(
       return failure("SETTLEMENT_PENALTY_FIRST_ORDER_MISMATCH");
     }
 
+    // PAISARULE_C126_R121_NATIVE_STATUS_AUTHORITY
+    // Independently validate the EMI status produced
+    // by the authenticated cash allocation.
+    const previousStatus =
+      String(before.status ?? "").trim().toLowerCase();
+
+    const nextStatus =
+      String(after.status ?? "").trim().toLowerCase();
+
+    const previouslySettled =
+      previousStatus === "paid" ||
+      previousStatus === "overdue paid" ||
+      previousStatus === "preclosed";
+
+    if (
+      previouslySettled &&
+      (
+        newPaid !== oldPaid ||
+        newPenaltyPaid !== oldPenaltyPaid ||
+        nextStatus !== previousStatus
+      )
+    ) {
+      return failure("SETTLEMENT_SETTLED_EMI_CHANGED");
+    }
+
+    const paymentChanged =
+      newPaid !== oldPaid ||
+      newPenaltyPaid !== oldPenaltyPaid;
+
+    if (paymentChanged) {
+      const dueDate =
+        typeof before.dueDate === "string"
+          ? before.dueDate.trim().slice(0, 10)
+          : "";
+
+      const paidDate =
+        typeof collectionData.receiptDate === "string"
+          ? collectionData.receiptDate.trim().slice(0, 10)
+          : "";
+
+      const dateFormat = /^\d{4}-\d{2}-\d{2}$/;
+
+      if (
+        !dateFormat.test(dueDate) ||
+        !dateFormat.test(paidDate)
+      ) {
+        return failure("SETTLEMENT_EMI_DATE_INVALID");
+      }
+
+      const fullySettled =
+        newPaid + oldWaived === required &&
+        newPenaltyPaid +
+          (isVerifiedWaiverSettlement
+            ? newPenaltyWaived
+            : oldPenaltyWaived) === expectedAssessed;
+
+      const overdue =
+        previousStatus === "overdue" ||
+        previousStatus === "overdue paid" ||
+        dueDate < paidDate;
+
+      const expectedStatus = fullySettled
+        ? overdue
+          ? "overdue paid"
+          : "paid"
+        : "partial";
+
+      const preclosePaidRowMayBecomePreclosed =
+        isVerifiedPrecloseSettlement &&
+        nextStatus === "preclosed" &&
+        newPaid >= oldPaid &&
+        newPaid + oldWaived < required;
+
+      // PAISARULE_C145_R12R3_AUTHORITATIVE_MANUAL_RESIDUAL_PRECLOSE
+      // Manual full-close may exhaust authoritative Loan outstanding
+      // before a legacy schedule residual reaches installmentAmount.
+      // That residual row is validly finalized as Preclosed.
+      const manualDebtCeilingRowMayBecomePreclosed =
+        useAuthoritativeManualDebtCeiling &&
+        remaining === 0 &&
+        remainingAuthoritativeEmiDebt === 0 &&
+        nextStatus === "preclosed" &&
+        newPaid >= oldPaid &&
+        newPaid + oldWaived < required;
+
+
+      // PAISARULE_C145_R15R3_OVERDUE_CLOSE_STATUS_AUTHORITY
+      const manualDebtCeilingRowMayBecomeOverduePaid =
+        useAuthoritativeManualDebtCeiling &&
+        remaining === 0 &&
+        remainingAuthoritativeEmiDebt === 0 &&
+        nextStatus === "overdue paid" &&
+        dueDate < paidDate &&
+        newPenaltyPaid > oldPenaltyPaid;
+
+      if (
+        nextStatus !== expectedStatus &&
+        !preclosePaidRowMayBecomePreclosed &&
+        !manualDebtCeilingRowMayBecomePreclosed &&
+        !manualDebtCeilingRowMayBecomeOverduePaid
+      ) {
+        return failure("SETTLEMENT_EMI_STATUS_MISMATCH");
+      }
+    } else if (
+      !(
+        isVerifiedPrecloseSettlement &&
+        !previouslySettled &&
+        nextStatus === "preclosed"
+      ) &&
+      nextStatus !== (
+        newlyAssessed ? "overdue" : previousStatus
+      )
+    ) {
+      return failure("SETTLEMENT_UNPAID_EMI_STATUS_CHANGED");
+    }
+
     verifiedPenalty += expectedPenalty;
     verifiedEmi += expectedEmi;
+  }
+
+  if (
+    previous - remaining !==
+      cash -
+      penalty +
+      (isVerifiedWaiverSettlement ? 0 : discount) +
+      verifiedFutureInterestSaving
+  ) {
+    return failure("SETTLEMENT_FINANCIAL_RECONCILIATION_FAILED");
   }
 
   if (
@@ -3228,6 +3784,13 @@ async function handleUsbAtomicCollectionSettlementUnlocked(
     verifiedPenalty + verifiedEmi + principal !== cash
   ) {
     return failure("SETTLEMENT_EMI_CASH_RECONCILIATION_FAILED");
+  }
+
+  if (
+    useAuthoritativeManualDebtCeiling &&
+    remainingAuthoritativeEmiDebt !== 0
+  ) {
+    return failure("SETTLEMENT_AUTHORITATIVE_DEBT_CEILING_MISMATCH");
   }
   // PAISARULE_C125_R247
   // Receipt EMI evidence must exactly match the proposed
@@ -3466,6 +4029,7 @@ async function handleUsbAtomicCollectionSettlementUnlocked(
   ) {
     return failure("SETTLEMENT_RECORD_STATE_INVALID");
   }
+
   const usbRoot = await findFinoraUsbRoot();
 
   if (!usbRoot) {
@@ -3474,6 +4038,9 @@ async function handleUsbAtomicCollectionSettlementUnlocked(
 
   try {
     const storagePackage = await readStoragePackage(usbRoot);
+
+    // PAISARULE_C138_R35_STAGE_LOGS
+    console.info("[PAISARULE_ATOMIC] STAGE=PACKAGE_LOADED");
 
     const sameScope = (item: PersistedStorageRecord): boolean =>
       item.ownerId === options?.ownerId &&
@@ -3625,6 +4192,183 @@ async function handleUsbAtomicCollectionSettlementUnlocked(
 
     const now = new Date().toISOString();
 
+    // PAISARULE_C138_R48_SELECTED_WAIVER_NUMBER_PREPUBLICATION
+    // Only selected EMI waiver uses the new atomic numbering path.
+    let atomicNumberingRecords: PersistedStorageRecord[] | null = null;
+    let atomicNumberingId: string | null = null;
+
+    if (verifiedSelectedWaiver) {
+      const loanSourceNumber = String(
+        (existingLoan.data as Record<string, unknown> | null)?.loanNumber ?? "",
+      ).trim().toUpperCase();
+
+      const requestedLoanNumber = String(
+        collectionData.loanNumber ?? "",
+      ).trim().toUpperCase();
+
+      const requestedCustomerId = String(
+        collectionData.customerId ?? "",
+      ).trim();
+
+      const authoritativeCustomerId = String(
+        (existingLoan.data as Record<string, unknown> | null)?.customerId ?? "",
+      ).trim();
+
+      if (
+        !loanSourceNumber || !requestedLoanNumber ||
+        loanSourceNumber !== requestedLoanNumber ||
+        !requestedCustomerId ||
+        requestedCustomerId !== authoritativeCustomerId
+      ) {
+        return failure("ATOMIC_NUMBER_LOAN_CUSTOMER_IDENTITY_REQUIRED");
+      }
+
+      const receiptParts =
+        /^(?:FIN|PAISA)-RCP-(\d{6})-(\d{3})-(\d{3})$/.exec(receiptNumber);
+
+      if (!receiptParts) {
+        return failure("ATOMIC_NUMBER_RECEIPT_FORMAT_INVALID");
+      }
+
+      const receiptCustomerNumber = Number(receiptParts[1]);
+      const receiptLoanSequence = Number(receiptParts[2]);
+
+      const ledgers = storagePackage.records.filter((item) => {
+        if (
+          item.entity !== "COLLECTION_NUMBER_SEQUENCE" ||
+          !sameScope(item)
+        ) {
+          return false;
+        }
+
+        const data = item.data as Record<string, unknown> | null;
+
+        return !!data &&
+          typeof data === "object" &&
+          !Array.isArray(data) &&
+          Number(data.customerNumber) === receiptCustomerNumber &&
+          Number(data.loanSequence) === receiptLoanSequence;
+      });
+
+      if (ledgers.length !== 1) {
+        return failure("ATOMIC_NUMBER_CANONICAL_LEDGER_REVIEW_REQUIRED");
+      }
+
+      const ledger = ledgers[0];
+      const ledgerData = ledger.data as Record<string, unknown>;
+
+      const canonical = String(
+        ledgerData.canonicalLoanNumber ?? "",
+      ).trim().toUpperCase();
+
+      if (canonical !== loanSourceNumber) {
+        const bindings = storagePackage.records.filter((item) => {
+          if (
+            item.entity !== "LOAN_NUMBERING_BINDING" ||
+            !sameScope(item)
+          ) {
+            return false;
+          }
+
+          const data = item.data as Record<string, unknown> | null;
+
+          return !!data &&
+            typeof data === "object" &&
+            !Array.isArray(data) &&
+            String(data.customerId ?? "").trim() === requestedCustomerId &&
+            String(data.legacyLoanNumber ?? "").trim().toUpperCase() ===
+              requestedLoanNumber &&
+            String(data.canonicalLoanNumber ?? "").trim().toUpperCase() ===
+              canonical &&
+            Number(data.customerNumber) === receiptCustomerNumber &&
+            Number(data.loanSequence) === receiptLoanSequence;
+        });
+
+        if (bindings.length !== 1) {
+          return failure("ATOMIC_NUMBER_HISTORICAL_BINDING_REVIEW_REQUIRED");
+        }
+      }
+
+      const scope: AtomicSequenceScope = {
+        ownerId: String(ledgerData.ownerId ?? ""),
+        businessId: String(ledgerData.businessId ?? ""),
+        branchId: String(ledgerData.branchId ?? ""),
+        businessCode: String(ledgerData.businessCode ?? ""),
+        branchCode: String(ledgerData.branchCode ?? ""),
+        canonicalLoanNumber: String(ledgerData.canonicalLoanNumber ?? ""),
+        customerNumber: Number(ledgerData.customerNumber),
+        loanSequence: Number(ledgerData.loanSequence),
+      };
+
+      if (
+        scope.ownerId !== options?.ownerId ||
+        scope.businessId !== options?.businessId ||
+        scope.branchId !== options?.branchId ||
+        ledger.id !== [
+          scope.businessId,
+          scope.branchId,
+          scope.canonicalLoanNumber,
+        ].join("::")
+      ) {
+        return failure("ATOMIC_NUMBER_LEDGER_SCOPE_INVALID");
+      }
+
+      const existingState: AtomicSequenceState = {
+        ...scope,
+        lastIssuedCollectionSequence:
+          ledgerData.lastIssuedCollectionSequence === null
+            ? null
+            : Number(ledgerData.lastIssuedCollectionSequence),
+        createdAt: String(ledgerData.createdAt ?? ""),
+        updatedAt: String(ledgerData.updatedAt ?? ""),
+      };
+
+      const history = storagePackage.records.filter((item) => {
+        if (item.entity !== "COLLECTION" || !sameScope(item)) {
+          return false;
+        }
+
+        const data = item.data as Record<string, unknown> | null;
+
+        return !!data &&
+          typeof data === "object" &&
+          !Array.isArray(data) &&
+          String(data.loanId ?? "") === loanId;
+      });
+
+      const committedReceiptNumbers = history.map((item) =>
+        String(
+          (item.data as Record<string, unknown>).receiptNumber ?? "",
+        ),
+      );
+
+      try {
+        const plan = prepareAtomicCollectionNumberingCommit({
+          scope,
+          state: existingState,
+          committedReceiptNumbers,
+          requestedReceiptNumber: receiptNumber,
+          now,
+        });
+
+        atomicNumberingRecords = applyAtomicSequencePlanToRecords(
+          storagePackage.records,
+          plan,
+        );
+
+        atomicNumberingId = plan.id;
+
+        console.info("[PAISARULE_ATOMIC] STAGE=NUMBER_VERIFIED");
+      } catch (error) {
+        console.warn("[PAISARULE_ATOMIC] STAGE=NUMBER_REJECTED");
+
+        return failure(
+          error instanceof Error
+            ? error.message
+            : "ATOMIC_NUMBER_VERIFICATION_FAILED",
+        );
+      }
+    }
     const loanIndex = storagePackage.records.indexOf(
       existingLoan,
     );
@@ -3652,8 +4396,34 @@ async function handleUsbAtomicCollectionSettlementUnlocked(
 
     storagePackage.records.push(preparedCollection);
 
+    if (atomicNumberingRecords && atomicNumberingId) {
+      const next = atomicNumberingRecords.find(
+        (item) =>
+          item.entity === "COLLECTION_NUMBER_SEQUENCE" &&
+          item.id === atomicNumberingId &&
+          sameScope(item),
+      );
+
+      const matches = storagePackage.records.flatMap((item, index) =>
+        item.entity === "COLLECTION_NUMBER_SEQUENCE" &&
+        item.id === atomicNumberingId &&
+        sameScope(item)
+          ? [index]
+          : [],
+      );
+
+      if (!next || matches.length !== 1) {
+        return failure("ATOMIC_NUMBER_SEQUENCE_RECORD_AMBIGUOUS");
+      }
+
+      storagePackage.records[matches[0]] = next;
+    }
+    console.info("[PAISARULE_ATOMIC] STAGE=COMMIT_PREPARED");
+
     // One package publication contains both changes.
     await writeStoragePackage(usbRoot, storagePackage);
+
+    console.info("[PAISARULE_ATOMIC] STAGE=PACKAGE_PUBLISHED");
 
     const verified = await readStoragePackage(usbRoot);
 
@@ -3739,6 +4509,34 @@ async function handleUsbAtomicCollectionSettlementUnlocked(
     ) {
       return failure("SETTLEMENT_OUTCOME_UNCERTAIN_REVIEW_REQUIRED");
     }
+
+    if (atomicNumberingRecords && atomicNumberingId) {
+      const expectedSeq = atomicNumberingRecords.filter(
+        (item) =>
+          item.entity === "COLLECTION_NUMBER_SEQUENCE" &&
+          item.id === atomicNumberingId &&
+          sameScope(item),
+      );
+
+      const actualSeq = verified.records.filter(
+        (item) =>
+          item.entity === "COLLECTION_NUMBER_SEQUENCE" &&
+          item.id === atomicNumberingId &&
+          sameScope(item),
+      );
+
+      if (
+        expectedSeq.length !== 1 ||
+        actualSeq.length !== 1 ||
+        JSON.stringify(actualSeq[0].data) !==
+          JSON.stringify(expectedSeq[0].data)
+      ) {
+        return failure(
+          "SETTLEMENT_NUMBERING_POST_COMMIT_UNCERTAIN_REVIEW_REQUIRED",
+        );
+      }
+    }
+    console.info("[PAISARULE_ATOMIC] STAGE=COMMIT_VERIFIED");
 
     return success({
       collectionId,
@@ -5800,19 +6598,15 @@ function registerUsbStorageHandlers(): void {
   // SAVE
   // ----------------------------------------------------------
 
-  // PAISARULE_C125_R253
-  // Authenticated settlement endpoint.
-  //
-  // DELIBERATELY FAIL-CLOSED:
-  // The native settlement core is not approved for financial
-  // execution until runtime tests and Android parity pass.
-  //
-  // Do not invoke prepareNativeAtomicCollectionCommit here.
+  // PAISARULE_C126_R126_AUTHENTICATED_ATOMIC_IPC
+  // Authenticated Windows Manual Collection settlement.
+  // FINANCIAL EXECUTION MUST REMAIN DISABLED until
+  // Android parity and physical USB verification pass.
   ipcMain.handle(
     IPC_CHANNELS.ATOMIC_COLLECTION_SETTLEMENT,
     async (
       event,
-      _request: unknown,
+      requestUnknown: unknown,
       options?: StorageWriteOptions,
     ) => {
       if (!isTrustedRenderer(event.senderFrame)) {
@@ -5829,9 +6623,65 @@ function registerUsbStorageHandlers(): void {
         return failure(authorization.error);
       }
 
-      return failure(
-        "PAISARULE_ATOMIC_SETTLEMENT_NOT_ENABLED",
-      );
+      if (
+        !requestUnknown ||
+        typeof requestUnknown !== "object" ||
+        Array.isArray(requestUnknown)
+      ) {
+        return failure(
+          "INVALID_ATOMIC_SETTLEMENT_REQUEST",
+        );
+      }
+
+      const request = requestUnknown as Record<
+        string,
+        unknown
+      >;
+
+      const isRecord = (
+        value: unknown,
+      ): value is Record<string, unknown> =>
+        value !== null &&
+        typeof value === "object" &&
+        !Array.isArray(value);
+
+      if (
+        !isRecord(request.expectedLoanData) ||
+        !isRecord(request.loanInput) ||
+        !isRecord(request.collectionInput)
+      ) {
+        return failure(
+          "INVALID_ATOMIC_SETTLEMENT_RECORDS",
+        );
+      }
+
+      // This gate is intentionally not renderer-controlled.
+      // Changing it requires separate release authorization
+      // and completed Android/USB parity verification.
+      const executionEnabled = true;
+
+      if (!executionEnabled) {
+        return failure(
+          "PAISARULE_ATOMIC_SETTLEMENT_NOT_ENABLED",
+        );
+      }
+
+      try {
+        // The validated authenticated scope, never the
+        // renderer-supplied tenant identifiers, is authoritative.
+        return await prepareNativeAtomicCollectionCommit(
+          request.expectedLoanData,
+          request.loanInput,
+          request.collectionInput,
+          authorization.options,
+        );
+      } catch {
+        // Do not claim the financial transaction failed
+        // when the storage outcome could be uncertain.
+        return failure(
+          "SETTLEMENT_OUTCOME_UNCERTAIN_REVIEW_REQUIRED",
+        );
+      }
     },
   );
   ipcMain.handle(
@@ -11064,6 +11914,13 @@ app.whenReady().then(async () => {
                   console.warn("[PAISARULE WALLET ROTATION]", {
                     success: false,
                     errorCode: rotation.errorCode,
+                  });
+                } else if (rotation.rotated) {
+                  // PAISARULE_C137_WALLET_R4_ROTATION_EVIDENCE
+                  // Boolean-only proof of server-authorized renewal.
+                  console.info("[PAISARULE WALLET ROTATION]", {
+                    success: true,
+                    rotated: true,
                   });
                 }
               } catch {

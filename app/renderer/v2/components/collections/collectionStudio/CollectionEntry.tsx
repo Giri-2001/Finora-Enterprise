@@ -60,6 +60,7 @@
 
 import { Capacitor } from "@capacitor/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import type { ReactNode } from "react";
 
@@ -107,6 +108,8 @@ interface EmiRecord {
   paidAmount?: number;
 
   penaltyAmount?: number;
+  penaltyPaidAmount?: number;
+  penaltyWaivedAmount?: number;
   receiptNumber?: string;
 
   paidDate?: string;
@@ -128,6 +131,7 @@ interface EmiRecord {
 
 interface CollectionEntryProps {
   middleSlot?: ReactNode;
+  onRefreshReadyChange?: (key: string, ready: boolean) => void;
 }
 
 // ============================================================
@@ -351,7 +355,7 @@ function sanitizeMoneyInput(rawValue: string): string {
 // COMPONENT
 // ============================================================
 
-export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
+export default function CollectionEntry({ middleSlot, onRefreshReadyChange }: CollectionEntryProps) {
   const { reviewData, updateField } = useCollectionController();
 
   // ==========================================================
@@ -392,6 +396,10 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
 
   updateFieldRef.current = updateField;
 
+  // PAISARULE_C129_R10_REFRESH_READY
+  const refreshReadyCallbackRef = useRef(onRefreshReadyChange);
+  refreshReadyCallbackRef.current = onRefreshReadyChange;
+
   // ==========================================================
   // CONTROLLER VALUES
   // ==========================================================
@@ -412,6 +420,272 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
 
   const isManual = collectionMode === "manual";
 
+  const [discountLimitWarning, setDiscountLimitWarning] = useState(false);
+  // PAISARULE_C137_R89_DISCOUNT_FOCUS
+  const [discountInputFocused, setDiscountInputFocused] = useState(false);
+
+  // PAISARULE_C132_R57_QUOTE_RECEIVER
+  // UI-only quote: never grants financial Save authorization.
+  // PAISARULE_C137_R10_AMOUNT_WORDS
+  // Read-only presentation of the same collection cash amount.
+  function collectionAmountInWords(value: number): string {
+    if (
+      !Number.isFinite(value) ||
+      value < 0 ||
+      !Number.isSafeInteger(Math.round(value * 100))
+    ) {
+      return "Amount unavailable";
+    }
+
+    const totalPaise = Math.round(value * 100);
+    const rupees = Math.floor(totalPaise / 100);
+    const paise = totalPaise % 100;
+
+    const ones = [
+      "Zero", "One", "Two", "Three", "Four",
+      "Five", "Six", "Seven", "Eight", "Nine",
+      "Ten", "Eleven", "Twelve", "Thirteen",
+      "Fourteen", "Fifteen", "Sixteen",
+      "Seventeen", "Eighteen", "Nineteen",
+    ];
+
+    const tens = [
+      "", "", "Twenty", "Thirty", "Forty",
+      "Fifty", "Sixty", "Seventy", "Eighty",
+      "Ninety",
+    ];
+
+    function belowThousand(n: number): string {
+      if (n < 20) {
+        return ones[n];
+      }
+
+      if (n < 100) {
+        return (
+          tens[Math.floor(n / 10)] +
+          (n % 10 ? " " + ones[n % 10] : "")
+        );
+      }
+
+      return (
+        ones[Math.floor(n / 100)] +
+        " Hundred" +
+        (n % 100 ? " " + belowThousand(n % 100) : "")
+      );
+    }
+
+    function spellInteger(n: number): string {
+      if (n < 1000) {
+        return belowThousand(n);
+      }
+
+      const groups: Array<[number, string]> = [
+        [10000000, "Crore"],
+        [100000, "Lakh"],
+        [1000, "Thousand"],
+      ];
+
+      for (const [unit, label] of groups) {
+        if (n >= unit) {
+          const quotient = Math.floor(n / unit);
+          const remainder = n % unit;
+
+          return (
+            spellInteger(quotient) +
+            " " + label +
+            (remainder ? " " + spellInteger(remainder) : "")
+          );
+        }
+      }
+
+      return belowThousand(n);
+    }
+
+    const rupeeWords = spellInteger(rupees) + " Rupees";
+
+    if (paise === 0) {
+      return rupeeWords + " Only";
+    }
+
+    return (
+      rupeeWords +
+      " and " +
+      spellInteger(paise) +
+      " Paise Only"
+    );
+  }
+  // PAISARULE_C137_R26_PRECLOSE_PREVIEW
+  // UI preview only. No settlement or save authorization.
+  const [precloseStage, setPrecloseStage] =
+    useState<"off" | "pending" | "confirmed">("off");
+
+  const [precloseDialogOpen, setPrecloseDialogOpen] =
+    useState(false);
+
+  const [precloseReason, setPrecloseReason] = useState("");
+  // PAISARULE_C137_R38_AUTOFILL
+  // UI values only; not an authorization to save Preclosure.
+  const preclosePreviousValuesRef = useRef<{
+    loanId: string;
+    receiptDate: string;
+    paymentAmount: number;
+    discountAmount: number;
+    advanceAdjustment: number;
+  } | null>(null);
+
+  const [precloseAcknowledged, setPrecloseAcknowledged] =
+    useState(false);
+
+  // PAISARULE_C137_R31_R2_STATE
+  useEffect(() => {
+    setPrecloseStage("off");
+    setPrecloseDialogOpen(false);
+    setPrecloseAcknowledged(false);
+    setPrecloseReason("");
+
+    window.dispatchEvent(
+      new CustomEvent("PAISARULE_PRECLOSE_REMARKS", {
+        detail: { stage: "off" },
+      }),
+    );
+  }, [loanId, reviewData.receiptDate]);
+
+  // PAISARULE_C137_R35_R2_THEME
+  // Read active theme from the existing Preclose field.
+  function resolvePreclosePopupTheme() {
+    const amountField = document.getElementById(
+      "paisarule-preclose-loan-amount",
+    );
+
+    const remarksField = document.getElementById(
+      "finora-payment-remarks",
+    );
+
+    const amountStyle = amountField
+      ? window.getComputedStyle(amountField)
+      : null;
+
+    const remarksStyle = remarksField
+      ? window.getComputedStyle(remarksField)
+      : null;
+
+    const surface =
+      amountStyle?.backgroundColor ?? "rgb(20, 20, 20)";
+
+    const text =
+      amountStyle?.color ?? "#FFFFFF";
+
+    const border =
+      amountStyle?.borderColor ?? "#64748B";
+
+    const inputSurface =
+      remarksStyle?.backgroundColor ?? surface;
+
+    const font =
+      amountStyle?.fontFamily ?? "Arial, sans-serif";
+
+    return {
+      surface,
+      text,
+      border,
+      inputSurface,
+      font,
+    };
+  }
+  const [precloseQuote, setPrecloseQuote] = useState<{
+    loanId: string;
+    receiptDate: string;
+    amount: number;
+    penaltyIncluded: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const activeLoanId = String(loanId).trim();
+    const activeDate = String(reviewData.receiptDate ?? "").trim();
+
+    setPrecloseQuote(null);
+
+    function receivePrecloseQuote(event: Event): void {
+      const detail = (event as CustomEvent<unknown>).detail;
+
+      if (!detail || typeof detail !== "object") {
+        return;
+      }
+
+      const quote = detail as Record<string, unknown>;
+      const incomingLoanId = String(quote.loanId ?? "").trim();
+      const incomingDate = String(quote.receiptDate ?? "").trim();
+      const amount = quote.amount;
+      const penaltyIncluded = quote.penaltyIncluded;
+
+      if (
+        !activeLoanId ||
+        !activeDate ||
+        incomingLoanId !== activeLoanId ||
+        incomingDate !== activeDate ||
+        typeof amount !== "number" ||
+        !Number.isFinite(amount) ||
+        amount <= 0 ||
+        // PAISARULE_C137_R55_PENALTY_AWARE
+        typeof penaltyIncluded !== "number" ||
+        !Number.isFinite(penaltyIncluded) ||
+        penaltyIncluded < 0 ||
+        penaltyIncluded > amount ||
+        !Number.isSafeInteger(Math.round(penaltyIncluded * 100)) ||
+        Math.abs(
+          penaltyIncluded * 100 -
+          Math.round(penaltyIncluded * 100)
+        ) > 0.000001 ||
+        !Number.isSafeInteger(Math.round(amount * 100)) ||
+        Math.abs(amount * 100 - Math.round(amount * 100)) > 0.000001
+      ) {
+        setPrecloseQuote(null);
+        return;
+      }
+
+      setPrecloseQuote({
+        loanId: incomingLoanId,
+        receiptDate: incomingDate,
+        amount,
+        penaltyIncluded,
+      });
+    }
+
+    window.addEventListener(
+      "PAISARULE_PRECLOSE_CYCLE_QUOTE",
+      receivePrecloseQuote,
+    );
+
+    // Request replay so mount order cannot silently lose the quote.
+    window.dispatchEvent(
+      new CustomEvent("PAISARULE_PRECLOSE_CYCLE_QUOTE_REQUEST", {
+        detail: {
+          loanId: activeLoanId,
+          receiptDate: activeDate,
+        },
+      }),
+    );
+
+    return () => {
+      window.removeEventListener(
+        "PAISARULE_PRECLOSE_CYCLE_QUOTE",
+        receivePrecloseQuote,
+      );
+    };
+  }, [loanId, reviewData.receiptDate]);
+
+  const visiblePrecloseAmount =
+    precloseQuote?.loanId === String(loanId).trim() &&
+    precloseQuote?.receiptDate === String(reviewData.receiptDate ?? "").trim()
+      ? precloseQuote.amount
+      : null;
+
+  const visiblePreclosePenalty =
+    precloseQuote?.loanId === String(loanId).trim() &&
+    precloseQuote?.receiptDate === String(reviewData.receiptDate ?? "").trim()
+      ? precloseQuote.penaltyIncluded
+      : null;
+
   // ==========================================================
   // EMI STATE
   // ==========================================================
@@ -424,11 +698,18 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
 
   const [selectedEmiNumbers, setSelectedEmiNumbers] = useState<number[]>([]);
 
+  // PAISARULE_C129_R21_BRAND_EMI_PRESERVE
+  const brandSelectedEmisRef = useRef(selectedEmiNumbers);
+  brandSelectedEmisRef.current = selectedEmiNumbers;
+
+  const brandCollectionModeRef = useRef(collectionMode);
+  brandCollectionModeRef.current = collectionMode;
+
   // ==========================================================
   // EMI DROPDOWN STATE
   // ==========================================================
 
-  const [emiDropdownOpen, setEmiDropdownOpen] = useState(false);
+  const [emiDropdownOpen, setEmiDropdownOpen] = useState(true);
 
   // FINORA_AP03_R014_EMI_HEADER_WIDTH
   // Header and EMI rows share the same Android scroll width.
@@ -447,8 +728,34 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
   // LOAD REAL EMI SCHEDULE
   // ==========================================================
 
+  // PAISARULE_C129_R5_LATEST_DATE_GUARD
+  // The active Loan/Date is authoritative for UI refresh.
+  // Older asynchronous reads must never overwrite new state.
+  const scheduleLoadEpochRef = useRef(0);
+  const scheduleAuthorityKeyRef = useRef("");
+
+  scheduleAuthorityKeyRef.current =
+    loanId + "|" + String(reviewData.receiptDate ?? "");
+
   const loadSchedule = useCallback(
-    async (resetSharedTransactionState = true): Promise<void> => {
+    async (resetSharedTransactionState = true, preserveBrandSelection = false): Promise<void> => {
+      const requestKey =
+        loanId + "|" + String(reviewData.receiptDate ?? "");
+
+      // A callback from an obsolete render cannot supersede
+      // the active Loan/Date request.
+      if (scheduleAuthorityKeyRef.current !== requestKey) {
+        return;
+      }
+
+      const requestEpoch = ++scheduleLoadEpochRef.current;
+
+      refreshReadyCallbackRef.current?.(requestKey, false);
+
+      const isCurrentRequest = (): boolean =>
+        requestEpoch === scheduleLoadEpochRef.current &&
+        requestKey === scheduleAuthorityKeyRef.current;
+
       if (!loanId) {
         setEmiSchedule([]);
 
@@ -473,10 +780,14 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
 
       setLoadError("");
 
-      setEmiDropdownOpen(false);
+      setEmiDropdownOpen(true);
 
       try {
         const loans = await fetchLoans();
+
+        if (!isCurrentRequest()) {
+          return;
+        }
 
         const selectedLoan = loans.find(
           (loan: { id?: string }) => String(loan.id ?? "") === loanId,
@@ -607,6 +918,16 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
 
                 penaltyAmount,
 
+                // PAISARULE_C132_R53_OVERDUE_EVIDENCE
+                // Assessed, collected and waived are distinct.
+                penaltyPaidAmount: safeNumber(
+                  installment.penaltyPaidAmount,
+                ),
+
+                penaltyWaivedAmount: safeNumber(
+                  installment.penaltyWaivedAmount,
+                ),
+
                 receiptNumber:
                   String(
                     installment.receiptNumber ?? "",
@@ -624,6 +945,16 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
               installment.installmentNumber > 0,
           );
 
+        if (!isCurrentRequest()) {
+          return;
+        }
+
+        if (!selectedLoan || normalizedSchedule.length === 0) {
+          setEmiSchedule([]);
+          setLoadError("Authoritative EMI schedule unavailable.");
+          return;
+        }
+
         setEmiSchedule(normalizedSchedule);
 
         const overduePenaltyTotal = normalizedSchedule.reduce(
@@ -634,18 +965,75 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
           0,
         );
 
-        updateFieldRef.current("penaltyAmount", overduePenaltyTotal);
+        if (preserveBrandSelection) {
+          // Reconcile the currently selected EMI against latest data.
+          // Manual payment fields remain untouched.
+          const previousNumbers = brandSelectedEmisRef.current;
 
-        setSelectedEmiNumbers([]);
+          const validNumbers =
+            brandCollectionModeRef.current === "emi"
+              ? previousNumbers.filter((number) =>
+                  normalizedSchedule.some(
+                    (item) =>
+                      item.installmentNumber === number &&
+                      !isLockedStatus(item.status) &&
+                      getRemainingEmiAmount(item) > 0,
+                  ),
+                )
+              : [];
 
-        if (resetSharedTransactionState) {
-          updateFieldRef.current("selectedEmiNumbers", []);
+          if (brandCollectionModeRef.current === "emi") {
+            const refreshedEmiAmount = normalizedSchedule.reduce(
+              (total, item) =>
+                validNumbers.includes(item.installmentNumber)
+                  ? total + getRemainingEmiAmount(item)
+                  : total,
+              0,
+            );
 
-          updateFieldRef.current("selectedEmiAmount", 0);
+            const refreshedSelectedPenalty = normalizedSchedule.reduce(
+              (total, item) =>
+                validNumbers.includes(item.installmentNumber) &&
+                normalizeStatus(item.status) === "overdue"
+                  ? total + safeNumber(item.penaltyAmount)
+                  : total,
+              0,
+            );
 
-          updateFieldRef.current("paymentAmount", 0);
+            setSelectedEmiNumbers(validNumbers);
+            updateFieldRef.current("selectedEmiNumbers", validNumbers);
+            updateFieldRef.current("selectedEmiAmount", refreshedEmiAmount);
+
+            if (previousNumbers.length > 0) {
+              updateFieldRef.current("paymentAmount", refreshedEmiAmount);
+            }
+
+            updateFieldRef.current(
+              "penaltyAmount",
+              validNumbers.length > 0
+                ? refreshedSelectedPenalty
+                : overduePenaltyTotal,
+            );
+          } else {
+            updateFieldRef.current("penaltyAmount", overduePenaltyTotal);
+          }
+        } else {
+          updateFieldRef.current("penaltyAmount", overduePenaltyTotal);
+
+          setSelectedEmiNumbers([]);
+
+          if (resetSharedTransactionState) {
+            updateFieldRef.current("selectedEmiNumbers", []);
+            updateFieldRef.current("selectedEmiAmount", 0);
+            updateFieldRef.current("paymentAmount", 0);
+          }
         }
+
+        refreshReadyCallbackRef.current?.(requestKey, true);
       } catch (error) {
+        if (!isCurrentRequest()) {
+          return;
+        }
         console.error("FINORA STEP 4 EMI SCHEDULE LOAD ERROR:", error);
 
         setEmiSchedule([]);
@@ -664,7 +1052,9 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
 
         setLoadError("Unable to load the selected loan EMI schedule.");
       } finally {
-        setLoading(false);
+        if (isCurrentRequest()) {
+          setLoading(false);
+        }
       }
     },
     [loanId, reviewData.receiptDate],
@@ -700,6 +1090,25 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
 
     return () => {
       window.removeEventListener("FINORA_LOAN_UPDATED", handleLoanUpdated);
+    };
+  }, [loadSchedule]);
+
+  // PAISARULE_C129_R21_BRAND_EVENT_LISTENER
+  useEffect(() => {
+    function handleBrandRefresh(): void {
+      void loadSchedule(false, true);
+    }
+
+    window.addEventListener(
+      "PAISARULE_COLLECTION_BRAND_REFRESH",
+      handleBrandRefresh,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "PAISARULE_COLLECTION_BRAND_REFRESH",
+        handleBrandRefresh,
+      );
     };
   }, [loadSchedule]);
 
@@ -746,11 +1155,26 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
   // AUTHORITATIVE TOTAL EMI / LOAN BALANCE
   // ==========================================================
 
-  const totalRemainingEmiAmount = hasAuthoritativeNumber(
-    reviewData.outstandingBalance,
-  )
-    ? safeNumber(reviewData.outstandingBalance)
-    : scheduleRemainingAmount;
+  // PAISARULE_C142_R3_AUTHORITATIVE_ZERO_BALANCE
+  // Zero is a valid authoritative outstanding value.
+  // Do not fall back to schedule residuals for a CLOSED loan.
+  const rawAuthoritativeOutstanding =
+    reviewData.outstandingBalance;
+
+  const authoritativeOutstandingNumber =
+    Number(rawAuthoritativeOutstanding);
+
+  const hasExplicitAuthoritativeOutstanding =
+    rawAuthoritativeOutstanding !== null &&
+    rawAuthoritativeOutstanding !== undefined &&
+    String(rawAuthoritativeOutstanding).trim() !== "" &&
+    Number.isFinite(authoritativeOutstandingNumber) &&
+    authoritativeOutstandingNumber >= 0;
+
+  const totalRemainingEmiAmount =
+    hasExplicitAuthoritativeOutstanding
+      ? authoritativeOutstandingNumber
+      : scheduleRemainingAmount;
 
   // ==========================================================
   // ELIGIBLE EMI LIST
@@ -765,6 +1189,32 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
       ),
     [emiSchedule],
   );
+
+  // PAISARULE R85: First unsettled EMI is mandatory in Manual mode.
+  // Reuse the EMI table's date-sensitive remaining amount.
+  const manualMinimumEmi = useMemo(
+    () =>
+      [...eligibleEmis].sort(
+        (a, b) => a.installmentNumber - b.installmentNumber,
+      )[0],
+    [eligibleEmis],
+  );
+
+  const manualGrossMinimum = manualMinimumEmi
+    ? getRemainingEmiAmount(manualMinimumEmi)
+    : 0;
+
+  const manualMinimumAmount = Math.max(
+    0,
+    manualGrossMinimum - discountAmount,
+  );
+
+  const manualAmountBelowMinimum =
+    isManual &&
+    paymentAmount > 0 &&
+    manualMinimumAmount > 0 &&
+    Math.round(paymentAmount * 100) <
+      Math.round(manualMinimumAmount * 100);
 
   // ==========================================================
   // SELECTED EMI AMOUNT
@@ -786,6 +1236,45 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
   // SELECT ALL STATE
   // ==========================================================
 
+  // C132: Discount is allowed only against unpaid overdue.
+  // Save must independently verify against authoritative records.
+  const eligibleOverdueDiscount = useMemo(() => {
+    const rows =
+      selectedEmiNumbers.length > 0
+        ? emiSchedule.filter(
+            (installment) =>
+              selectedEmiNumbers.includes(installment.installmentNumber) &&
+              !isLockedStatus(installment.status),
+          )
+        : manualMinimumEmi
+          ? [manualMinimumEmi]
+          : [];
+
+    const cents = rows.reduce((total, installment) => {
+      const penalty = safeNumber(installment.penaltyAmount);
+
+      const penaltyPaid = safeNumber(
+        (installment as EmiRecord & {
+          penaltyPaidAmount?: number;
+        }).penaltyPaidAmount,
+      );
+
+      const penaltyWaived = safeNumber(
+        (installment as EmiRecord & {
+          penaltyWaivedAmount?: number;
+        }).penaltyWaivedAmount,
+      );
+
+      return total + Math.max(
+        0,
+        Math.round(penalty * 100) -
+          Math.round(penaltyPaid * 100) -
+          Math.round(penaltyWaived * 100),
+      );
+    }, 0);
+
+    return cents / 100;
+  }, [emiSchedule, selectedEmiNumbers, manualMinimumEmi]);
   const allEligibleSelected =
     eligibleEmis.length > 0 &&
     eligibleEmis.every((installment) =>
@@ -821,7 +1310,7 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
 
     setSelectedEmiNumbers([]);
 
-    setEmiDropdownOpen(false);
+    setEmiDropdownOpen(true);
 
     updateField("selectedEmiNumbers", []);
 
@@ -834,6 +1323,11 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
 
       updateField("discountAmount", 0);
     }
+
+    // PAISARULE_C129_R6_MODE_REFRESH
+    // Re-evaluate penalty for the active Loan and Date.
+    // R5 rejects obsolete asynchronous responses.
+    void loadSchedule(false);
   }
 
   // ==========================================================
@@ -847,13 +1341,40 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
   ): void {
     const sanitized = sanitizeMoneyInput(rawValue);
 
-    if (sanitized === "" || sanitized === ".") {
-      updateField(field, 0);
+    const value =
+      sanitized === "" || sanitized === "."
+        ? 0
+        : safeNumber(sanitized);
+
+    if (field === "discountAmount") {
+      if (
+        !Number.isFinite(value) ||
+        value < 0 ||
+        Math.round(value * 100) >
+          Math.round(eligibleOverdueDiscount * 100)
+      ) {
+        setDiscountLimitWarning(true);
+        return;
+      }
+
+      setDiscountLimitWarning(false);
+
+      const grossAmount =
+        selectedEmiNumbers.length > 0
+          ? selectedEmiAmount
+          : paymentAmount + discountAmount;
+
+      const nextCashAmount =
+        Math.max(
+          0,
+          Math.round((grossAmount - value) * 100) / 100,
+        );
+
+      updateField("discountAmount", value);
+      updateField("paymentAmount", nextCashAmount);
 
       return;
     }
-
-    const value = safeNumber(sanitized);
 
     updateField(field, value);
   }
@@ -912,9 +1433,11 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
     updateField("selectedEmiAmount", nextAmount);
     updateField("penaltyAmount", nextPenaltyAmount);
 
+    updateField("discountAmount", 0);
+    setDiscountLimitWarning(false);
     updateField("paymentAmount", nextAmount);
 
-    console.log(
+console.log(
       "FINORA STEP 4 EMI SELECTED:",
       installment.installmentNumber,
       remainingAmount,
@@ -976,9 +1499,11 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
     updateField("selectedEmiAmount", nextAmount);
     updateField("penaltyAmount", nextPenaltyAmount);
 
+    updateField("discountAmount", 0);
+    setDiscountLimitWarning(false);
     updateField("paymentAmount", nextAmount);
 
-    console.log(
+console.log(
       allEligibleSelected
         ? "FINORA STEP 4 ALL ELIGIBLE EMIS DESELECTED"
         : "PAISARULE STEP 4 ALL ELIGIBLE EMIS SELECTED",
@@ -1017,6 +1542,30 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
 
   return (
     <section style={collectionEntryStyles.panel}>
+        {/* PAISARULE_C135_R10_MANUAL_PLACEHOLDER_CONTRAST */}
+        <style>{`
+          /* PAISARULE_C137_R20_COLLECTION_BORDER */
+          input[aria-label="Manual collection amount"] {
+            border: 1px solid rgba(220, 235, 255, 0.95) !important;
+            border-right: 1px solid rgba(220, 235, 255, 0.95) !important;
+            box-sizing: border-box !important;
+            background-clip: padding-box;
+          }
+
+          input[aria-label="Manual collection amount"][aria-invalid="true"] {
+            border: 1px solid var(--finora-danger, #dc2626) !important;
+            border-right: 1px solid var(--finora-danger, #dc2626) !important;
+          }
+          input[aria-label="Manual collection amount"]::placeholder,
+          input[aria-label="Manual principal"]::placeholder,
+          input[aria-label="Discount"]::placeholder {
+            color: var(
+              --finora-theme-text-primary,
+              var(--text, #111827)
+            ) !important;
+            opacity: 1;
+          }
+        `}</style>
       <div style={responsiveModeWorkspaceStyle}>
         {/* ==================================================
             LEFT — EMI COLLECTION
@@ -1505,9 +2054,29 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                       )
                     }
                     placeholder="₹ 0"
-                    style={collectionEntryStyles.manualInput}
+                    style={{
+                      ...collectionEntryStyles.manualInput,
+                      border: manualAmountBelowMinimum
+                         ? "1px solid var(--finora-danger, #dc2626)"
+                         : "1px solid rgba(220, 235, 255, 0.78)",
+                      boxSizing: "border-box",
+
+                      ...(manualAmountBelowMinimum
+                        ? {
+                            // Color is included in conditional border.
+                            outline: "1px solid var(--finora-danger, #dc2626)",
+                          }
+                        : {}),
+                    }}
+                    aria-invalid={manualAmountBelowMinimum}
+                    aria-describedby={
+                      manualAmountBelowMinimum
+                        ? "paisarule-manual-minimum-error"
+                        : undefined
+                    }
                     aria-label="Manual collection amount"
                   />
+
                 </label>
 
                 {/* ========================================
@@ -1551,7 +2120,6 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                     inputMode="decimal"
                     autoComplete="off"
                     value={discountAmount === 0 ? "" : String(discountAmount)}
-                    onFocus={ensureManualMode}
                     onChange={(event) =>
                       handleManualValueChange(
                         "discountAmount",
@@ -1561,16 +2129,602 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                     placeholder="₹ 0"
                     style={collectionEntryStyles.manualInput}
                     aria-label="Discount"
+                    onFocus={() => setDiscountInputFocused(true)}
+                    onBlur={() => setDiscountInputFocused(false)}
+                    disabled={eligibleOverdueDiscount <= 0}
                   />
+
                 </label>
               </div>
+
+              {/* PAISARULE_C132_R48_DISCOUNT_MESSAGE
+                  Show only after Discount entry or invalid attempt.
+                  Full width, outside the three-column input grid.
+              */}
+              {(discountInputFocused || discountLimitWarning) && (
+                <div
+                  role={discountLimitWarning ? "alert" : "status"}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    minWidth: 0,
+                    boxSizing: "border-box",
+                    marginTop: 8,
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    color: discountLimitWarning ? "#FEE2E2" : "var(--finora-theme-text-primary, #111827)",
+                    background: discountLimitWarning ? "linear-gradient(135deg, rgba(127, 29, 29, 0.96) 0%, rgba(153, 27, 27, 0.92) 100%)" : "var(--finora-theme-surface-muted, #F3F6FA)",
+                    border: discountLimitWarning ? "1px solid rgba(248, 113, 113, 0.95)" : "1px solid var(--finora-theme-border-default, #D5DCE5)",
+                    fontWeight: 700,
+                    fontSize: 12,
+                    lineHeight: 1.5,
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  <span
+                      aria-hidden="true"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 17,
+                        height: 17,
+                        borderRadius: "50%",
+                        border: "1.5px solid currentColor",
+                        fontSize: 11,
+                        fontWeight: 800,
+                        lineHeight: 1,
+                        marginRight: 6,
+                        verticalAlign: "middle",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {discountLimitWarning ? "!" : "i"}
+                    </span>
+                  <span>
+                    {discountLimitWarning
+                      ? "Discount Exceeds Eligible Limit. Maximum: "
+                      : "Maximum Eligible Discount: "}
+                    {currency(eligibleOverdueDiscount)} (Overdue Only)
+                  </span>
+                </div>
+              )}
+
+              {/* R86: Full-width Manual minimum error below all inputs. */}
+              {manualAmountBelowMinimum && manualMinimumEmi && (
+                <div
+                  id="paisarule-manual-minimum-error"
+                  role="alert"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    width: "100%",
+                    minWidth: 0,
+                    boxSizing: "border-box",
+                    marginTop: 10,
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    border: "1px solid rgba(248, 113, 113, 0.95)",
+                    color: "#FEE2E2",
+                    background: "linear-gradient(135deg, rgba(127, 29, 29, 0.96) 0%, rgba(153, 27, 27, 0.92) 100%)",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    lineHeight: 1.5,
+                    whiteSpace: "nowrap",
+                    overflowX: "auto",
+                  }}
+                >
+                  <span aria-hidden="true">⚠</span>
+                  <span>
+                    Minimum Collection Amount is{" "}
+                    {currency(manualMinimumAmount)}{" "}
+                    (EMI{" "}
+                    {String(
+                      manualMinimumEmi.installmentNumber,
+                    ).padStart(2, "0")})
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* PAISARULE_C132_R47_PRECLOSE_UI
+                Full-width Preclose Loan entry.
+                Temporarily disabled until authoritative
+                cycle calculation and atomic Save are ready.
+            */}
+            <div
+              style={{
+                width: "100%",
+                minWidth: 0,
+                boxSizing: "border-box",
+                marginTop: 12,
+                padding: "12px 14px",
+                border: "1px solid var(--finora-border, #d5dce5)",
+                borderRadius: 12,
+                background: "var(--finora-surface, transparent)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+              }}
+            >
+              {/* PAISARULE_C137_R5_PRECLOSE_THREE_COLUMNS */}
+              <strong
+                style={{
+                  color: "var(--finora-theme-text-primary, var(--text, #111827))",
+                  fontSize: 12,
+                  fontWeight: 800,
+                }}
+              >
+                PRECLOSE LOAN
+              </strong>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(3, minmax(0, 1fr))",
+                  gap: 10,
+                  width: "100%",
+                  minWidth: 0,
+                }}
+              >
+                <div
+                  style={{
+                    minWidth: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}
+                >
+                  <label
+                    htmlFor="paisarule-preclose-loan-amount"
+                    style={collectionEntryStyles.manualFieldLabel}
+                  >
+                    PRECLOSE AMOUNT
+                  </label>
+                  <TextInput
+                    id="paisarule-preclose-loan-amount"
+                    type="text"
+                    value={
+                      visiblePrecloseAmount === null
+                        ? ""
+                        : currency(visiblePrecloseAmount)
+                    }
+                    placeholder="Quote unavailable"
+                    style={{
+                      ...collectionEntryStyles.manualInput,
+                      width: "100%",
+                      boxSizing: "border-box",
+                      opacity: 1,
+                    }}
+                    aria-label="Preclose Loan amount"
+                    disabled
+                  />
+                </div>
+
+                <div
+                  style={{
+                    minWidth: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}
+                >
+                  <label
+                    htmlFor="paisarule-preclose-saved-interest"
+                    style={collectionEntryStyles.manualFieldLabel}
+                  >
+                    SAVED INTEREST
+                  </label>
+                  <TextInput
+                    id="paisarule-preclose-saved-interest"
+                    type="text"
+                    value={(() => {
+                      const outstanding = Number(
+                        reviewData.outstandingBalance,
+                      );
+                      if (
+                        visiblePrecloseAmount === null || visiblePreclosePenalty === null ||
+                        !Number.isFinite(outstanding) ||
+                        outstanding < visiblePrecloseAmount ||
+                        !Number.isSafeInteger(
+                          Math.round(outstanding * 100),
+                        )
+                      ) {
+                        return "";
+                      }
+
+                      return currency(
+                        Math.round(
+                          (outstanding - visiblePrecloseAmount + visiblePreclosePenalty) * 100,
+                        ) / 100,
+                      );
+                    })()}
+                    placeholder="Not calculated"
+                    style={{
+                      ...collectionEntryStyles.manualInput,
+                      width: "100%",
+                      boxSizing: "border-box",
+                      opacity: 1,
+                    }}
+                    aria-label="Estimated saved interest"
+                    disabled
+                  />
+                </div>
+
+                <div
+                  style={{
+                    minWidth: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}
+                >
+                  <span style={collectionEntryStyles.manualFieldLabel}>
+                    PRECLOSE MODE
+                  </span>
+                  {/* PAISARULE_C137_R31_R2_TRAFFIC_LIGHT */}
+                  <button
+                    type="button"
+                    aria-label="Preclose mode"
+                    aria-pressed={precloseStage === "confirmed"}
+                    data-paisarule-preclose-state={precloseStage}
+                    onClick={() => {
+                      if (precloseStage === "confirmed") {
+                                                // PAISARULE_C137_R39_CLEAR_OFF
+                        // Explicit OFF clears only entry-form values.
+                        // No Loan, Collection, DB or Wallet write.
+                        updateField("paymentAmount", 0);
+                        updateField("discountAmount", 0);
+                        updateField("advanceAdjustment", 0);
+                        // PAISARULE_C137_R68_ATOMIC_UI_RESET
+                        updateField("remarks", "");
+                        preclosePreviousValuesRef.current = null;
+                        setPrecloseReason("");
+
+                        setPrecloseStage("off");
+                        setPrecloseDialogOpen(false);
+                        setPrecloseAcknowledged(false);
+                        window.dispatchEvent(
+                          new CustomEvent("PAISARULE_PRECLOSE_REMARKS", {
+                            detail: { stage: "off" },
+                          }),
+                        );
+                      } else {
+                        setPrecloseReason("");
+                        setPrecloseAcknowledged(false);
+                        setPrecloseStage("pending");
+                        setPrecloseDialogOpen(true);
+                      }
+                    }}
+                    style={{
+                      position: "relative",
+                      width: "100%",
+                      height: 45,
+                      boxSizing: "border-box",
+                      borderRadius: 12,
+                      overflow: "hidden",
+                      border: "1px solid rgba(255,255,255,0.4)",
+                      background:
+                        precloseStage === "off"
+                          ? "#991B1B"
+                          : precloseStage === "pending"
+                            ? "#B45309"
+                            : "#15803D",
+                      color: "#FFFFFF",
+                      fontWeight: 800,
+                      fontSize: 12,
+                      cursor: "pointer",
+                      transition: "background 250ms ease",
+                    }}
+                  >
+
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        position: "absolute",
+                        top: "50%",
+                        left:
+                          precloseStage === "off"
+                            ? 5
+                            : precloseStage === "pending"
+                              ? "calc(50% - 13px)"
+                              : "calc(100% - 31px)",
+                        transform: "translateY(-50%)",
+                        width: 26,
+                        height: 26,
+                        borderRadius: "50%",
+                        background: "#FFFFFF",
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                        transition:
+                          "left 300ms cubic-bezier(0.22,1,0.36,1)",
+                      }}
+                    />
+                  </button>
+
+                  {/* PAISARULE_C137_R34_PORTAL */}
+                  {precloseDialogOpen && createPortal((
+                    <div
+                      role="presentation"
+                      style={{
+                        position: "fixed",
+                        inset: 0,
+                        zIndex: 2147483000,
+                        background: "rgba(2, 6, 23, 0.10)",
+                        backdropFilter: "blur(1px)",
+                        WebkitBackdropFilter: "blur(1px)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 16,
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Confirm Loan Preclosure"
+                        style={{
+                          width: "100%",
+                          maxWidth: 460,
+                          fontFamily: resolvePreclosePopupTheme().font,
+                          maxHeight: "90vh",
+                          overflowY: "auto",
+                          display: "grid",
+                          gap: 14,
+                          padding: 20,
+                          boxSizing: "border-box",
+                          borderRadius: 16,
+                          border:
+                            "1px solid var(--finora-border, #64748b)",
+                          background: resolvePreclosePopupTheme().surface,
+                          colorScheme: "normal",
+                          color: resolvePreclosePopupTheme().text,
+                          boxShadow:
+                            "0 24px 80px rgba(0,0,0,0.45)",
+                        }}
+                      >
+                        <strong style={{ fontSize: 17 }}>
+                          CONFIRM LOAN PRECLOSURE
+                        </strong>
+
+                        <span style={{ fontSize: 13 }}>
+                          Preclose Amount:{" "}
+                          <strong>
+                            {visiblePrecloseAmount === null
+                              ? "Quote unavailable"
+                              : currency(visiblePrecloseAmount)}
+                          </strong>
+                        </span>
+
+                        <label
+                          htmlFor="paisarule-preclose-reason"
+                          style={{ fontWeight: 750, fontSize: 12 }}
+                        >
+                          REASON FOR PRECLOSURE *
+                        </label>
+
+                        {/* PAISARULE_C137_R36_PRIMARY_TEXT */}
+                        <style>{`
+                          #paisarule-preclose-reason::placeholder {
+                            color: inherit !important;
+                            opacity: 1 !important;
+                          }
+                        `}</style>
+                        <textarea
+                          id="paisarule-preclose-reason"
+                          autoFocus
+                          rows={3}
+                          value={precloseReason}
+                          onChange={(event) =>
+                            setPrecloseReason(event.target.value)
+                          }
+                          placeholder="Enter customer preclosure reason"
+                          style={{
+                            width: "100%",
+                            minWidth: 0,
+                            padding: 12,
+                            boxSizing: "border-box",
+                            borderRadius: 10,
+                            border:
+                              "1px solid var(--finora-border, #64748b)",
+                            background: resolvePreclosePopupTheme().inputSurface,
+                            color: resolvePreclosePopupTheme().text,
+                            fontFamily: resolvePreclosePopupTheme().font,
+                            resize: "vertical",
+                          }}
+                        />
+
+                        <span style={{ fontSize: 11 }}>
+                          Minimum 10 non-whitespace characters:{" "}
+                          {precloseReason.replace(/\s/g, "").length}
+                        </span>
+
+                        <label
+                          style={{
+                            display: "flex",
+                            gap: 9,
+                            alignItems: "flex-start",
+                            fontSize: 12,
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={precloseAcknowledged}
+                            onChange={(event) =>
+                              setPrecloseAcknowledged(
+                                event.target.checked
+                              )
+                            }
+                          />
+                          I verified the customer request and
+                          reviewed the preclosure quote.
+                        </label>
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
+                            gap: 10,
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPrecloseStage("off");
+                              setPrecloseDialogOpen(false);
+                              setPrecloseAcknowledged(false);
+                            }}
+                            style={{
+                              minHeight: 44,
+                              borderRadius: 10,
+                              border:
+                                "1px solid var(--finora-border, #64748b)",
+                              background: "transparent",
+                              color: "inherit",
+                              fontWeight: 750,
+                              cursor: "pointer",
+                            }}
+                          >
+                            CANCEL
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={
+                              !precloseAcknowledged ||
+                              visiblePrecloseAmount === null ||
+                              precloseReason.replace(/\s/g, "").length < 10
+                            }
+                            onClick={() => {
+                              const reason = precloseReason.trim();
+
+                              if (
+                                !precloseAcknowledged ||
+                                visiblePrecloseAmount === null ||
+                                reason.replace(/\s/g, "").length < 10
+                              ) {
+                                return;
+                              }
+
+                              window.dispatchEvent(
+                                new CustomEvent(
+                                  "PAISARULE_PRECLOSE_REMARKS",
+                                  {
+                                    detail: {
+                                      stage: "confirmed",
+                                      reason,
+                                    },
+                                  },
+                                ),
+                              );
+
+                              // PAISARULE_C137_R38_AUTOFILL_CONFIRM
+                              const outstanding = Number(
+                                reviewData.outstandingBalance,
+                              );
+
+                              const quote = visiblePrecloseAmount;
+
+                              if (
+                                quote === null || visiblePreclosePenalty === null ||
+                                !Number.isFinite(quote) ||
+                                quote <= 0 ||
+                                !Number.isFinite(outstanding) ||
+                                outstanding < quote
+                              ) {
+                                setPrecloseStage("off");
+                                setPrecloseDialogOpen(false);
+                                setPrecloseAcknowledged(false);
+                                return;
+                              }
+
+                              const futureInterestWaiver =
+                                Math.round(
+                                  (outstanding - quote + visiblePreclosePenalty) * 100,
+                                ) / 100;
+
+                              preclosePreviousValuesRef.current = {
+                                loanId: String(reviewData.loanId ?? ""),
+                                receiptDate: String(
+                                  reviewData.receiptDate ?? "",
+                                ),
+                                paymentAmount: safeNumber(
+                                  reviewData.paymentAmount,
+                                ),
+                                discountAmount: safeNumber(
+                                  reviewData.discountAmount,
+                                ),
+                                advanceAdjustment: safeNumber(
+                                  reviewData.advanceAdjustment,
+                                ),
+                              };
+
+                              // Select existing Manual Collection mode.
+                              handleModeChange("manual");
+
+                              // Populate the same controller fields as
+                              // Settlement Entry's existing inputs.
+                              updateField("paymentAmount", quote);
+                              updateField(
+                                "discountAmount",
+                                futureInterestWaiver,
+                              );
+                              updateField("advanceAdjustment", 0);
+                              // PAISARULE_C137_R64_DIRECT_REMARKS_AUTOFILL
+                              updateField("remarks", reason);
+                              setPrecloseStage("confirmed");
+                              setPrecloseDialogOpen(false);
+                            }}
+                            style={{
+                              minHeight: 44,
+                              borderRadius: 10,
+                              border: 0,
+                              background:
+                                precloseAcknowledged &&
+                                visiblePrecloseAmount !== null &&
+                                precloseReason.replace(/\s/g, "").length >= 10
+                                  ? "#15803D"
+                                  : "#475569",
+                              color: "#FFFFFF",
+                              fontWeight: 800,
+                              cursor: "pointer",
+                              opacity: 1,
+                            }}
+                          >
+                            CONFIRM PRECLOSE
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ), document.body)}
+                </div>
+              </div>
+
+              <span
+                id="paisarule-preclose-pending"
+                style={{
+                  color:
+                    "var(--finora-theme-text-primary, var(--text, #111827))",
+                  fontSize: 11,
+                  lineHeight: 1.5,
+                }}
+              >
+                {precloseStage === "confirmed"
+                  ? "PRECLOSE CONFIRMED — Atomic Preclose Save integration is pending."
+                  : precloseStage === "pending"
+                    ? "PRECLOSE PENDING — Owner confirmation required."
+                    : "PRECLOSE OFF — Normal Collection mode."}
+              </span>
             </div>
 
             {/* ==============================================
                 MANUAL VALUES
             ============================================== */}
 
-            <div style={responsiveValueGridStyle}>
+            <div style={{ ...responsiveValueGridStyle, marginTop: 12 }}>
               <div
                 style={{
                   ...collectionEntryStyles.valueCard,
@@ -1581,7 +2735,7 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                 <span style={collectionEntryStyles.valueLabel}>Collection</span>
 
                 <strong style={collectionEntryStyles.value}>
-                  {currency(isManual ? paymentAmount : 0)}
+                  {currency(paymentAmount)}
                 </strong>
               </div>
 
@@ -1606,6 +2760,52 @@ export default function CollectionEntry({ middleSlot }: CollectionEntryProps) {
                   {currency(discountAmount)}
                 </strong>
               </div>
+            </div>
+            {/* PAISARULE_C137_R10_FULL_WIDTH_AMOUNT_WORDS */}
+            <div
+              aria-label="Amount in Words"
+              style={{
+                width: "100%",
+                minWidth: 0,
+                boxSizing: "border-box",
+                marginTop: 12,
+                padding: "12px 14px",
+                border:
+                  "1px solid var(--finora-border, #d5dce5)",
+                borderRadius: 10,
+                background:
+                  "var(--finora-surface, transparent)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 7,
+              }}
+            >
+              <span
+                style={{
+                  color:
+                    "var(--finora-theme-text-primary, var(--text, #111827))",
+                  fontSize: 11,
+                  fontWeight: 750,
+                  letterSpacing: "0.03em",
+                }}
+              >
+                AMOUNT IN WORDS
+              </span>
+              <strong
+                aria-live="polite"
+                style={{
+                  color:
+                    "var(--finora-theme-text-primary, var(--text, #111827))",
+                  fontSize: 13,
+                  fontWeight: 750,
+                  lineHeight: 1.5,
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {collectionAmountInWords(
+                  Number(reviewData.paymentAmount),
+                )}
+              </strong>
             </div>
           </div>
         </section>

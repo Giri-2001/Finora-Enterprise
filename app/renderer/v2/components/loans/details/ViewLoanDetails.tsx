@@ -351,33 +351,54 @@ function getScheduleBalance(
   paidAmount: unknown,
   status: unknown,
 ): number | undefined {
+  // PAISARULE_C130_R3_INSTALLMENT_BALANCE
+  // This is an individual EMI balance, not total loan outstanding.
   const normalizedStatus = String(status ?? "")
     .trim()
-    .toLowerCase();
+    .toLowerCase()
+    .replace(/[\s_-]+/g, " ");
 
-  if (normalizedStatus === "paid" || normalizedStatus === "preclosed") {
+  // Settled installments have no remaining collectible EMI amount.
+  if (
+    normalizedStatus === "paid" ||
+    normalizedStatus === "overdue paid" ||
+    normalizedStatus === "preclosed"
+  ) {
     return 0;
   }
+
+  const installment = Number(installmentAmount);
+  const paid = getSchedulePaidAmount(paidAmount);
+
+  const calculatedRemaining = Number.isFinite(installment)
+    ? Math.max(0, installment - paid)
+    : undefined;
 
   const storedBalance = Number(persistedBalance);
 
   if (
     persistedBalance !== undefined &&
     persistedBalance !== null &&
-    Number.isFinite(storedBalance)
+    Number.isFinite(storedBalance) &&
+    storedBalance >= 0
   ) {
-    return Math.max(0, storedBalance);
+    // Prefer meaningful persisted remaining EMI balances.
+    if (storedBalance > 0) {
+      return storedBalance;
+    }
+
+    // Older schedules may persist zero even for unpaid EMIs.
+    if (
+      calculatedRemaining !== undefined &&
+      calculatedRemaining > 0
+    ) {
+      return calculatedRemaining;
+    }
+
+    return 0;
   }
 
-  const installment = Number(installmentAmount);
-
-  if (!Number.isFinite(installment)) {
-    return undefined;
-  }
-
-  const paid = getSchedulePaidAmount(paidAmount);
-
-  return Math.max(0, installment - paid);
+  return calculatedRemaining;
 }
 
 // ============================================================

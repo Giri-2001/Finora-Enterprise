@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 //
 // IDENTITY & NUMBERING ENGINE
 // NUMBERING FORMATTER
@@ -229,7 +229,7 @@ export function formatCollectionNumber(
   );
 
   return joinNumberParts([
-    FINORA_NUMBER_PREFIX,
+    "PAISA",
     FINORA_COLLECTION_PREFIX,
     formatNumericSegment(
       customerNumber,
@@ -283,7 +283,7 @@ export function formatReceiptNumber(
   );
 
   return joinNumberParts([
-    FINORA_NUMBER_PREFIX,
+    "PAISA",
     FINORA_RECEIPT_PREFIX,
     formatNumericSegment(
       customerNumber,

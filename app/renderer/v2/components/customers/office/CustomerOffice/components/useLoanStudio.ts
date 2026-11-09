@@ -2466,6 +2466,44 @@ export function useLoanStudio({
     const authoritativeLoanNumber =
       loanNumberResult.data.loanNumber;
 
+    // PAISARULE_C133_R8_PREVIEW_FINAL_MATCH
+    // The displayed preview and the final reserved number
+    // must refer to exactly the same Customer and sequence.
+    // FIN and PAISA prefixes are presentation aliases only.
+    const normalizeLoanNumberForMatch = (value: string): string =>
+      String(value ?? "")
+        .trim()
+        .toUpperCase()
+        .replace(/^FIN-LOAN-/, "PAISA-LOAN-");
+
+    const expectedPreviewLoanNumber =
+      normalizeLoanNumberForMatch(loanNumberPreview);
+
+    const actualReservedLoanNumber =
+      normalizeLoanNumberForMatch(authoritativeLoanNumber);
+
+    if (
+      !expectedPreviewLoanNumber ||
+      !actualReservedLoanNumber ||
+      expectedPreviewLoanNumber !== actualReservedLoanNumber
+    ) {
+      console.error(
+        "PAISARULE LOAN NUMBER PREVIEW/RESERVATION MISMATCH",
+        {
+          expectedPreviewLoanNumber,
+          actualReservedLoanNumber,
+        },
+      );
+
+      await finoraError(
+        "Loan Number changed during approval. " +
+        "No Loan was created. Please restart Loan entry " +
+        "and verify the latest Loan Number.",
+      );
+
+      return;
+    }
+
     /* ========================================================
        BUILD LOAN
     ======================================================== */

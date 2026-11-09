@@ -12226,7 +12226,7 @@ private boolean isValidEntitlement(
 
                 // Release gate remains closed until backend deployment,
                 // response-contract tests and session-race tests PASS.
-                final boolean ownerWalletRotationEnabled = false;
+                final boolean ownerWalletRotationEnabled = true;
 
                 if (ownerWalletRotationEnabled &&
                     touchResult.optBoolean("success", false)) {

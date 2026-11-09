@@ -179,7 +179,7 @@ export const collectionHistoryStyles: Record<string, CSSProperties> = {
 
     marginTop: "8px",
 
-    color: THEME.brand,
+    color: THEME.textPrimary,
 
     strokeWidth: 2,
   },

@@ -162,7 +162,7 @@ export const collectionSystemGeneratedStyles: Record<string, CSSProperties> = {
 
     marginTop: "1px",
 
-    color: THEME.brand,
+    color: THEME.textPrimary,
   },
 
   // ==========================================================
@@ -274,7 +274,7 @@ financialList: {
 
   whiteSpace: "nowrap",
 
-  color: THEME.textMuted,
+  color: THEME.textPrimary,
 
   fontFamily: INTER_FONT,
 
@@ -360,7 +360,7 @@ financialValue: {
   // ==========================================================
 
   generatedTotalLabel: {
-    color: THEME.brand,
+    color: THEME.textPrimary,
 
     fontFamily: INTER_FONT,
 
@@ -450,7 +450,7 @@ financialValue: {
 
     marginTop: "1px",
 
-    color: THEME.brand,
+    color: THEME.textPrimary,
   },
 
   // ==========================================================

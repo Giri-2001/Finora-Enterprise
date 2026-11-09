@@ -111,15 +111,23 @@ export function planSequentialManualCollection(
   const lines: ManualAllocationLine[] = [];
 
   for (const row of prepared) {
+    // R58: Fully close a row when cash covers EMI + fee.
+    // Otherwise apply available cash to the EMI first.
+    // Any unpaid fee remains due on this same row.
+    const fullRowDue = row.emi + row.penalty;
+    const canCloseRow = remaining >= fullRowDue;
+
+    const emiReceived = canCloseRow
+      ? row.emi
+      : Math.min(remaining, row.emi);
+
+    remaining -= emiReceived;
+    totalEmi += emiReceived;
+
     const penaltyReceived = Math.min(remaining, row.penalty);
 
     remaining -= penaltyReceived;
     totalPenalty += penaltyReceived;
-
-    const emiReceived = Math.min(remaining, row.emi);
-
-    remaining -= emiReceived;
-    totalEmi += emiReceived;
 
     lines.push({
       installmentNumber: row.number,

@@ -98,6 +98,14 @@ function formatEmiDate(value: string): string {
 function getRemainingAmount(
   installment: EmiScheduleRecord,
 ): number {
+  // PAISARULE_C142_R7A_PRECLOSED_ZERO_BALANCE
+  // A Preclosed EMI is a final non-collectible schedule row.
+  // Any residual amount represents liability removed by preclosure,
+  // not an amount still due from the customer.
+  if (normalizeStatus(installment.status) === "preclosed") {
+    return 0;
+  }
+
   return Math.max(
     0,
     installment.installmentAmount -
@@ -433,8 +441,7 @@ export default function CollectionEmiSchedule({
         <div
           style={{
             ...collectionEntryStyles.schedule,
-
-            overflowX: "auto",
+            overflow: "auto",
           }}
         >
           {/* ==================================================

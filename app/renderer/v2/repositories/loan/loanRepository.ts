@@ -1,4 +1,4 @@
-﻿import { projectManualPenaltyScheduleSettlement } from "./manualPenaltyScheduleSettlement";
+import { projectManualPenaltyScheduleSettlement } from "./manualPenaltyScheduleSettlement";
 // ============================================================
 // FINORA ENTERPRISE OS™
 //
@@ -228,6 +228,11 @@ export interface LoanOutstandingUpdateOptions {
   discountAmount?: number;
   manualPrincipalAmount?: number;
   penaltyAmount?: number;
+
+  // PAISARULE_C141_R9B
+  // Confirmed Preclose discount reduces Loan liability
+  // without becoming EMI waivedAmount.
+  allowPrecloseDiscount?: boolean;
 }
 
 // ============================================================
@@ -912,7 +917,10 @@ function allocateManualPayment(
 //
 // ============================================================
 
-function finalizeClosedSchedule(schedule: LoanScheduleInstallment[]): {
+function finalizeClosedSchedule(
+  schedule: LoanScheduleInstallment[],
+  closureDate?: string,
+): {
   schedule: LoanScheduleInstallment[];
 
   changed: boolean;
@@ -921,6 +929,39 @@ function finalizeClosedSchedule(schedule: LoanScheduleInstallment[]): {
 
   const finalizedSchedule = schedule.map((installment) => {
     const normalizedStatus = normalizeInstallmentStatus(installment.status);
+
+    // PAISARULE_C145_R15R3_OVERDUE_CLOSE_STATUS_AUTHORITY
+    // Matured EMI + actually-paid penalty is Overdue Paid.
+    // Only future / unmatured residual closure is Preclosed.
+    const dueDate = String(installment.dueDate ?? "").slice(0, 10);
+    const persistedPaidDate =
+      String(installment.paidDate ?? "").slice(0, 10);
+    const normalizedClosureDate =
+      String(closureDate ?? "").slice(0, 10);
+    const effectivePaidDate =
+      persistedPaidDate || normalizedClosureDate;
+    const penaltyPaid =
+      safePositiveNumber(installment.penaltyPaidAmount);
+
+    const closedAsOverduePaid =
+      /^\d{4}-\d{2}-\d{2}$/.test(dueDate) &&
+      /^\d{4}-\d{2}-\d{2}$/.test(effectivePaidDate) &&
+      dueDate < effectivePaidDate &&
+      penaltyPaid > 0;
+
+    if (
+      closedAsOverduePaid &&
+      normalizedStatus !== "paid" &&
+      normalizedStatus !== "overdue paid" &&
+      normalizedStatus !== "preclosed"
+    ) {
+      changed = true;
+
+      return {
+        ...installment,
+        status: "Overdue Paid",
+      };
+    }
 
     // ------------------------------------------------------
     // FINAL HISTORICAL STATES
@@ -1339,6 +1380,58 @@ export async function addLoan(loan: Loan): Promise<StorageResult<Loan>> {
     };
   }
 
+  // PAISARULE_C133_R10_UNIQUE_LOAN_NUMBER
+  // Include Closed and Preclosed Loans. No repair or data mutation.
+  // FIN and PAISA loan prefixes refer to the same displayed number.
+  const canonicalLoanNumber = (value: unknown): string =>
+    String(value ?? "")
+      .trim()
+      .toUpperCase()
+      .replace(/^FIN-LOAN-/, "PAISA-LOAN-");
+
+  const requestedLoanNumber =
+    canonicalLoanNumber(normalizedLoan.loanNumber);
+
+  if (!requestedLoanNumber) {
+    return {
+      success: false,
+      error: "Loan Number is required before saving.",
+    };
+  }
+
+  const historicalLoansResult =
+    await storageManager.getAll<LoanStorageRecord>(
+      buildLoanQuery(),
+    );
+
+  if (
+    !historicalLoansResult.success ||
+    !Array.isArray(historicalLoansResult.data)
+  ) {
+    return {
+      success: false,
+      error:
+        historicalLoansResult.error ??
+        "Unable to verify existing Loan Numbers. Loan Save blocked.",
+    };
+  }
+
+  const duplicateLoanNumber =
+    historicalLoansResult.data.some(
+      (historicalLoan) =>
+        canonicalLoanNumber(historicalLoan.loanNumber) ===
+        requestedLoanNumber,
+    );
+
+  if (duplicateLoanNumber) {
+    return {
+      success: false,
+      error:
+        "Loan Number already exists. Loan Save blocked. " +
+        "Refresh the Loan Number preview before retrying.",
+    };
+  }
+
   const result = await storageManager.save<LoanStorageRecord>(
     toLoanStorageRecord(normalizedLoan),
   );
@@ -1607,6 +1700,8 @@ export async function previewManualCollectionSettlement(
       principalAmount,
       receiptNumber,
       paidDate,
+      Number((loan as Loan & { lateFee?: number }).lateFee ?? 0),
+      Number(loan.outstanding),
     );
 
     return {
@@ -1862,8 +1957,27 @@ export function projectLoanOutstandingWithoutPersistence(
   // DISCOUNT / WAIVER
   // ==========================================================
 
-  const discountAmount = safePositiveNumber(options?.discountAmount);
+  const requestedDiscountAmount =
+    safePositiveNumber(options?.discountAmount);
+
+  const allowPrecloseDiscount =
+    options?.allowPrecloseDiscount === true;
+
+  const discountAmount =
+    allowPrecloseDiscount ? 0 : requestedDiscountAmount;
+
   const penaltyAmount = safePositiveNumber(options?.penaltyAmount);
+
+  // PAISARULE C132-R39:
+  // Temporary fail-closed protection until the overdue-only
+  // waiver is reconciled and committed atomically.
+  // Never reduce contractual outstanding using an overdue waiver.
+  if (
+    requestedDiscountAmount > 0 &&
+    !allowPrecloseDiscount
+  ) {
+    return undefined;
+  }
 
   // ==========================================================
   // MANUAL PRINCIPAL
@@ -1928,7 +2042,9 @@ export function projectLoanOutstandingWithoutPersistence(
     0,
     debtPaymentAmount - manualPrincipalAmount,
   );
-  const settlementReduction = debtPaymentAmount + discountAmount;
+  const settlementReduction =
+    debtPaymentAmount +
+    (allowPrecloseDiscount ? requestedDiscountAmount : 0);
 
   // ==========================================================
   // MANUAL PRINCIPAL SPECIAL PATH
@@ -2056,6 +2172,8 @@ export function projectLoanOutstandingWithoutPersistence(
           manualPrincipalAmount,
           receiptNumber,
           paidDate,
+          Number((rawLoan as Loan & { lateFee?: number }).lateFee ?? 0),
+   currentOutstanding,
         );
       } catch {
         return undefined;
@@ -2088,33 +2206,11 @@ export function projectLoanOutstandingWithoutPersistence(
 
 
 
-      // ========================================================
-      // APPLY DISCOUNT TO SCHEDULE
-      //
-      // Discount reduces contractual liability but never enters
-      // paidAmount or Collection cash.
-      // ========================================================
-
-      if (discountAmount > 0) {
-        if (selectedEmiNumbers.length > 0) {
-          updatedSchedule = allocateSelectedEmiDiscount(
-            updatedSchedule,
-            selectedEmiNumbers,
-            discountAmount,
-            receiptNumber,
-            paidDate,
-          );
-        } else {
-          updatedSchedule = allocateManualDiscount(
-            updatedSchedule,
-            discountAmount,
-            receiptNumber,
-            paidDate,
-          );
-        }
-      }
-
-    // ========================================================
+      // PAISARULE C132-R43:
+      // Legacy contractual EMI discount allocation retired.
+      // Discount remains blocked by R39 until the overdue-only
+      // projection and Native Atomic settlement are integrated.
+// ========================================================
     // PRESERVE OVERDUE PENALTY AFTER PAYMENT
     // ========================================================
     //
@@ -2205,16 +2301,19 @@ export function projectLoanOutstandingWithoutPersistence(
             originalInstallment.penaltyAmount,
           );
 
+        // PAISARULE R96:
+        // Manual projection has already assessed the overdue fee.
+        // Preserve that authoritative assessed amount, not zero.
         const preservedPenalty =
-          originalPenalty > 0
-            ? originalPenalty
-            : singleSelectedPenalty > 0
-              ? singleSelectedPenalty
-              : loanLateFee;
+          selectedEmiNumbers.length === 0
+            ? safePositiveNumber(installment.penaltyAmount)
+            : originalPenalty > 0
+              ? originalPenalty
+              : singleSelectedPenalty > 0
+                ? singleSelectedPenalty
+                : loanLateFee;
 
-        if (preservedPenalty <= 0) {
-          return installment;
-        }
+
 
         const installmentAmount =
           safePositiveNumber(
@@ -2364,7 +2463,7 @@ export function projectLoanOutstandingWithoutPersistence(
     const scheduleAfterPayment = getPersistedSchedule(updatedLoan);
 
     if (scheduleAfterPayment.field && scheduleAfterPayment.schedule) {
-      const finalized = finalizeClosedSchedule(scheduleAfterPayment.schedule);
+      const finalized = finalizeClosedSchedule(scheduleAfterPayment.schedule, paidDate);
 
       updatedLoan = applyUpdatedSchedule(
         updatedLoan,
@@ -2500,7 +2599,8 @@ export function prepareManualLoanForAtomicSettlement(
   // Native R244 currently rejects discount settlement.
   if (
     options.discountAmount !== undefined &&
-    options.discountAmount !== 0
+    options.discountAmount !== 0 &&
+    options.allowPrecloseDiscount !== true
   ) {
     return undefined;
   }

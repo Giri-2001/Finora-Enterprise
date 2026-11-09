@@ -288,7 +288,7 @@ export function createCollectionLoanSelectionStyles(
   const sectionIcon: CSSProperties = {
     flexShrink: 0,
 
-    color: colors.brand,
+    color: colors.textPrimary,
 
     transform: "translateY(10px)",
 

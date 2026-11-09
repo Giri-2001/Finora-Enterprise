@@ -101,8 +101,21 @@ interface PaisaruleRestoreUsbBridge {
   ): Promise<PaisaruleRestoreCommitResult>;
 }
 
-const paisaruleRestoreUsbBridge =
-  registerPlugin<PaisaruleRestoreUsbBridge>("FinoraUsb");
+// PAISARULE_C137_UI_R4_SINGLE_USB_PLUGIN_REGISTRATION
+// Reuse the Capacitor proxy across Vite HMR evaluations.
+// No USB data, login secrets or Wallet tokens are cached.
+const paisaruleRestoreUsbBridge = (() => {
+  const registry = globalThis as typeof globalThis & {
+    __paisaruleRestoreUsbBridge?: PaisaruleRestoreUsbBridge;
+  };
+
+  if (!registry.__paisaruleRestoreUsbBridge) {
+    registry.__paisaruleRestoreUsbBridge =
+      registerPlugin<PaisaruleRestoreUsbBridge>("FinoraUsb");
+  }
+
+  return registry.__paisaruleRestoreUsbBridge;
+})();
 import { useContext, useEffect, useState } from "react";
 import PaisaruleRestorePremiumDialog from "./PaisaruleRestorePremiumDialog";
 import { Capacitor, registerPlugin } from "@capacitor/core";

@@ -159,7 +159,10 @@ type FinoraWalletRotationOutcome = {
   errorCode?: string;
 };
 
-const FINORA_WALLET_ROTATE_BEFORE_MS = 10 * 60_000;
+// PAISARULE_C137_WALLET_R4_EARLY_ROTATION
+// Rotate only after authenticated Business Session activity.
+// Preserve server-issued expiry and scope verification.
+const FINORA_WALLET_ROTATE_BEFORE_MS = 45 * 60_000;
 const FINORA_WALLET_MAX_ROTATION_TTL_MS = 3_605_000;
 const FINORA_WALLET_HEX64 = /^[a-f0-9]{64}$/i;
 

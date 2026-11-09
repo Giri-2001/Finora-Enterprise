@@ -2884,6 +2884,16 @@ function AuthenticatedV2Application({
       return;
     }
 
+    // PAISARULE_C129_R19_COLLECTION_BRAND_EVENT
+    // Keep the active Collections workspace mounted.
+    // The workspace listener will refresh data without navigation.
+    if (page === "collections" && collectionStudioOpen) {
+      window.dispatchEvent(
+        new CustomEvent("PAISARULE_COLLECTION_BRAND_REFRESH"),
+      );
+      return;
+    }
+
     setPageRefreshKey(
       (currentKey) => currentKey + 1,
     );

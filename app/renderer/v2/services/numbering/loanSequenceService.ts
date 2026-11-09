@@ -383,8 +383,13 @@ async function resolveNextLoanSequenceWithLoanBootstrap(
   state: LoanSequenceState | undefined,
 ): Promise<StorageResult<number>> {
 
-  if (state) {
-    return resolveNextLoanSequence(state);
+  // PAISARULE_C133_R4_SEQUENCE_CONTINUITY
+  // Compare both previously reserved and historical issued Loans.
+  // Closed and Preclosed Loans must never recycle numbers.
+  const persistedNext = resolveNextLoanSequence(state);
+
+  if (!persistedNext.success) {
+    return persistedNext;
   }
 
   const loansResult =
@@ -403,7 +408,7 @@ async function resolveNextLoanSequenceWithLoanBootstrap(
   const loans =
     loansResult.data ?? [];
 
-  let highestExistingSequence = 0;
+  let highestExistingSequence = state?.lastIssuedLoanSequence ?? 0;
 
   for (const loan of loans) {
     const normalizedLoanNumber =
@@ -424,6 +429,13 @@ async function resolveNextLoanSequenceWithLoanBootstrap(
     let loanSequenceText:
       string | undefined;
 
+    const paisaruleShape =
+      parts.length === 4 &&
+      (parts[0] === "FIN" || parts[0] === "PAISA") &&
+      parts[1] === "LOAN" &&
+      /^\d{6}$/.test(parts[2] ?? "") &&
+      /^\d{3}$/.test(parts[3] ?? "");
+
     const currentShape =
       parts.length === 5 &&
       (parts[0] === "FIN" || parts[0] === "PAISA") &&
@@ -441,7 +453,10 @@ async function resolveNextLoanSequenceWithLoanBootstrap(
       /^\d{6}$/.test(parts[4] ?? "") &&
       /^\d{3}$/.test(parts[5] ?? "");
 
-    if (currentShape) {
+    if (paisaruleShape) {
+      customerNumberText = parts[2];
+      loanSequenceText = parts[3];
+    } else if (currentShape) {
       customerNumberText = parts[3];
       loanSequenceText = parts[4];
     } else if (previousCanonicalShape) {

@@ -134,7 +134,7 @@ export const collectionPaymentDetailsStyles: Record<string, CSSProperties> = {
 
   marginTop: "2px",
 
-  color: THEME.brand,
+  color: THEME.textPrimary,
 
   strokeWidth: 2,
 },
