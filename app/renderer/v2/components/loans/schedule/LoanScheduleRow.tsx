@@ -93,7 +93,10 @@ const THEME = {
 // STATUS STYLE HELPER
 // ============================================================
 
-function getStatusStyle(status: LoanInstallment["status"]) {
+function getStatusStyle(
+  status: LoanInstallment["status"],
+  themeId: string,
+) {
   switch (status) {
     case "Paid":
       return {
@@ -137,9 +140,9 @@ function getStatusStyle(status: LoanInstallment["status"]) {
       return {
         background: "transparent",
 
-        border: `1px solid ${THEME.primary}`,
+        border: `1px solid ${["royal-navy", "amethyst", "emerald"].includes(themeId) ? THEME.textPrimary : THEME.danger}`,
 
-        color: THEME.primary,
+        color: ["royal-navy", "amethyst", "emerald"].includes(themeId) ? THEME.textPrimary : THEME.danger,
       };
   }
 }
@@ -172,7 +175,9 @@ function formatIndianDate(value: string): string {
 // ============================================================
 
 export default function LoanScheduleRow({ installment }: LoanScheduleRowProps) {
-  const statusStyle = getStatusStyle(installment.status);
+  const themeId =
+    document.documentElement.getAttribute("data-theme") ?? "";
+  const statusStyle = getStatusStyle(installment.status, themeId);
 
   return (
     <tr

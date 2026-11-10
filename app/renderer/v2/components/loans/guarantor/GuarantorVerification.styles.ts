@@ -322,3 +322,25 @@ export const selectFocusStyle: CSSProperties = {
 // ============================================================
 // END
 // ============================================================
+/* PAISARULE C144-R23 GUARANTOR VERIFICATION MOBILE */
+export const mobileGuarantorVerificationCss = `
+  @media (max-width: 767px) {
+    .paisarule-guarantor-verification
+      .paisarule-guarantor-verification-title {
+      font-size: 15px !important;
+      color: var(--finora-theme-text-primary, #FFFFFF) !important;
+    }
+
+    .paisarule-guarantor-verification label {
+      font-size: 13px !important;
+      color: var(--finora-theme-text-primary, #FFFFFF) !important;
+    }
+
+    .paisarule-guarantor-verification
+      .paisarule-guarantor-verification-select {
+      height: 40px !important;
+      min-height: 40px !important;
+      font-size: 13px !important;
+      }
+  }
+`;

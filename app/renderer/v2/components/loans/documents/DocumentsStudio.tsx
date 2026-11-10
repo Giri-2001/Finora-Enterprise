@@ -461,7 +461,7 @@ export default function DocumentsStudio({
   ======================================================== */
 
   return (
-    <section style={sectionStyle}>
+    <section className="paisarule-loan-documents-step3" style={sectionStyle}>
       {/* ======================================================
          HEADER
       ====================================================== */}

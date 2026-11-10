@@ -81,7 +81,7 @@ export const rowStyle: CSSProperties = {
 
 export const labelStyle: CSSProperties = {
   minWidth: 0,
-  color: COLORS.textMuted,
+  color: COLORS.text,
   fontSize: "12px",
   fontWeight: 500,
   lineHeight: 1.25,

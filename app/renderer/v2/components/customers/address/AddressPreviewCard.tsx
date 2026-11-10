@@ -233,7 +233,20 @@ export default function AddressPreviewCard({
       addressTokens,
     ),
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-    fontSize: `${addressTokens.previewTitleSize + 1}px`,
+    fontSize:
+      `${addressTokens.viewport === "mobile" ? 17 : addressTokens.previewTitleSize + 1}px`,
+    fontWeight:
+      addressTokens.viewport === "mobile"
+        ? 750
+        : createAddressPreviewTitleStyle(addressTokens).fontWeight,
+    lineHeight:
+      addressTokens.viewport === "mobile"
+        ? 1.15
+        : createAddressPreviewTitleStyle(addressTokens).lineHeight,
+    letterSpacing:
+      addressTokens.viewport === "mobile"
+        ? ".05px"
+        : createAddressPreviewTitleStyle(addressTokens).letterSpacing,
   };
 
 

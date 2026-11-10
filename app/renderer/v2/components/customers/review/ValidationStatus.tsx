@@ -86,6 +86,7 @@ function StatusRow({
 
   styles,
 
+  themeId,
 }: {
 
   icon:
@@ -102,6 +103,7 @@ function StatusRow({
       typeof createValidationStatusStyles
     >;
 
+  themeId: string;
 }) {
 
   return (
@@ -154,7 +156,7 @@ function StatusRow({
   style={
     ok
       ? { ...styles.statusIconCompleteStyle, color: "var(--finora-theme-status-success, #16A34A)" }
-      : { ...styles.statusIconPendingStyle, color: "var(--finora-theme-status-danger, #DC2626)" }
+      : { ...styles.statusIconPendingStyle, color: (["royal-navy", "amethyst", "emerald"].includes(themeId) ? "#FFFFFF" : "var(--finora-theme-status-danger, #DC2626)") }
   }
   aria-hidden="true"
 >
@@ -178,7 +180,7 @@ function StatusRow({
         }
       >
 
-        <span style={{ color: ok ? "var(--finora-theme-status-success, #16A34A)" : "var(--finora-theme-status-danger, #DC2626)" }}>{ok ? "Complete" : "Pending"}</span>
+        <span style={{ color: ok ? "var(--finora-theme-status-success, #16A34A)" : (["royal-navy", "amethyst", "emerald"].includes(themeId) ? "#FFFFFF" : "var(--finora-theme-status-danger, #DC2626)") }}>{ok ? "Complete" : "Pending"}</span>
 
       </strong>
 
@@ -212,6 +214,7 @@ export default function ValidationStatus({
 
   const {
     theme,
+    themeId,
   } = useTheme();
 
 
@@ -328,6 +331,7 @@ export default function ValidationStatus({
         styles={
           styles
         }
+        themeId={themeId}
       />
 
 
@@ -342,6 +346,7 @@ export default function ValidationStatus({
         styles={
           styles
         }
+        themeId={themeId}
       />
 
 
@@ -356,6 +361,7 @@ export default function ValidationStatus({
         styles={
           styles
         }
+        themeId={themeId}
       />
 
 
@@ -370,6 +376,7 @@ export default function ValidationStatus({
         styles={
           styles
         }
+        themeId={themeId}
       />
 
     </section>

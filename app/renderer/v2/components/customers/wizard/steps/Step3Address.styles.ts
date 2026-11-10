@@ -297,13 +297,17 @@ export function createStep3AddressStyles(
       "var(--finora-theme-text-primary, #171A21)",
 
     fontSize:
-      `${tokens.inputFontSize + 5}px`,
+      `${tokens.viewport === "mobile" ? 16 : tokens.inputFontSize + 5}px`,
 
     lineHeight:
       1.15,
 
     fontWeight:
-      800,
+      tokens.viewport === "mobile" ? 700 : 800,
+
+    letterSpacing:
+      tokens.viewport === "mobile" ? ".05px" : undefined,
+
 
   };
 
@@ -321,7 +325,7 @@ export function createStep3AddressStyles(
       "var(--finora-theme-text-secondary, #4B5563)",
 
     fontSize:
-      `${Math.max(9, tokens.inputFontSize)}px`,
+      `${tokens.viewport === "mobile" ? 14 : Math.max(9, tokens.inputFontSize)}px`,
 
     lineHeight:
       1.3,
@@ -345,16 +349,14 @@ export function createStep3AddressStyles(
       theme.colors.text.primary,
 
     fontSize:
-      `${Math.max(13, tokens.inputFontSize + 4)}px`,
+      `${tokens.viewport === "mobile" ? 17 : Math.max(13, tokens.inputFontSize + 4)}px`,
 
     lineHeight:
       1.15,
 
-    fontWeight:
-      800,
+    fontWeight: tokens.viewport === "mobile" ? 750 : 800,
 
-    letterSpacing:
-      "-0.1px",
+    letterSpacing: tokens.viewport === "mobile" ? ".05px" : "-0.1px",
 
   };
 

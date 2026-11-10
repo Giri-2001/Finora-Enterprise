@@ -2745,9 +2745,54 @@ if (!root.canWrite()) {
 
             DocumentFile storageDirectory;
 
+            // PAISARULE_C141_R27_OWNER_EXISTING_HIERARCHY
+            //
+            // A directly selected Owner branch folder is the branch container,
+            // not the storage directory itself. Its authoritative business
+            // data remains:
+            //
+            //   <Owner>/FINORA/storage
+            //
+            // For an Owner folder, resolve that existing hierarchy only.
+            // Never create a new FINORA/storage hierarchy during normal
+            // Owner access. Missing hierarchy fails closed.
             if (selectedFinoraStorageDirectory) {
                 storageDirectory =
                     root;
+            } else if (selectedOwnerBranchFolder) {
+                DocumentFile finoraDirectory =
+                    root.findFile(
+                        FINORA_DIRECTORY
+                    );
+
+                if (
+                    finoraDirectory == null ||
+                    !finoraDirectory.exists() ||
+                    !finoraDirectory.isDirectory()
+                ) {
+                    return targetFailure(
+                        "UNAVAILABLE",
+                        "USB:" + volumeId,
+                        "PAISARULE Owner USB FINORA directory is unavailable."
+                    );
+                }
+
+                storageDirectory =
+                    finoraDirectory.findFile(
+                        STORAGE_DIRECTORY
+                    );
+
+                if (
+                    storageDirectory == null ||
+                    !storageDirectory.exists() ||
+                    !storageDirectory.isDirectory()
+                ) {
+                    return targetFailure(
+                        "UNAVAILABLE",
+                        "USB:" + volumeId,
+                        "PAISARULE Owner USB storage directory is unavailable."
+                    );
+                }
             } else {
                 DocumentFile finoraDirectory =
                     ensureDirectory(

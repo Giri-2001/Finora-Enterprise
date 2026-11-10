@@ -1420,6 +1420,27 @@ final class FinoraNativeWalletSession {
     // FINORA_P1_723H_NATIVE_READS
     // Fixed paths only. Credential stays in native process memory.
     private static JSONObject readOwnerWallet(String route, String source) {
+        final String tokenSnapshot;
+
+        synchronized (FinoraNativeWalletSession.class) {
+            tokenSnapshot = bearerToken;
+        }
+
+        if (
+            tokenSnapshot == null ||
+            tokenSnapshot.trim().isEmpty()
+        ) {
+            return failure("WALLET_SESSION_NOT_AUTHORIZED");
+        }
+
+        return readOwnerWalletWithToken(
+            route,
+            source,
+            tokenSnapshot
+        );
+    }
+
+    private static JSONObject readOwnerWalletWithToken(String route, String source, String token) {
         HttpsURLConnection connection = null;
         try {
             if (!route.equals("/owner/wallet/pricing") &&
@@ -1449,7 +1470,7 @@ final class FinoraNativeWalletSession {
             connection.setInstanceFollowRedirects(false);
             connection.setUseCaches(false);
             connection.setRequestProperty(
-                "Authorization", "Bearer " + bearerToken
+                "Authorization", "Bearer " + token
             );
             connection.setRequestProperty("Accept", "application/json");
             connection.setRequestProperty("Cache-Control", "no-store");
@@ -1546,11 +1567,50 @@ final class FinoraNativeWalletSession {
     // FINORA_P1_725M_IDENTITY
     // Server session determines Owner/Business/Branch.
     // No caller-supplied scope, no database mutation.
-    static synchronized JSONObject verifiedBusinessIdentity() {
-        return readOwnerWallet(
+    static JSONObject verifiedBusinessIdentity() {
+        final String tokenSnapshot;
+        final long generationSnapshot;
+
+        synchronized (FinoraNativeWalletSession.class) {
+            if (
+                bearerToken == null ||
+                bearerToken.trim().isEmpty() ||
+                verifiedBusinessSessionId == null ||
+                verifiedWalletPrincipal == null ||
+                verifiedBusinessPrincipal == null
+            ) {
+                return failure("BUSINESS_SESSION_REQUIRED");
+            }
+
+            tokenSnapshot = bearerToken;
+            generationSnapshot = walletSessionGeneration;
+        }
+
+        // PAISARULE_C141_R44_ANDROID_IDENTITY_NETWORK_OUTSIDE_LOCK
+        //
+        // Same authenticated PostgreSQL business identity authority.
+        // Only the blocking HTTP I/O runs outside the global native
+        // session monitor. No Customer rule or authority is bypassed.
+        JSONObject result = readOwnerWalletWithToken(
             "/owner/wallet/business-identity",
-            "FINORA_POSTGRESQL_BUSINESS_IDENTITY"
+            "FINORA_POSTGRESQL_BUSINESS_IDENTITY",
+            tokenSnapshot
         );
+
+        synchronized (FinoraNativeWalletSession.class) {
+            if (
+                generationSnapshot != walletSessionGeneration ||
+                bearerToken == null ||
+                !tokenSnapshot.equals(bearerToken) ||
+                verifiedBusinessSessionId == null ||
+                verifiedWalletPrincipal == null ||
+                verifiedBusinessPrincipal == null
+            ) {
+                return failure("BUSINESS_SESSION_CHANGED");
+            }
+
+            return result;
+        }
     }
         // FINORA_P1_729Z_NUMBERING_READ
     // Read-only authenticated PostgreSQL numbering.

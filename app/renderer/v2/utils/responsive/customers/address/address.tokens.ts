@@ -287,7 +287,7 @@ export const MOBILE_ADDRESS_TOKENS:
     34,
 
   sectionHeaderPaddingBottom:
-    7,
+    9,
 
   addressColumns:
     1,
@@ -296,7 +296,7 @@ export const MOBILE_ADDRESS_TOKENS:
     8,
 
   addressRowGap:
-    7,
+    9,
 
   fullAddressColumns:
     1,
@@ -308,7 +308,7 @@ export const MOBILE_ADDRESS_TOKENS:
     4,
 
   labelFontSize:
-    9,
+    13,
 
   labelFontWeight:
     700,
@@ -317,10 +317,10 @@ export const MOBILE_ADDRESS_TOKENS:
     0.30,
 
   inputHeight:
-    38,
+    41,
 
   addressInputHeight:
-    40,
+    43,
 
   inputPaddingX:
     10,
@@ -329,7 +329,7 @@ export const MOBILE_ADDRESS_TOKENS:
     8,
 
   inputFontSize:
-    11,
+    14,
 
   inputFontWeight:
     500,
@@ -365,22 +365,22 @@ export const MOBILE_ADDRESS_TOKENS:
     9,
 
   previewTitleSize:
-    12,
+    15,
 
   previewSubtitleSize:
-    9,
+    13,
 
   previewLabelSize:
-    8,
-
-  previewValueSize:
     10,
 
+  previewValueSize:
+    11,
+
   previewRowGap:
-    6,
+    8,
 
   previewRowPaddingY:
-    6,
+    7.5,
 
   previewMetaColumns:
     1,

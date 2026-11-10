@@ -171,16 +171,16 @@ export function createStep4KycStyles(
     panelTitleStyle: {
       margin: 0,
       color: THEME.text,
-      fontSize: `${Math.max(tokens.previewTitleSize + 4, 11)}px`,
+      fontSize: `${tokens.viewport === "mobile" ? 17 : Math.max(tokens.previewTitleSize + 4, 11)}px`,
       lineHeight: 1.15,
-      fontWeight: 700,
+      fontWeight: tokens.viewport === "mobile" ? 750 : 700,
       letterSpacing: ".05px",
     },
 
     panelSubtitleStyle: {
   margin: "3px 0 0",
   color: THEME.textSecondary,
-  fontSize: `${tokens.previewSubtitleSize + 3}px`,
+  fontSize: `${tokens.viewport === "mobile" ? 13 : tokens.previewSubtitleSize + 3}px`,
   lineHeight: 1.25,
   fontWeight: 550,
 },
@@ -267,7 +267,7 @@ export function createStep4KycStyles(
       background: THEME.panel,
       display: "flex",
       flexDirection: "column",
-      gap: `${tokens.previewGap}px`,
+      gap: `${tokens.viewport === "mobile" ? 10 : tokens.previewGap}px`,
       overflow: "hidden",
     },
 
@@ -302,9 +302,11 @@ export function createStep4KycStyles(
     previewTitleStyle: {
       margin: 0,
       color: THEME.text,
-      fontSize: `${tokens.previewTitleSize}px`,
+      fontSize: `${tokens.viewport === "mobile" ? 17 : tokens.previewTitleSize}px`,
       lineHeight: 1.15,
-      fontWeight: 850,
+      fontWeight: tokens.viewport === "mobile" ? 750 : 850,
+      letterSpacing: tokens.viewport === "mobile" ? ".05px" : undefined,
+
     },
 
     previewSubtitleStyle: {
@@ -332,8 +334,8 @@ export function createStep4KycStyles(
       display: "flex",
       flexDirection: "column",
       justifyContent: "center",
-      gap: "2px",
-      padding: `${tokens.previewRowPaddingY}px ${tokens.previewPaddingX}px`,
+      gap: tokens.viewport === "mobile" ? "4px" : "2px",
+      padding: `${tokens.viewport === "mobile" ? tokens.previewRowPaddingY + 2 : tokens.previewRowPaddingY}px ${tokens.previewPaddingX}px`,
       borderRadius: `${Math.max(tokens.previewRadius - 2, 8)}px`,
       border: `1px solid ${THEME.borderSubtle}`,
       background:

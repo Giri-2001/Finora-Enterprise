@@ -177,7 +177,7 @@ export const subtitleStyle: CSSProperties = {
   fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   margin: 0,
 
-  color: THEME.textSecondary,
+  color: THEME.textPrimary,
 
   fontSize: "14px",
 

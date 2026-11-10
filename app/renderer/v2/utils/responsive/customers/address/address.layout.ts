@@ -769,7 +769,7 @@ export function createAddressPreviewStyle(
     display: "flex",
     flexDirection: "column",
 
-    gap: `${tokens.previewGap}px`,
+    gap: `${tokens.viewport === "mobile" ? 10 : tokens.previewGap}px`,
   };
 }
 
@@ -979,7 +979,7 @@ export function createAddressPreviewRowStyle(
       0,
 
     padding:
-      `${tokens.previewRowPaddingY + 4}px ${tokens.previewPaddingX}px`,
+      `${tokens.viewport === "mobile" ? tokens.previewRowPaddingY + 2 : tokens.previewRowPaddingY + 4}px ${tokens.previewPaddingX}px`,
 
     boxSizing:
       "border-box",
@@ -1000,7 +1000,7 @@ export function createAddressPreviewRowStyle(
       "column",
 
     gap:
-      `${Math.max(2, tokens.labelGap - 1)}px`,
+      `${tokens.viewport === "mobile" ? 4 : Math.max(2, tokens.labelGap - 1)}px`,
 
     overflow:
       "hidden",

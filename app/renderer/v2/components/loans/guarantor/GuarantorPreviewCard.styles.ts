@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE V2
 //
 // GUARANTOR STUDIO
@@ -249,3 +249,23 @@ export const fullWidthRowStyle: CSSProperties = {
 // ============================================================
 // END
 // ============================================================
+/* PAISARULE C144-R23 GUARANTOR PREVIEW MOBILE */
+export const mobileGuarantorPreviewCss = `
+  @media (max-width: 767px) {
+    .paisarule-guarantor-preview
+      .paisarule-guarantor-preview-label {
+      color: var(--finora-theme-text-primary, #FFFFFF) !important;
+      font-size: 13px !important;
+    }
+
+    .paisarule-guarantor-preview
+      .paisarule-guarantor-preview-value {
+      font-size: 13px !important;
+    }
+
+    .paisarule-guarantor-preview
+      .paisarule-guarantor-preview-primary-value {
+      font-size: 14px !important;
+    }
+  }
+`;

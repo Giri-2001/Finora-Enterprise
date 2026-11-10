@@ -1622,6 +1622,10 @@ case 3:
             resetWizard
           }
 
+          onBackToCustomersHub={
+            onBackToCustomersHub
+          }
+
           originalCustomerProfile={
             originalCustomerProfile
           }

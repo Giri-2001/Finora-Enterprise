@@ -95,7 +95,7 @@ export const sectionTitleStyle: CSSProperties = {
   fontFamily: FORM_FONT_FAMILY,
   marginBottom: "6px",
 
-  color: COLORS.text,
+  color: "var(--finora-theme-text-primary, #FFFFFF)",
 
   fontSize: "14px",
 
@@ -218,7 +218,7 @@ export const fieldLabelStyle: CSSProperties = {
 
   minHeight: "19px",
 
-  color: COLORS.textSecondary,
+  color: "var(--finora-theme-text-primary, #FFFFFF)",
 
   fontSize: "14px",
 
@@ -272,7 +272,7 @@ export const inputStyle: CSSProperties = {
 
   background: COLORS.input,
 
-  color: COLORS.text,
+  color: "var(--finora-theme-text-primary, #FFFFFF)",
 
   fontSize: "13px",
 
@@ -288,6 +288,7 @@ export const inputStyle: CSSProperties = {
 ============================================================ */
 
 export const selectStyle: CSSProperties = {
+  color: "var(--finora-theme-text-primary, #FFFFFF)",
   ...inputStyle,
 
   cursor: "pointer",

@@ -18,6 +18,7 @@ import {
   inputStyle,
   responsiveGridCss,
   wrapperClassName,
+  mobileGuarantorFormCss,
   wrapperStyle,
 } from "./GuarantorForm.styles";
 
@@ -68,7 +69,7 @@ export default function GuarantorForm({
           Laptop  1200px+  → 4 columns
       ===================================================== */}
 
-      <style>{responsiveGridCss}</style>
+      <style>{responsiveGridCss + mobileGuarantorFormCss}</style>
 
       {/* =====================================================
           GUARANTOR INFORMATION WRAPPER
@@ -85,7 +86,7 @@ export default function GuarantorForm({
         <div style={headerStyle}>
           <span style={accentStyle} />
 
-          <span>Guarantor Information</span>
+          <span className="paisarule-guarantor-form-title">Guarantor Information</span>
         </div>
 
         {/* ===================================================
@@ -106,7 +107,7 @@ export default function GuarantorForm({
                   )
                 }
                 placeholder="Enter guarantor name"
-                style={inputStyle}
+                className="paisarule-guarantor-input" style={inputStyle}
               />
             </FormField>
           </div>
@@ -137,7 +138,7 @@ export default function GuarantorForm({
                   );
                 }}
                 placeholder="Enter 10-digit mobile number"
-                style={inputStyle}
+                className="paisarule-guarantor-input" style={inputStyle}
                 maxLength={10}
                 inputMode="numeric"
                 pattern="[0-9]{10}"
@@ -161,7 +162,7 @@ export default function GuarantorForm({
                   )
                 }
                 placeholder="Enter occupation"
-                style={inputStyle}
+                className="paisarule-guarantor-input" style={inputStyle}
               />
             </FormField>
           </div>
@@ -182,7 +183,7 @@ export default function GuarantorForm({
                   )
                 }
                 placeholder="Enter address"
-                style={inputStyle}
+                className="paisarule-guarantor-input" style={inputStyle}
               />
             </FormField>
           </div>

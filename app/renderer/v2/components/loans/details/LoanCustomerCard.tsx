@@ -449,6 +449,32 @@ useEffect(() => {
                 SEARCH
             ============================================= */}
 
+            <style>{`
+              .paisarule-loan-customer-search {
+                color: var(--finora-theme-text-primary, #FFFFFF) !important;
+              }
+
+              .paisarule-loan-customer-search::placeholder {
+                color: var(--finora-theme-text-primary, #FFFFFF) !important;
+                opacity: 1 !important;
+              }
+
+              @media (max-width: 768px) {
+                .paisarule-loan-customer-search {
+                  height: 36px !important;
+                  min-height: 36px !important;
+                  font-size: 13px !important;
+                  color: var(--finora-theme-text-primary, #FFFFFF) !important;
+                }
+
+                .paisarule-loan-customer-search::placeholder {
+                  color: var(--finora-theme-text-primary, #FFFFFF) !important;
+                  opacity: 1 !important;
+                  font-size: 13px !important;
+                }
+              }
+            `}</style>
+
             <input
               type="text"
 
@@ -463,6 +489,7 @@ useEffect(() => {
                   )
               }
 
+              className="paisarule-loan-customer-search"
               placeholder="Search Customers..."
 
               autoFocus

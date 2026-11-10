@@ -269,7 +269,7 @@ export const MOBILE_BASICFORM_TOKENS:
   --------------------------------------------------------- */
 
   labelFontSize:
-    11,
+    13,
 
   labelFontWeight:
     650,
@@ -278,7 +278,7 @@ export const MOBILE_BASICFORM_TOKENS:
     0.45,
 
   inputFontSize:
-    12,
+    15,
 
     
 

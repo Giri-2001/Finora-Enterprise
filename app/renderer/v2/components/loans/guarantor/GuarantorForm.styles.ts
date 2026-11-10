@@ -269,7 +269,7 @@ width: "100%",
   background:
     THEME.input,
 
-  color: THEME.primary,
+  color: THEME.text,
 
   fontSize: "12px",
 
@@ -307,3 +307,40 @@ export const fullWidthFieldStyle: CSSProperties = {
 // ============================================================
 // END
 // ============================================================
+/* PAISARULE C144-R23 GUARANTOR FORM MOBILE */
+export const mobileGuarantorFormCss = `
+  @media (max-width: 767px) {
+    .finora-guarantor-form-responsive
+      .paisarule-guarantor-form-title {
+      font-size: 14px !important;
+      color: var(--finora-theme-text-primary, #FFFFFF) !important;
+    }
+
+    .finora-guarantor-form-responsive label {
+      font-size: 13px !important;
+      color: var(--finora-theme-text-primary, #FFFFFF) !important;
+    }
+
+    .finora-guarantor-form-responsive
+      .paisarule-guarantor-input {
+      height: 40px !important;
+      min-height: 40px !important;
+      font-size: 13px !important;
+      }
+
+    .finora-guarantor-form-responsive
+      .paisarule-guarantor-input::placeholder {
+      font-size: 13px !important;
+      color: var(--finora-theme-text-primary, #FFFFFF) !important;
+      opacity: 1 !important;
+    }
+  }
+
+  /* PAISARULE C144-R47-R3 EXE GUARANTOR PLACEHOLDER PRIMARY */
+  @media (min-width: 1200px) {
+    .finora-guarantor-form-responsive
+      .paisarule-guarantor-input::placeholder {
+      color: var(--finora-theme-text-primary, #FFFFFF) !important;
+      opacity: 1 !important;
+    }
+  }`;

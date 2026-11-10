@@ -16,7 +16,12 @@
 // - No inline responsive logic.
 // ============================================================
 
-import { useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FocusEvent as ReactFocusEvent,
+} from "react";
 
 import {
   ArrowLeft,
@@ -399,7 +404,81 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
 
   const previousNavigationDisabled = step === 1 || (isGoldLoan && step === 2);
 
+  const handleLoanFormFocusCapture = (
+    event: ReactFocusEvent<HTMLElement>,
+  ): void => {
+    const target = event.target;
+
+    if (
+      !(
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLSelectElement ||
+        target instanceof HTMLTextAreaElement
+      )
+    ) {
+      return;
+    }
+
+    const compactViewport =
+      window.matchMedia("(max-width: 768px)").matches ||
+      window.matchMedia("(pointer: coarse)").matches;
+
+    if (!compactViewport) {
+      return;
+    }
+
+    const revealFocusedControl = (): void => {
+      target.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "nearest",
+      });
+    };
+
+    revealFocusedControl();
+
+    window.requestAnimationFrame(revealFocusedControl);
+    window.setTimeout(revealFocusedControl, 180);
+    window.setTimeout(revealFocusedControl, 420);
+  };
+
   const activeStepItem = STEP_ITEMS[step - 1] ?? STEP_ITEMS[0];
+
+  /*
+   * A newly rendered Loan Wizard step must start at the top.
+   * This runs only after the authoritative step value changes,
+   * so failed validation keeps the current scroll position.
+   */
+  const previousRenderedStepRef = useRef(step);
+
+  useEffect(() => {
+    if (previousRenderedStepRef.current === step) {
+      return;
+    }
+
+    previousRenderedStepRef.current = step;
+
+    const revealStepTop = (): void => {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "auto",
+      });
+
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+
+    revealStepTop();
+
+    const frameId = window.requestAnimationFrame(revealStepTop);
+    const timeoutId = window.setTimeout(revealStepTop, 120);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [step]);
 
   const handleStepSelection = (current: number): void => {
     if (isGoldLoan && current === 1) {
@@ -491,7 +570,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
   ========================================================== */
 
   return (
-    <section style={shellStyle}>
+    <section style={shellStyle} onFocusCapture={handleLoanFormFocusCapture}>
       <div style={contentStyle}>
         {/* ====================================================
             STEP 1 — LOAN DETAILS
@@ -931,21 +1010,21 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
               zIndex: 20,
             }}
           >
-            {mobileStepMenuOpen ? (
-              <div
+            {!isMobile && mobileStepMenuOpen ? (<div
                 role="menu"
                 aria-label="Loan workflow steps"
                 style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  bottom: "calc(100% + 6px)",
+                  position:
+                    isMobile
+                      ? "static"
+                      : "absolute",
+                  left: isMobile ? undefined : 0,
+                  right: isMobile ? undefined : 0,
+                  bottom: isMobile ? undefined : "calc(100% + 6px)",
                   zIndex: 40,
+                  width: isMobile ? "100%" : undefined,
                   display: "grid",
-                  gridTemplateColumns:
-                    tokens.meta.viewport === "tablet"
-                      ? "repeat(2, minmax(0, 1fr))"
-                      : "minmax(0, 1fr)",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
                   gap: "4px",
                   padding: "6px",
                   boxSizing: "border-box",
@@ -976,10 +1055,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
                         ...stepItemStyle,
                         cursor: "pointer",
                         textAlign: "left",
-                        minHeight:
-                          tokens.meta.viewport === "tablet"
-                            ? "58px"
-                            : undefined,
+                        minHeight: isMobile ? "44px" : "58px",
                         flexDirection:
                           tokens.meta.viewport === "tablet"
                             ? "column"
@@ -1035,6 +1111,7 @@ export default function LoanStudioView(props: LoanStudioViewModel) {
               }}
               style={{
                 ...stepItemStyle,
+                display: "none",
                 cursor: "pointer",
                 justifyContent: "space-between",
                 textAlign: "left",

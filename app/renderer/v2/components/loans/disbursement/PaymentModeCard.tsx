@@ -51,6 +51,7 @@ const dropdownTextStyle: CSSProperties = {
   fontSize: "14px",
   fontWeight: 650,
   lineHeight: 1.4,
+  color: "var(--finora-theme-text-primary, #f8fafc)",
 };
 
 // ============================================================
@@ -81,7 +82,8 @@ export default function PaymentModeCard({
   onTransactionStatusChange,
 }: PaymentModeCardProps) {
   return (
-    <SummaryCard title="Payment Mode">
+    <div className="paisarule-step6-payment-mode">
+      <SummaryCard title="Payment Mode">
       <div style={fieldsStyle}>
         {/* ==================================================
             PRIMARY PAYMENT MODE
@@ -90,7 +92,7 @@ export default function PaymentModeCard({
         <FormField label="Payment Mode" required labelTextStyle={formLabelTextStyle}>
           <SelectInput
             value={paymentMode}
-            style={dropdownTextStyle}
+            className="paisarule-step6-select" style={dropdownTextStyle}
             optionTextStyle={dropdownTextStyle}
             onChange={(event) => {
               onPaymentModeChange?.(event.target.value);
@@ -123,7 +125,7 @@ export default function PaymentModeCard({
         <FormField label="Transaction Status" labelTextStyle={formLabelTextStyle}>
           <SelectInput
             value={transactionStatus}
-            style={dropdownTextStyle}
+            className="paisarule-step6-select" style={dropdownTextStyle}
             optionTextStyle={dropdownTextStyle}
             onChange={(event) => {
               onTransactionStatusChange?.(event.target.value);
@@ -140,8 +142,19 @@ export default function PaymentModeCard({
             ]}
           />
         </FormField>
-      </div>
-    </SummaryCard>
+      </div>      </SummaryCard>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .paisarule-step6-payment-mode .paisarule-step6-select {
+            min-height: 40px !important;
+            height: 40px !important;
+            font-size: 15px !important;
+            color: var(--finora-theme-text-primary, #f8fafc) !important;
+          }
+        }
+      `}</style>
+    </div>
   );
 }
 

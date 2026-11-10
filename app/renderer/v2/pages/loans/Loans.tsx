@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import {
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import {
   Eye as FinoraReceiptEye,
   Download as FinoraReceiptDownload,
   Share2 as FinoraReceiptShare,
@@ -4001,14 +4001,11 @@ return (
               style={{
                 ...responsiveRejectedButtonStyle,
                 background: responsiveStatisticCardStyle.background ?? themeColors.surface, /* FINORA_R193_R1_LOAN_BUTTON */
-                borderWidth: 1,
-                borderStyle: "solid",
-                borderColor:
-                  typeof responsiveCreateButtonStyle.backgroundColor === "string"
+                border: `1px solid ${typeof responsiveCreateButtonStyle.backgroundColor === "string"
                     ? responsiveCreateButtonStyle.backgroundColor
                     : typeof responsiveCreateButtonStyle.background === "string"
                       ? responsiveCreateButtonStyle.background
-                      : "currentColor",
+                      : "currentColor"}`,
                 color:
                   finoraVividLoanButtons
                     ? "#FFFFFF"

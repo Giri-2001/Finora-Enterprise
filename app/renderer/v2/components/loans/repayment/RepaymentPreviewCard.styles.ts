@@ -138,7 +138,7 @@ export function createRepaymentPreviewCardStyles(
     labelStyle: {
       minWidth: 0,
       flex: "1 1 auto",
-      color: THEME.textMuted,
+      color: THEME.text,
       fontSize: mobile ? "11px" : "12px",
       fontWeight: 500,
       lineHeight: 1.25,

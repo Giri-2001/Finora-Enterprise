@@ -214,9 +214,10 @@ export default function ApprovalActions({
           ...actionRowStyle,
           ...(isMobile
             ? {
-                flexDirection: "column",
+                flexDirection: "row",
                 alignItems: "stretch",
                 flexWrap: "nowrap",
+                gap: 6,
               }
             : {}),
         }}
@@ -225,7 +226,8 @@ export default function ApprovalActions({
             isMobile
               ? {
                   ...actionButtonStyle,
-                  width: "100%",
+                  flex: "1 1 0",
+                  width: 0,
                   minWidth: 0,
                 }
               : actionButtonStyle
@@ -245,7 +247,8 @@ export default function ApprovalActions({
             isMobile
               ? {
                   ...actionButtonStyle,
-                  width: "100%",
+                  flex: "1 1 0",
+                  width: 0,
                   minWidth: 0,
                 }
               : actionButtonStyle
@@ -269,7 +272,8 @@ export default function ApprovalActions({
             isMobile
               ? {
                   ...actionButtonStyle,
-                  width: "100%",
+                  flex: "1 1 0",
+                  width: 0,
                   minWidth: 0,
                 }
               : actionButtonStyle

@@ -1,5 +1,5 @@
 // ============================================================
-// FINORA ENTERPRISE OS™
+// FINORA ENTERPRISE OSâ„¢
 //
 // IDENTITY & NUMBERING ENGINE
 // CUSTOMER SERIES SERVICE
@@ -170,13 +170,106 @@ export async function loadCustomerSeriesConfiguration():
     >
   > {
 
-  const scopeResult =
+
+  // PAISARULE_C141_R60_ANDROID_AUTHORITATIVE_USB_NUMBERING
+  //
+  // Android Owner uses the authenticated OWNER session for immutable
+  // owner/business/branch scope. The existing USB NUMBERING_SERIES
+  // remains authoritative for Customer numbering.
+  //
+  // Fail closed:
+  // - authenticated OWNER session required
+  // - exact owner/business/branch match required
+  // - existing USB series must be LOCKED
+  // - no LOCAL fallback
+  // - no PostgreSQL numbering counter
+  const { Capacitor } =
+    await import("@capacitor/core");
+
+  if (
+    Capacitor.isNativePlatform() &&
+    Capacitor.getPlatform() === "android"
+  ) {
+    const { getSession } =
+      await import("../../store/authStore");
+
+    const session =
+      getSession();
+
+    if (
+      !session?.sessionId ||
+      session.role !== "OWNER" ||
+      !session.ownerId ||
+      !session.businessId ||
+      !session.branchId
+    ) {
+      return {
+        success: false,
+        error:
+          "AUTHORIZED_NUMBERING_SCOPE_UNAVAILABLE",
+      };
+    }
+
+    const configurationResult =
+      await numberingSeriesRepository.findByBranch(
+        session.businessId,
+        session.branchId,
+      );
+
+    if (!configurationResult.success) {
+      return {
+        success: false,
+        error:
+          configurationResult.error ??
+          "USB_NUMBERING_READ_FAILED",
+      };
+    }
+
+    const configuration =
+      configurationResult.data;
+
+    if (!configuration) {
+      return {
+        success: false,
+        error:
+          "USB_NUMBERING_SERIES_NOT_FOUND",
+      };
+    }
+
+    if (
+      configuration.ownerId !== session.ownerId ||
+      configuration.businessId !== session.businessId ||
+      configuration.branchId !== session.branchId
+    ) {
+      return {
+        success: false,
+        error:
+          "USB_NUMBERING_SCOPE_MISMATCH",
+      };
+    }
+
+    if (configuration.status !== "LOCKED") {
+      return {
+        success: false,
+        error:
+          "USB_NUMBERING_SERIES_NOT_LOCKED",
+      };
+    }
+
+    return {
+      success: true,
+      data: configuration,
+    };
+  }
+const scopeResult =
     await resolveFinoraNumberingScope();
+
 
   if (
     !scopeResult.success ||
     !scopeResult.data
   ) {
+
 
     return {
       success:
@@ -190,6 +283,7 @@ export async function loadCustomerSeriesConfiguration():
 
   const scope =
     scopeResult.data;
+
 
   const configurationResult =
     await numberingSeriesRepository.findByBranch(
@@ -707,6 +801,7 @@ async function reserveNextCustomerNumberUnlocked():
       CustomerNumberPreview
     >
   > {
+
   const configurationResult =
     await loadCustomerSeriesConfiguration();
 
@@ -780,6 +875,7 @@ async function reserveNextCustomerNumberUnlocked():
 
   const now =
     new Date().toISOString();
+
 
   const updateResult =
     await numberingSeriesRepository.update(

@@ -220,6 +220,7 @@ export default function Step1Identity({
 
   const {
     tokens,
+    isMobile,
   } = useResponsive();
 
 
@@ -742,7 +743,7 @@ export default function Step1Identity({
     >
 
       <h1 style={{
-          ...formTitleStyle, fontSize: "23px", fontWeight: 750, margin: 0,
+          ...formTitleStyle, fontSize: isMobile ? "18px" : "23px", fontWeight: 750, fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)", margin: 0,
         }}
       >
         Customer Identity
@@ -750,7 +751,7 @@ export default function Step1Identity({
 
 
       <p style={{
-          ...formSubtitleStyle, fontSize: "12px", fontWeight: 550, margin: "3px 0 0", maxWidth: "100%", whiteSpace: "normal", overflowWrap: "break-word", wordBreak: "break-word",
+          ...formSubtitleStyle, fontSize: isMobile ? "13px" : "14px", fontWeight: isMobile ? 500 : 550, fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)", margin: "3px 0 0", maxWidth: "100%", whiteSpace: "normal", overflowWrap: "break-word", wordBreak: "break-word",
         }}
       >
         Create the customer's permanent

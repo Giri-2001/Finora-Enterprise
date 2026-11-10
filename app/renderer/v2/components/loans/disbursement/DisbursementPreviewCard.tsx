@@ -12,7 +12,6 @@
 
 import SummaryCard from "../../common/cards/SummaryCard";
 
-import { formatRupee } from "../../../utils/currency/formatCurrency";
 
 // ============================================================
 // TYPES
@@ -57,14 +56,6 @@ export default function DisbursementPreviewCard({
         <strong>
           {" "}
           {disbursementDate}
-        </strong>
-      </span>
-
-      <span>
-        Amount :
-        <strong>
-          {" "}
-          {formatRupee(amount)}
         </strong>
       </span>
 

@@ -160,7 +160,7 @@ export function createRepaymentSummaryStyles(
     labelStyle: {
       minWidth: 0,
       flex: "1 1 auto",
-      color: THEME.textMuted,
+      color: THEME.text,
       fontSize: `${labelFontSize}px`,
       fontWeight: 500,
       lineHeight: 1.25,

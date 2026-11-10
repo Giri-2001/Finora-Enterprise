@@ -111,7 +111,7 @@ export function DocumentThumb({
   if (item.type === "image") {
     return (
       <img
-        src={item.url}
+        src={item.url || item.dataUrl}
         alt={item.name}
         style={
           compact
@@ -151,24 +151,25 @@ export function DocumentTile({
   return (
     <article
       key={item.id}
+      className="paisarule-document-tile"
       style={documentTileStyle}
     >
       <button
         type="button"
         onClick={() => onOpen(item)}
-        style={documentTileButtonStyle}
+        className="paisarule-document-tile-preview" style={documentTileButtonStyle}
         aria-label={`View ${item.name}`}
       >
         <DocumentThumb item={item} />
       </button>
       <div style={documentTileFooterStyle}>
         <div
-          style={documentTileNameStyle}
+          className="paisarule-document-name" style={documentTileNameStyle}
           title={item.name}
         >
           {item.name}
         </div>
-        <div style={documentTileTypeStyle}>
+        <div className="paisarule-document-type" style={documentTileTypeStyle}>
           {item.type === "pdf"
             ? "PDF"
             : "Photo"}
@@ -223,6 +224,7 @@ export function CategoryCard({
   return (
     <section
       key={category.id}
+      className="paisarule-document-category-card"
       style={categoryCardStyle}
     >
       <div style={categoryHeaderStyle}>
@@ -297,7 +299,7 @@ export function CategoryCard({
             <div style={categoryTitleStyle}>
               {category.title}
             </div>
-            <div style={categoryMetaStyle}>
+            <div className="paisarule-documents-readable-text" style={categoryMetaStyle}>
               {formatCount(items.length)}
             </div>
           </div>
@@ -312,11 +314,11 @@ export function CategoryCard({
           View All
         </button>
       </div>
-      <div style={categoryPreviewStyle}>
+      <div className="paisarule-category-preview-grid" style={categoryPreviewStyle}>
         {items
           .slice(0, 10)
           .map((item) => (
-            <button
+            <button className="paisarule-category-document-preview"
               key={item.id}
               type="button"
               onClick={() =>
@@ -337,7 +339,7 @@ export function CategoryCard({
           </div>
         )}
       </div>
-      <button
+      <button className="paisarule-category-add-document"
         type="button"
         onClick={() => onUpload(category.id)}
         style={addButtonStyle}
@@ -360,6 +362,7 @@ export function EvidencePreview({
 }: EvidencePreviewProps) {
   return (
     <section
+      className="paisarule-evidence-preview-card"
       style={evidencePreviewSectionStyle}
     >
       <div
@@ -450,7 +453,7 @@ export function CategoryGallery({
             <div style={galleryTitleStyle}>
               {category.title}
             </div>
-            <div style={galleryMetaStyle}>
+            <div className="paisarule-documents-readable-text" style={galleryMetaStyle}>
             {formatCount(items.length)}
             </div>
           </div>
@@ -464,7 +467,7 @@ export function CategoryGallery({
         </button>
       </div>
       <div style={galleryViewportStyle}>
-        <div style={galleryGridStyle}>
+        <div className="paisarule-documents-gallery paisarule-view-all-grid" style={galleryGridStyle}>
           {items.map((item) => (
             <DocumentTile
               key={item.id}
@@ -574,7 +577,26 @@ export function DocumentViewer({
         style={viewerCloseStyle}
         aria-label="Close viewer"
       >
-        ×
+        <svg
+          aria-hidden="true"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          style={{
+            display: "block",
+            flex: "0 0 auto",
+            pointerEvents: "none",
+          }}
+        >
+          <path
+            d="M6 6L18 18M18 6L6 18"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          />
+        </svg>
       </button>
       <div style={viewerContentStyle}>
         <div style={viewerTitleStyle}>
@@ -582,14 +604,14 @@ export function DocumentViewer({
         </div>
         {item.type === "image" ? (
           <img
-            src={item.url}
+            src={item.url || item.dataUrl}
             alt={item.name}
             style={viewerImageStyle}
           />
         ) : (
           <iframe
             title={item.name}
-            src={item.url}
+            src={item.url || item.dataUrl}
             style={viewerFrameStyle}
           />
         )}

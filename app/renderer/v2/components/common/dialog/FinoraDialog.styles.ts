@@ -224,9 +224,9 @@ export const brandTitleStyle:
   CSSProperties = {
     margin: 0,
 
-    color: THEME.primary,
+    color: THEME.textPrimary,
 
-    fontSize: "13px",
+    fontSize: "15px",
 
     fontWeight: 850,
 

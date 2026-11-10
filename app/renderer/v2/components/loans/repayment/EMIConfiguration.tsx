@@ -81,10 +81,49 @@ export default function EMIConfiguration({
   }
 
   return (
-    <div style={wrapperStyle}>
+    <div className="paisarule-loan-step2-emi" style={wrapperStyle}>
+      <style>{`
+        @media (max-width: 768px) {
+          .paisarule-loan-step2-emi .paisarule-loan-step2-title {
+            font-size: 13px !important;
+          }
+
+          .paisarule-loan-step2-emi label {
+            font-size: 13px !important;
+            color: var(--finora-theme-text-primary, #FFFFFF) !important;
+          }
+
+          .paisarule-loan-step2-emi input,
+          .paisarule-loan-step2-emi select {
+            min-height: 41px !important;
+            height: 41px !important;
+            font-size: 14px !important;
+            color: var(--finora-theme-text-primary, #FFFFFF) !important;
+          }
+
+          .paisarule-loan-step2-emi input::placeholder {
+            color: var(--finora-theme-text-primary, #FFFFFF) !important;
+            opacity: 1 !important;
+            font-size: 14px !important;
+          }
+
+          .paisarule-loan-step2-emi .finora-calendar-input {
+            min-height: 41px !important;
+            height: 41px !important;
+            font-size: 14px !important;
+            color: var(--finora-theme-text-primary, #FFFFFF) !important;
+          }
+
+          .paisarule-loan-step2-emi .finora-calendar-input::placeholder {
+            color: var(--finora-theme-text-primary, #FFFFFF) !important;
+            opacity: 1 !important;
+            font-size: 14px !important;
+          }
+        }
+      `}</style>
       <div style={headerStyle}>
         <span style={accentStyle} />
-        <span>EMI Configuration</span>
+        <span className="paisarule-loan-step2-title">EMI Configuration</span>
       </div>
 
       <div style={contentStyle}>

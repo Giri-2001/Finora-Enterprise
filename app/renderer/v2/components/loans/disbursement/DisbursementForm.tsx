@@ -109,7 +109,7 @@ export default function DisbursementForm({
             <div
               style={{
                 ...formLabelTextStyle,
-                fontSize: "13px",
+                fontSize: "14px",
                 whiteSpace: "nowrap",
                 display: "flex",
                 alignItems: "center",
@@ -129,7 +129,12 @@ export default function DisbursementForm({
               </span>
             </div>
 
-            <div style={inputWrapperStyle}>
+            <div
+              style={{
+                ...inputWrapperStyle,
+                width: "calc(100% - 3px)",
+              }}
+            >
               <div
                 className="finora-disbursement-date-compact"
                 title="This date is locked to the active PAISARULE Login Date."
@@ -149,7 +154,7 @@ export default function DisbursementForm({
             <div
               style={{
                 ...formLabelTextStyle,
-                fontSize: "13px",
+                fontSize: "14px",
                 whiteSpace: "nowrap",
                 display: "flex",
                 alignItems: "center",
@@ -169,7 +174,12 @@ export default function DisbursementForm({
               </span>
             </div>
 
-            <div style={inputWrapperStyle}>
+            <div
+              style={{
+                ...inputWrapperStyle,
+                width: "calc(100% - 3px)",
+              }}
+            >
               <TextInput
                 type="text"
                 value={formattedDisbursement}

@@ -51,14 +51,6 @@ export default function DisbursementReceipt({
     >
 
       <span>
-        Receipt No :
-        <strong>
-          {" "}
-          {receiptNumber}
-        </strong>
-      </span>
-
-      <span>
         Customer :
         <strong>
           {" "}

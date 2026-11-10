@@ -74,7 +74,7 @@ export const rowStyle: CSSProperties = {
   border: `1px solid ${COLORS.border}`,
   borderRadius: "6px",
   background: COLORS.panel,
-  color: COLORS.textSecondary,
+  color: COLORS.text,
   fontSize: "12px",
   fontWeight: 500,
   lineHeight: 1.25,
@@ -86,7 +86,7 @@ export const rowStyle: CSSProperties = {
 
 export const labelStyle: CSSProperties = {
   minWidth: 0,
-  color: COLORS.textMuted,
+  color: COLORS.text,
   fontSize: "12px",
   fontWeight: 500,
   lineHeight: 1.25,

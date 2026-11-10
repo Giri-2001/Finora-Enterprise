@@ -84,6 +84,18 @@ const THEME = {
 
   successBorder:
     "var(--finora-theme-success-border, var(--finora-theme-border-strong, rgba(16,185,129,.35)))",
+
+  /* ---------------------------------------------------------
+     DANGER
+  --------------------------------------------------------- */
+
+  danger: "var(--finora-theme-danger, #EF4444)",
+
+  dangerSoft:
+    "var(--finora-theme-danger-soft, rgba(239,68,68,.10))",
+
+  dangerBorder:
+    "var(--finora-theme-danger, #EF4444)",
 } as const;
 
 /* ===========================================================
@@ -270,11 +282,11 @@ export const statusMarkPendingStyle: CSSProperties = {
 
   borderRadius: "50%",
 
-  background: THEME.brandAccentSoft,
+  background: THEME.dangerSoft,
 
-  border: `1px solid ${THEME.brandAccent}`,
+  border: `1px solid ${THEME.dangerBorder}`,
 
-  color: THEME.brandAccent,
+  color: THEME.danger,
 
   fontSize: "14px",
 
@@ -357,7 +369,7 @@ export const statusTextPendingStyle: ResponsiveCSSProperties = {
 
   whiteSpace: "nowrap",
 
-  color: THEME.brandAccent,
+  color: THEME.danger,
 
   fontSize: "14px",
 
@@ -399,7 +411,7 @@ export const emptyStateStyle: ResponsiveCSSProperties = {
 
   background: THEME.surface,
 
-  color: THEME.textMuted,
+  color: THEME.textPrimary,
 
   fontSize: "14px",
 

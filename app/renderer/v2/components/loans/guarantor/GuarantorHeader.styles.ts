@@ -149,3 +149,19 @@ export const subtitleStyle: CSSProperties = {
 // ============================================================
 // END
 // ============================================================
+/* PAISARULE C144-R23 GUARANTOR HEADER MOBILE */
+export const mobileGuarantorHeaderCss = `
+  @media (max-width: 767px) {
+    .paisarule-guarantor-header
+      .paisarule-guarantor-header-title {
+      font-size: 22px !important;
+    }
+
+    .paisarule-guarantor-header
+      .paisarule-guarantor-header-subtitle {
+      color:
+        var(--finora-theme-text-primary, #FFFFFF) !important;
+      font-size: 13px !important;
+    }
+  }
+`;

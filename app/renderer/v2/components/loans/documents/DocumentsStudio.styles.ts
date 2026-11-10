@@ -341,7 +341,7 @@ export const categoryPreviewStyle = {
 };
 
 export const categoryPreviewButtonStyle = {
-  flex: "0 0 64px",
+  flex: "0 0 70px",
   padding: 0,
   border: subtleBorder,
   borderRadius: "7px",
@@ -351,8 +351,8 @@ export const categoryPreviewButtonStyle = {
 };
 
 export const categoryPreviewThumbStyle = {
-  width: "52px",
-  height: "42px",
+  width: "70px",
+  height: "52px",
   flexShrink: 0,
   display: "block",
   objectFit: "cover" as const,
@@ -753,3 +753,544 @@ export const viewerCloseStyle = {
   lineHeight: 1,
   cursor: "pointer",
 };
+/* PAISARULE C144-R21 MOBILE DOCUMENTS POLISH */
+const mobileDocumentsPresentationStyle = `
+  @media (max-width: 768px) {
+    .paisarule-loan-documents-step3 {
+      --paisarule-documents-mobile-readable:
+        var(--finora-theme-text-primary, #FFFFFF);
+    }
+
+    .paisarule-loan-documents-step3 .paisarule-documents-gallery {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 10px !important;
+    }
+
+    .paisarule-loan-documents-step3 .paisarule-document-tile-preview {
+      height: 82px !important;
+      min-height: 82px !important;
+      display: block !important;
+      overflow: hidden !important;
+    }
+
+    .paisarule-loan-documents-step3 .paisarule-document-tile-preview img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-documents-readable-text {
+      color:
+        var(--finora-theme-text-primary, #FFFFFF) !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-document-name {
+      font-size: 12px !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-document-type {
+      color:
+        var(--finora-theme-text-primary, #FFFFFF) !important;
+      font-size: 10px !important;
+    }
+  }
+  /* PAISARULE C144-R57-R2 MOBILE DOCUMENT COMPACT SPACING */
+  @media (max-width: 767px) {
+    .paisarule-loan-documents-step3
+      .paisarule-document-category-card {
+      min-height: 0 !important;
+      height: auto !important;
+      padding-top: 7px !important;
+      padding-bottom: 0 !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-category-document-preview {
+      min-height: 32px !important;
+      margin-top: 4px !important;
+    }
+  }
+    /* PAISARULE C144-R59-R2 MOBILE CATEGORY INNER COMPACT */
+  @media (max-width: 767px) {
+    .paisarule-loan-documents-step3
+      .paisarule-document-category-card > div:nth-of-type(2) {
+      min-height: 24px !important;
+      margin-top: 2px !important;
+      padding-bottom: 0 !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-document-category-card > div:nth-of-type(2) > div {
+      min-height: 24px !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-document-category-card
+      .paisarule-category-add-document {
+      margin-top: 3px !important;
+      margin-bottom: 0 !important;
+    }
+  }
+
+  /* PAISARULE C144-R60-R1 MOBILE ADD DOCUMENT BOTTOM CENTER */
+  @media (max-width: 767px) {
+    .paisarule-loan-documents-step3
+      .paisarule-document-category-card {
+      display: flex !important;
+      flex-direction: column !important;
+      padding-bottom: 7px !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-document-category-card
+      .paisarule-category-add-document {
+      display: block !important;
+      align-self: center !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+      margin-top: 8px !important;
+      margin-bottom: 0 !important;
+      flex-shrink: 0 !important;
+    }
+  }
+    /* PAISARULE C144-R62 FINAL MOBILE DOCUMENT CARD GEOMETRY */
+  @media (max-width: 767px) {
+    .paisarule-loan-documents-step3
+      .paisarule-document-category-card {
+      min-height: 140px !important;
+      height: 140px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      padding-top: 7px !important;
+      padding-bottom: 7px !important;
+      box-sizing: border-box !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-document-category-card
+      > div:nth-of-type(2) {
+      min-height: 52px !important;
+      height: 52px !important;
+      margin-top: 3px !important;
+      padding-bottom: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-document-category-card
+      > div:nth-of-type(2)
+      > div {
+      min-height: 52px !important;
+      height: 52px !important;
+      box-sizing: border-box !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-category-document-preview {
+      min-height: 66px !important;
+      height: 66px !important;
+      margin-top: 0 !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-document-category-card
+      .paisarule-category-add-document {
+      display: block !important;
+      align-self: center !important;
+      margin-top: auto !important;
+      margin-right: auto !important;
+      margin-bottom: 0 !important;
+      margin-left: auto !important;
+      flex-shrink: 0 !important;
+    }
+  }
+  /* PAISARULE C144-R66-R3 FINAL MOBILE DOCUMENT DOM GEOMETRY */
+  @media (max-width: 767px) {
+    .paisarule-loan-documents-step3
+      .paisarule-category-document-preview {
+      flex: 0 0 70px !important;
+      width: 70px !important;
+      min-width: 70px !important;
+      max-width: 70px !important;
+      height: 52px !important;
+      min-height: 52px !important;
+      max-height: 52px !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-category-document-preview > img {
+      width: 70px !important;
+      min-width: 70px !important;
+      max-width: 70px !important;
+      height: 52px !important;
+      min-height: 52px !important;
+      max-height: 52px !important;
+      display: block !important;
+      object-fit: cover !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-documents-gallery {
+      grid-template-columns:
+        repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      align-items: start !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-document-tile {
+      min-height: 0 !important;
+      height: auto !important;
+      align-self: start !important;
+      overflow: hidden !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-document-tile
+      .paisarule-document-tile-preview {
+      height: 82px !important;
+      min-height: 82px !important;
+      max-height: 82px !important;
+      display: block !important;
+      overflow: hidden !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-document-tile
+      .paisarule-document-tile-preview > img {
+      width: 100% !important;
+      height: 100% !important;
+      max-height: 82px !important;
+      display: block !important;
+      object-fit: contain !important;
+    }
+  }
+  /* PAISARULE C144-R67-R3 ROOT-INDEPENDENT MOBILE DOCUMENTS */
+  @media (max-width: 768px) {
+    .paisarule-category-preview-grid {
+      display: grid !important;
+      grid-template-columns:
+        repeat(3, minmax(0, 1fr)) !important;
+      gap: 6px !important;
+      width: 100% !important;
+      height: 52px !important;
+      min-height: 52px !important;
+      max-height: 52px !important;
+      overflow: hidden !important;
+      align-items: stretch !important;
+    }
+
+    .paisarule-category-preview-grid
+      .paisarule-category-document-preview {
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: none !important;
+      height: 52px !important;
+      min-height: 52px !important;
+      max-height: 52px !important;
+      flex: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+
+    .paisarule-category-preview-grid
+      .paisarule-category-document-preview
+      img {
+      display: block !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      height: 52px !important;
+      min-height: 52px !important;
+      max-height: 52px !important;
+      object-fit: contain !important;
+    }
+
+    .paisarule-view-all-grid {
+      display: grid !important;
+      grid-template-columns:
+        repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      width: 100% !important;
+      align-items: start !important;
+    }
+
+    .paisarule-view-all-grid
+      > .paisarule-document-tile {
+      width: 100% !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      height: auto !important;
+      align-self: start !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+
+    .paisarule-view-all-grid
+      > .paisarule-document-tile
+      > .paisarule-document-tile-preview {
+      display: block !important;
+      width: 100% !important;
+      height: 82px !important;
+      min-height: 82px !important;
+      max-height: 82px !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+
+    .paisarule-view-all-grid
+      > .paisarule-document-tile
+      > .paisarule-document-tile-preview
+      img {
+      display: block !important;
+      width: 100% !important;
+      height: 100% !important;
+      max-height: 82px !important;
+      object-fit: contain !important;
+    }
+  }
+
+/* PAISARULE C144-R68-R2 MOBILE MAIN THUMB HEIGHT MATCH */
+@media (max-width: 767px) {
+  .paisarule-category-preview-grid .paisarule-category-document-preview {
+    height: 82px !important;
+    min-height: 82px !important;
+    max-height: 82px !important;
+    overflow: hidden !important;
+  }
+
+  .paisarule-category-preview-grid .paisarule-category-document-preview img {
+    width: 100% !important;
+    height: 82px !important;
+    min-height: 82px !important;
+    max-height: 82px !important;
+    display: block !important;
+    object-fit: contain !important;
+  }
+}
+/* PAISARULE C144-R39-R3 EXE FIVE CARDS +30PX */
+  @media (min-width: 769px) {
+    .paisarule-loan-documents-step3
+      .paisarule-document-category-card {
+      padding-bottom: 11px !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-evidence-preview-card {
+      height: 200px !important;
+      min-height: 200px !important;
+      padding-bottom: 11px !important;
+      box-sizing: border-box !important;
+    }
+    /* PAISARULE C144-R40-R3 ADD DOCUMENT BOTTOM CENTER */
+    .paisarule-loan-documents-step3
+      .paisarule-document-category-card {
+      display: flex !important;
+      flex-direction: column !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-category-add-document {
+      display: block !important;
+      margin-top: auto !important;
+      align-self: center !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+    }
+  }
+    /* PAISARULE C144-R44-R1 EXE FINAL DOCUMENT LAYOUT */
+
+    .paisarule-loan-documents-step3
+      .paisarule-document-category-card {
+      min-height: 200px !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-category-document-preview {
+      height: 72px !important;
+      min-height: 72px !important;
+      overflow: hidden !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-category-document-preview img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-documents-gallery {
+      grid-template-columns:
+        repeat(4, minmax(0, 1fr)) !important;
+      gap: 10px !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-documents-gallery
+      .paisarule-document-tile-preview {
+      height: 180px !important;
+      min-height: 180px !important;
+      overflow: hidden !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-documents-gallery
+      .paisarule-document-tile-preview img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+    }
+    /* PAISARULE C144-R45-R2 EVIDENCE PREVIEW SIZE */
+    .paisarule-loan-documents-step3
+      .paisarule-evidence-preview-card button {
+      flex-basis: 110px !important;
+      width: 110px !important;
+      height: 90px !important;
+      min-height: 90px !important;
+    }
+
+    .paisarule-loan-documents-step3
+      .paisarule-evidence-preview-card button img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+    }
+
+  /* PAISARULE C144-R69-R5 FINAL MOBILE CASCADE */
+  @media (max-width: 768px) {
+    .paisarule-category-preview-grid {
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 6px !important;
+      width: 100% !important;
+
+      height: 110px !important;
+      min-height: 110px !important;
+      max-height: 110px !important;
+
+      overflow: hidden !important;
+      align-items: stretch !important;
+    }
+
+    .paisarule-category-preview-grid
+      > .paisarule-category-document-preview {
+      display: block !important;
+
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+
+      height: 110px !important;
+      min-height: 110px !important;
+      max-height: 110px !important;
+
+      flex: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+
+    .paisarule-category-preview-grid
+      > .paisarule-category-document-preview
+      > img {
+      display: block !important;
+      width: 100% !important;
+
+      height: 110px !important;
+      min-height: 110px !important;
+      max-height: 110px !important;
+
+      object-fit: contain !important;
+    }
+
+    .paisarule-documents-gallery.paisarule-view-all-grid {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+      width: 100% !important;
+      align-items: start !important;
+    }
+
+    .paisarule-documents-gallery.paisarule-view-all-grid
+      > .paisarule-document-tile {
+      width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+
+      height: auto !important;
+      min-height: 0 !important;
+      max-height: none !important;
+
+      align-self: start !important;
+      overflow: hidden !important;
+    }
+
+    .paisarule-documents-gallery.paisarule-view-all-grid
+      > .paisarule-document-tile
+      > .paisarule-document-tile-preview {
+      display: block !important;
+      width: 100% !important;
+
+      height: 110px !important;
+      min-height: 110px !important;
+      max-height: 110px !important;
+
+      padding: 0 !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+
+    .paisarule-documents-gallery.paisarule-view-all-grid
+      > .paisarule-document-tile
+      > .paisarule-document-tile-preview
+      > img {
+      display: block !important;
+      width: 100% !important;
+
+      height: 110px !important;
+      min-height: 110px !important;
+      max-height: 110px !important;
+
+      object-fit: contain !important;
+    }
+  }
+
+  /* PAISARULE C144-R71-R2 MAIN PREVIEW PARENT CLIP FIX */
+  @media (max-width: 768px) {
+    .paisarule-loan-documents-step3
+      .paisarule-document-category-card
+      > .paisarule-category-preview-grid,
+    .paisarule-loan-documents-step3
+      .paisarule-document-category-card
+      > div:nth-of-type(2).paisarule-category-preview-grid {
+      height: 110px !important;
+      min-height: 110px !important;
+      max-height: 110px !important;
+      overflow: hidden !important;
+    }
+  }`;
+
+if (
+  typeof document !== "undefined" &&
+  !document.getElementById(
+    "paisarule-c144-r21-documents-mobile-style",
+  )
+) {
+  const styleElement = document.createElement("style");
+  styleElement.id =
+    "paisarule-c144-r21-documents-mobile-style";
+  styleElement.textContent =
+    mobileDocumentsPresentationStyle;
+  document.head.appendChild(styleElement);
+}

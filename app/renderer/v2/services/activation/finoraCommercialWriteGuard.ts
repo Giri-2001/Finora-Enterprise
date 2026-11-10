@@ -356,9 +356,11 @@ export async function authorizeFinoraCommercialWrite(
     // Use native authenticated PostgreSQL pricing on Android.
     const android = isFinoraAndroidWallet();
     const wallet = android ? null : getFinoraServerWalletBridge();
+
     const pricing = android
       ? await getFinoraAndroidPricing()
       : wallet ? await wallet.pricing() : null;
+
 
     if (
       !pricing?.success ||
@@ -415,6 +417,7 @@ export async function authorizeFinoraCommercialWrite(
     };
   }
 
+
   const accessAuthorityResult =
     await evaluateAuthoritativeFinoraBranchAccess(
       userId,
@@ -422,6 +425,7 @@ export async function authorizeFinoraCommercialWrite(
       businessId,
       branchId,
     );
+
 
   if (
     !accessAuthorityResult.success ||
@@ -502,8 +506,13 @@ export async function authorizeFinoraCommercialWrite(
 
   if (session.dataContext === "REAL") {
     try {
-      const bridge = getFinoraServerWalletBridge();
-      const pricing = bridge ? await bridge.pricing() : null;
+      const android = isFinoraAndroidWallet();
+      const bridge = android ? null : getFinoraServerWalletBridge();
+
+      const pricing = android
+        ? await getFinoraAndroidPricing()
+        : bridge ? await bridge.pricing() : null;
+
 
       if (
         pricing?.success === true &&

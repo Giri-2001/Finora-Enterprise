@@ -213,6 +213,9 @@ interface Step6ReviewProps {
   resetWizard:
     () => void;
 
+  onBackToCustomersHub?:
+    () => void;
+
   originalCustomerProfile?:
     CustomerProfile;
 
@@ -466,6 +469,8 @@ export default function Step6Review({
 
   resetWizard,
 
+  onBackToCustomersHub,
+
   originalCustomerProfile,
 
   isEditMode = false,
@@ -697,7 +702,7 @@ export default function Step6Review({
 
         setPendingNotificationBusinessIdentity(undefined);
 
-        resetWizard();
+
 
       } catch (error) {
         console.error(
@@ -1670,6 +1675,7 @@ export default function Step6Review({
 
           // C5-N: Use the authenticated Server Reception identity.
           // Never manufacture a legacy signed business profile.
+
           const serverIdentityResult =
             await loadFinoraServerSettingsIdentity({
               ownerId: activeOwnerId,
@@ -1820,6 +1826,11 @@ export default function Step6Review({
           finalCustomerId = centralReservation.data.customerId;
         } else {
           // Preserve existing behavior until verified migration.
+
+
+
+
+
           const reservationResult =
             await reserveNextCustomerNumber();
 
@@ -2408,6 +2419,7 @@ export default function Step6Review({
           );
         }
 
+
         const result =
           await customerService.create(
             newCustomer,
@@ -2523,7 +2535,7 @@ export default function Step6Review({
         }
 
 
-        
+
 
 
         setCustomerValidationMessage(null);
@@ -2533,6 +2545,10 @@ export default function Step6Review({
 
 Customer ID: ${finalCustomerId}`,
         );
+
+        // Success popup is authoritative: continue only after OK.
+        resetWizard();
+        onBackToCustomersHub?.();
 
       } catch (error) {
 

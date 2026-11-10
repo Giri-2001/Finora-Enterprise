@@ -205,6 +205,8 @@ export const descriptionStyle: CSSProperties = {
 
   fontSize: "12px",
 
+  fontWeight: 450,
+
   maxWidth: "100%",
 
   whiteSpace: "normal",

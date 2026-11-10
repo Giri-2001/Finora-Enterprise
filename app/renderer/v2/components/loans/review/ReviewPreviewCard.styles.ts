@@ -147,7 +147,7 @@ export const rowStyle: CSSProperties = {
 
   background: THEME.panelSoft,
 
-  color: THEME.textSecondary,
+  color: THEME.text,
 
   fontSize: "14px",
 
@@ -164,7 +164,7 @@ export const labelStyle: CSSProperties = {
   fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
   minWidth: 0,
 
-  color: THEME.textMuted,
+  color: THEME.text,
 
   fontSize: "14px",
 

@@ -18,6 +18,7 @@ import {
   previewGridStyle,
   primaryValueStyle,
   rowStyle,
+  mobileGuarantorPreviewCss,
   valueStyle,
 } from "./GuarantorPreviewCard.styles";
 
@@ -57,50 +58,51 @@ export default function GuarantorPreviewCard({
   address = "--",
 }: GuarantorPreviewCardProps) {
   return (
-    <div style={cardStyle}>
+    <div className="paisarule-guarantor-preview" style={cardStyle}>
+        <style>{mobileGuarantorPreviewCss}</style>
       <SummaryCard title="Guarantor Preview">
         <div style={previewGridStyle}>
 
           {/* GUARANTOR */}
           <div style={highlightRowStyle}>
-            <span style={labelStyle}>
+            <span className="paisarule-guarantor-preview-label" style={labelStyle}>
               Guarantor
             </span>
 
-            <strong style={primaryValueStyle}>
+            <strong className="paisarule-guarantor-preview-primary-value" style={primaryValueStyle}>
               {capitalizeFirstLetter(guarantorName)}
             </strong>
           </div>
 
           {/* MOBILE */}
           <div style={rowStyle}>
-            <span style={labelStyle}>
+            <span className="paisarule-guarantor-preview-label" style={labelStyle}>
               Mobile
             </span>
 
-            <strong style={valueStyle}>
+            <strong className="paisarule-guarantor-preview-value" style={valueStyle}>
               {mobileNumber}
             </strong>
           </div>
 
           {/* OCCUPATION */}
           <div style={rowStyle}>
-            <span style={labelStyle}>
+            <span className="paisarule-guarantor-preview-label" style={labelStyle}>
               Occupation
             </span>
 
-            <strong style={valueStyle}>
+            <strong className="paisarule-guarantor-preview-value" style={valueStyle}>
               {capitalizeFirstLetter(occupation)}
             </strong>
           </div>
 
           {/* ADDRESS */}
           <div style={fullWidthRowStyle}>
-            <span style={labelStyle}>
+            <span className="paisarule-guarantor-preview-label" style={labelStyle}>
               Address
             </span>
 
-            <strong style={valueStyle}>
+            <strong className="paisarule-guarantor-preview-value" style={valueStyle}>
               {capitalizeFirstLetter(address)}
             </strong>
           </div>

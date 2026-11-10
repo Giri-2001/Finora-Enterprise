@@ -237,7 +237,7 @@ export default function LoanPreviewCard({
 
               fontWeight: 750,
 
-              color: "#FFFFFF",
+              color: "var(--finora-theme-text-primary, #FFFFFF)",
 
               lineHeight: 1.2,
             }}
@@ -253,7 +253,7 @@ export default function LoanPreviewCard({
 
               fontWeight: 500,
 
-              color: "#94A3B8",
+              color: "var(--finora-theme-text-primary, #FFFFFF)",
 
               lineHeight: 1.2,
             }}

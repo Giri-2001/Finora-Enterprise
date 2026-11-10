@@ -27,6 +27,7 @@ import {
   headerStyle,
   selectOptionTextStyle,
   selectStyle,
+  mobileGuarantorVerificationCss,
   wrapperStyle,
 } from "./GuarantorVerification.styles";
 
@@ -55,13 +56,14 @@ export default function GuarantorVerification({
   onIdentityVerificationChange,
 }: GuarantorVerificationProps) {
   return (
-    <div style={wrapperStyle}>
+    <div className="paisarule-guarantor-verification" style={wrapperStyle}>
+        <style>{mobileGuarantorVerificationCss}</style>
       {/* HEADER */}
 
       <div style={headerStyle}>
         <span style={accentStyle} />
 
-        <span>Guarantor Verification</span>
+        <span className="paisarule-guarantor-verification-title">Guarantor Verification</span>
       </div>
 
       {/* CONTENT */}
@@ -77,7 +79,7 @@ export default function GuarantorVerification({
                 onChange={(event) =>
                   onVerificationStatusChange(event.target.value)
                 }
-                style={selectStyle}
+                className="paisarule-guarantor-verification-select" style={selectStyle}
                 optionTextStyle={selectOptionTextStyle}
                 options={[
                   {
@@ -108,7 +110,7 @@ export default function GuarantorVerification({
                 onChange={(event) =>
                   onIdentityVerificationChange(event.target.value)
                 }
-                style={selectStyle}
+                className="paisarule-guarantor-verification-select" style={selectStyle}
                 optionTextStyle={selectOptionTextStyle}
                 options={[
                   {

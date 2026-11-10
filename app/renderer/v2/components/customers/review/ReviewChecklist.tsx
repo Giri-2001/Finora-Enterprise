@@ -83,6 +83,7 @@ function ChecklistItem({
 
   styles,
 
+  themeId,
   compactLabel = false,
 
 }: ReviewChecklistItem & {
@@ -92,6 +93,7 @@ function ChecklistItem({
       typeof createReviewChecklistStyles
     >;
 
+  themeId: string;
   compactLabel?: boolean;
 
 }) {
@@ -171,7 +173,7 @@ function ChecklistItem({
 
   <span
     style={
-      { ...styles.statusIndicatorStyle, color: completed ? "var(--finora-theme-status-success, #16A34A)" : "var(--finora-theme-status-danger, #DC2626)" }
+      { ...styles.statusIndicatorStyle, color: completed ? "var(--finora-theme-status-success, #16A34A)" : (["royal-navy", "amethyst", "emerald"].includes(themeId) ? "#FFFFFF" : "var(--finora-theme-status-danger, #DC2626)") }
     }
     aria-hidden="true"
   >
@@ -186,7 +188,7 @@ function ChecklistItem({
 
   <span>
 
-    <span style={{ color: completed ? "var(--finora-theme-status-success, #16A34A)" : "var(--finora-theme-status-danger, #DC2626)" }}>{completed ? "Complete" : "Pending"}</span>
+    <span style={{ color: completed ? "var(--finora-theme-status-success, #16A34A)" : (["royal-navy", "amethyst", "emerald"].includes(themeId) ? "#FFFFFF" : "var(--finora-theme-status-danger, #DC2626)") }}>{completed ? "Complete" : "Pending"}</span>
 
   </span>
 
@@ -216,6 +218,7 @@ export default function ReviewChecklist({
 
   const {
     theme,
+    themeId,
   } = useTheme();
 
   const { tokens } = useResponsive();
@@ -365,6 +368,7 @@ export default function ReviewChecklist({
                 styles={
                   resolvedStyles
                 }
+                themeId={themeId}
               />
 
             ),

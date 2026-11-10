@@ -1,4 +1,4 @@
-﻿// ============================================================
+// ============================================================
 // FINORA ENTERPRISE V2
 //
 // LOAN DETAILS STUDIO
@@ -100,7 +100,8 @@ interface LoanFormProps {
   advanceDeduction: string;
 
   lateFee: string;
-
+
+
 
   loanDate?: string;
   collectionDate: string;
@@ -127,7 +128,8 @@ interface LoanFormProps {
   onAdvanceDeductionChange: (value: string) => void;
 
   onLateFeeChange: (value: string) => void;
-
+
+
 
   onLoanDateChange?: (value: string) => void;
   onCollectionDateChange: (value: string) => void;
@@ -202,7 +204,8 @@ export default function LoanForm({
   advanceDeduction,
 
   lateFee,
-
+
+
 
   loanDate = "",
   collectionDate,
@@ -225,7 +228,8 @@ export default function LoanForm({
   onAdvanceDeductionChange,
 
   onLateFeeChange,
-
+
+
 
   onLoanDateChange = () => undefined,
   onCollectionDateChange,
@@ -256,6 +260,39 @@ export default function LoanForm({
   ========================================================== */
 
   const resolvedFormGridStyle = createLoanFormGridStyle(step1Tokens);
+
+  const isMobileStep1 = step1Tokens.viewport === "mobile";
+
+  const resolvedFieldLabelStyle = isMobileStep1
+    ? {
+        ...fieldLabelStyle,
+        fontSize: "15px",
+      }
+    : fieldLabelStyle;
+
+  const resolvedSectionTitleStyle = isMobileStep1
+    ? {
+        ...sectionTitleStyle,
+        fontSize: "15px",
+      }
+    : sectionTitleStyle;
+
+  const resolvedInputStyle = isMobileStep1
+    ? {
+        ...inputStyle,
+        height: "41px",
+        minHeight: "41px",
+        fontSize: "14px",
+      }
+    : inputStyle;
+
+  const resolvedSelectStyle = isMobileStep1
+    ? {
+        ...selectStyle,
+        minHeight: "41px",
+        fontSize: "14px",
+      }
+    : selectStyle;
 
   /* ==========================================================
      HANDLERS
@@ -368,7 +405,7 @@ export default function LoanForm({
 
     required = false,
   ) => (
-    <div style={fieldLabelStyle}>
+    <div style={resolvedFieldLabelStyle}>
       <span>{label}</span>
 
       {required && <span style={requiredMarkStyle}>*</span>}
@@ -380,13 +417,29 @@ export default function LoanForm({
   ========================================================== */
 
   return (
-    <div>
+    <div className="paisarule-loan-step1-form">
+      <style>{`
+        .paisarule-loan-step1-form input::placeholder,
+        .paisarule-loan-step1-form textarea::placeholder {
+          color: var(--finora-theme-text-primary, #FFFFFF) !important;
+          opacity: 1 !important;
+        }
+
+        @media (max-width: 768px) {
+          .paisarule-loan-step1-form input::placeholder,
+          .paisarule-loan-step1-form textarea::placeholder {
+            color: var(--finora-theme-text-primary, #FFFFFF) !important;
+            opacity: 1 !important;
+            font-size: 14px !important;
+          }
+        }
+      `}</style>
       {/* ======================================================
           LOAN BASIC DETAILS
       ====================================================== */}
 
       <section style={sectionStyle}>
-        <div style={sectionTitleStyle}>Loan Basic Details</div>
+        <div style={resolvedSectionTitleStyle}>Loan Basic Details</div>
 
         <div style={resolvedFormGridStyle}>
           {/* LOAN NUMBER */}
@@ -403,7 +456,7 @@ export default function LoanForm({
               readOnly
               aria-label="Loan Number"
               style={{
-                ...inputStyle,
+                ...resolvedInputStyle,
                 opacity: 0.72,
                 cursor: "default",
               }}
@@ -432,7 +485,7 @@ export default function LoanForm({
                   ? "Locked from Gold Loan Step 1 sanctioned amount"
                   : undefined
               }
-              style={{                 ...inputStyle,                 fontWeight: 650,               }}
+              style={{                 ...resolvedInputStyle,                 fontWeight: 650,               }}
             />
           </div>
 
@@ -455,7 +508,7 @@ export default function LoanForm({
 
                 onEMICalculationChange(normalized);
               }}
-              style={selectStyle}
+              style={resolvedSelectStyle}
             >
               <option value="interestOnly">Interest Only</option>
 
@@ -477,7 +530,7 @@ export default function LoanForm({
               onChange={handleInterestChange}
               placeholder="Percentage In Rupees"
               autoComplete="off"
-              style={inputStyle}
+              style={resolvedInputStyle}
             />
           </div>
         </div>
@@ -488,7 +541,7 @@ export default function LoanForm({
       ====================================================== */}
 
       <section style={sectionStyle}>
-        <div style={sectionTitleStyle}>Financial Terms</div>
+        <div style={resolvedSectionTitleStyle}>Financial Terms</div>
 
         <div style={resolvedFormGridStyle}>
           {/* PROCESSING FEE */}
@@ -503,7 +556,7 @@ export default function LoanForm({
               onChange={handleProcessingFeeChange}
               placeholder="Enter Processing Fee"
               autoComplete="off"
-              style={inputStyle}
+              style={resolvedInputStyle}
             />
           </div>
 
@@ -524,7 +577,7 @@ export default function LoanForm({
               placeholder="Enter Deduction Amount"
               autoComplete="off"
               disabled={emiCalculation === "reducing"}
-              style={inputStyle}
+              style={resolvedInputStyle}
             />
           </div>
 
@@ -540,7 +593,7 @@ export default function LoanForm({
               onChange={handleLateFeeChange}
               placeholder="Enter Late Fee"
               autoComplete="off"
-              style={inputStyle}
+              style={resolvedInputStyle}
             />
           </div>
         </div>
@@ -551,7 +604,7 @@ export default function LoanForm({
       ====================================================== */}
 
       <section style={sectionStyle}>
-        <div style={sectionTitleStyle}>Loan Duration</div>
+        <div style={resolvedSectionTitleStyle}>Loan Duration</div>
 
         <div style={resolvedFormGridStyle}>
           {/* LOAN DATE */}
@@ -587,7 +640,7 @@ export default function LoanForm({
               autoComplete="off"
               aria-label="Collection Date DD-MM"
               style={{
-                ...inputStyle,
+                ...resolvedInputStyle,
                 height: "38px",
                 minHeight: "38px",
                 marginTop: "4px",
@@ -609,7 +662,7 @@ export default function LoanForm({
                 placeholder="Duration"
                 autoComplete="off"
                 style={{
-                  ...inputStyle,
+                  ...resolvedInputStyle,
                   height: "38px",
                   minHeight: "38px",
                 }}
@@ -638,7 +691,7 @@ export default function LoanForm({
       ====================================================== */}
 
       <section style={sectionStyle}>
-        <div style={sectionTitleStyle}>Additional Information</div>
+        <div style={resolvedSectionTitleStyle}>Additional Information</div>
 
         <div style={resolvedFormGridStyle}>
           {/* PURPOSE */}
@@ -652,7 +705,7 @@ export default function LoanForm({
               onChange={handlePurposeChange}
               placeholder="Enter Loan Purpose"
               autoComplete="off"
-              style={inputStyle}
+              style={resolvedInputStyle}
             />
           </div>
 
@@ -673,7 +726,7 @@ export default function LoanForm({
 
               autoComplete="off"
 
-              style={inputStyle}
+              style={resolvedInputStyle}
 
             />
           </div>

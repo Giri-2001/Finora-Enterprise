@@ -234,6 +234,7 @@ function Step2Basic({
 
   const {
   tokens,
+  isMobile,
 } = useResponsive();
 
 
@@ -591,16 +592,18 @@ function Step2Basic({
   ======================================================= */}
 
   <div
-    style={
-      formHeaderContentStyle
-    }
+    style={{
+      ...formHeaderContentStyle,
+      minWidth: 0,
+      flex: "1 1 0%",
+    }}
   >
 
     <h1
       style={{
         ...formTitleStyle,
 
-        ...resolvedFormTitleStyle, fontSize: "21px", fontWeight: 750, fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)", maxWidth: "100%", whiteSpace: "normal", overflowWrap: "break-word",
+        ...resolvedFormTitleStyle, fontSize: isMobile ? "18px" : "23px", fontWeight: 750, fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)", maxWidth: "100%", whiteSpace: "normal", overflowWrap: "break-word",
 
       }}
     >
@@ -612,7 +615,7 @@ function Step2Basic({
       style={{
         ...formSubtitleStyle,
 
-        ...resolvedFormSubtitleStyle, fontSize: "12px", fontWeight: 500, fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)", maxWidth: "100%", whiteSpace: "normal", overflowWrap: "break-word",
+        ...resolvedFormSubtitleStyle, fontSize: isMobile ? "13px" : "14px", fontWeight: 500, fontFamily: "var(--finora-theme-font-family, Inter, sans-serif)", maxWidth: "100%", whiteSpace: "normal", overflowWrap: "break-word",
 
       }}
     >

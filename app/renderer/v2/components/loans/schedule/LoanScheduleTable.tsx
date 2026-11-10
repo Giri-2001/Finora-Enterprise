@@ -88,7 +88,10 @@ function formatIndianDate(value: string): string {
   return `${day} ${date.toLocaleString("en-IN", { month: "short" })} ${year}`;
 }
 
-function getStatusStyle(status: LoanInstallment["status"]) {
+function getStatusStyle(
+  status: LoanInstallment["status"],
+  themeId: string,
+) {
   switch (status) {
     case "Paid":
       return {
@@ -118,8 +121,8 @@ function getStatusStyle(status: LoanInstallment["status"]) {
     default:
       return {
         background: "transparent",
-        border: `1px solid ${THEME.primary}`,
-        color: THEME.primary,
+        border: `1px solid ${["royal-navy", "amethyst", "emerald"].includes(themeId) ? THEME.text : THEME.danger}`,
+        color: ["royal-navy", "amethyst", "emerald"].includes(themeId) ? THEME.text : THEME.danger,
       };
   }
 }
@@ -135,7 +138,10 @@ function CompactScheduleRow({
   installment: LoanInstallment;
   last: boolean;
 }) {
-  const statusStyle = getStatusStyle(installment.status);
+  const themeId =
+    document.documentElement.getAttribute("data-theme") ?? "";
+
+  const statusStyle = getStatusStyle(installment.status, themeId);
 
   return (
     <div
@@ -231,7 +237,7 @@ export default function LoanScheduleTable({
   const { tokens } = useResponsive();
 
   const compact =
-    tokens.meta.viewport === "mobile" || tokens.meta.viewport === "tablet";
+    tokens.meta.viewport === "mobile";
 
   const hasSchedule = schedule.length > 0;
 

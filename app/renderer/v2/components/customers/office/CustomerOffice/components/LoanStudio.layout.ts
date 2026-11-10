@@ -219,6 +219,7 @@ export function createLoanStudioStep5Layout(
   tokens: ResponsiveTokens,
 ): LoanStudioStep5Layout {
   const mobile = tokens.meta.viewport === "mobile";
+  const tablet = tokens.meta.viewport === "tablet";
 
   const gap = Math.max(8, tokens.spacing.small);
 
@@ -241,7 +242,7 @@ export function createLoanStudioStep5Layout(
 
       display: "grid",
 
-      gridTemplateColumns: mobile
+      gridTemplateColumns: mobile || tablet
         ? "minmax(0, 1fr)"
         : "minmax(0, 1fr) minmax(0, 1fr)",
 
@@ -417,7 +418,11 @@ export function createLoanStudioStep6Layout(
 
       display: "grid",
 
-      gridTemplateColumns: mobile         ? "minmax(0, 1fr)"         : tablet           ? "minmax(0, 11fr) minmax(0, 9fr)"           : "minmax(0, 1fr) minmax(0, 1fr)",
+      gridTemplateColumns: mobile
+        ? "minmax(0, 1fr)"
+        : tablet
+          ? `minmax(0, calc(55% - ${gap * 0.55}px + 10px)) minmax(0, calc(45% - ${gap * 0.45}px - 10px))`
+          : "minmax(0, 1fr) minmax(0, 1fr)",
 
       gridTemplateAreas: mobile
         ? `
